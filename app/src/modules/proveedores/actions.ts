@@ -41,14 +41,19 @@ export async function editarProveedor(
 
 export async function eliminarProveedor(id: string) {
   const supabase = createAdminClient()
-  // Verificar que no tenga productos activos
-  const { count } = await supabase
-    .from('productos')
-    .select('*', { count: 'exact', head: true })
-    .eq('proveedor_id', id)
-    .eq('activo', true)
-  if ((count ?? 0) > 0)
-    return { error: 'Este proveedor tiene productos activos. Desactivalos primero.' }
+  // Verificar si tiene productos (activos o no) — la DB tiene RESTRICT
+  const [{ count: activos }, { count: inactivos }] = await Promise.all([
+    supabase.from('productos').select('*', { count: 'exact', head: true }).eq('proveedor_id', id).eq('activo', true),
+    supabase.from('productos').select('*', { count: 'exact', head: true }).eq('proveedor_id', id).eq('activo', false),
+  ])
+  const totalActivos = activos ?? 0
+  const totalInactivos = inactivos ?? 0
+  if (totalActivos > 0 || totalInactivos > 0) {
+    const partes = []
+    if (totalActivos > 0) partes.push(`${totalActivos} producto${totalActivos !== 1 ? 's' : ''} activo${totalActivos !== 1 ? 's' : ''}`)
+    if (totalInactivos > 0) partes.push(`${totalInactivos} producto${totalInactivos !== 1 ? 's' : ''} inactivo${totalInactivos !== 1 ? 's' : ''}`)
+    return { error: `No se puede eliminar: este proveedor tiene ${partes.join(' y ')}. Eliminá los productos primero.` }
+  }
   const { error } = await supabase.from('proveedores').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/proveedores')

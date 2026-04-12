@@ -86,8 +86,26 @@ export async function actualizarEstado(id: string, estado: EstadoEvento) {
   return { error: null }
 }
 
+export async function chequearEliminarEvento(id: string) {
+  const supabase = createAdminClient()
+  const [{ count: compras }, { count: pagos }, { count: ajustes }] = await Promise.all([
+    supabase.from('compras').select('*', { count: 'exact', head: true }).eq('evento_id', id),
+    supabase.from('pagos_cliente').select('*', { count: 'exact', head: true }).eq('evento_id', id),
+    supabase.from('ajustes_ipc').select('*', { count: 'exact', head: true }).eq('evento_id', id),
+  ])
+  return {
+    compras: compras ?? 0,
+    pagos: pagos ?? 0,
+    ajustes: ajustes ?? 0,
+  }
+}
+
 export async function eliminarEvento(id: string) {
   const supabase = createAdminClient()
+  // Borrar registros con RESTRICT antes de poder eliminar el evento
+  await supabase.from('pagos_cliente').delete().eq('evento_id', id)
+  await supabase.from('ajustes_ipc').delete().eq('evento_id', id)
+  await supabase.from('compras').delete().eq('evento_id', id)
   const { error } = await supabase.from('eventos').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')

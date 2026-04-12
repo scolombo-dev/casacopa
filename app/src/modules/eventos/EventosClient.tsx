@@ -17,7 +17,7 @@ import {
   setTragosEvento,
   crearStaff, editarStaff, eliminarStaff,
   crearExtra, editarExtra, eliminarExtra,
-  finalizarEvento,
+  finalizarEvento, chequearEliminarEvento,
 } from './actions'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
@@ -1109,6 +1109,7 @@ export default function EventosClient({
   const [modalCrear, setModalCrear] = useState(false)
   const [editando, setEditando] = useState<EventoCompleto | null>(null)
   const [eliminando, setEliminando] = useState<EventoCompleto | null>(null)
+  const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number } | null>(null)
 
   const filtrados = filtroEstado
     ? eventos.filter(e => e.estado === filtroEstado)
@@ -1181,7 +1182,11 @@ export default function EventosClient({
               propuestas={propuestas}
               recetas={recetas}
               onEdit={() => setEditando(ev)}
-              onDelete={() => setEliminando(ev)}
+              onDelete={() => startTransition(async () => {
+                const info = await chequearEliminarEvento(ev.id)
+                setInfoEliminar(info)
+                setEliminando(ev)
+              })}
             />
           ))}
         </div>
@@ -1212,15 +1217,41 @@ export default function EventosClient({
 
       {/* Modal eliminar */}
       {eliminando && (
-        <Modal titulo="Eliminar evento" onClose={() => setEliminando(null)}>
-          <p className="text-sm text-gray-600 mb-4">
-            ¿Eliminar <strong>{eliminando.nombre}</strong>? Se borrarán también los tragos, staff y extras asociados.
+        <Modal titulo="Eliminar evento" onClose={() => { setEliminando(null); setInfoEliminar(null) }}>
+          <p className="text-sm text-gray-600 mb-3">
+            ¿Eliminar <strong>{eliminando.nombre}</strong>?
           </p>
+          <div className="text-sm text-gray-600 mb-4 space-y-1">
+            <p className="font-medium text-gray-700">Se eliminará también:</p>
+            <ul className="list-disc list-inside space-y-0.5 text-gray-500">
+              <li>Tragos, staff y extras del evento</li>
+              <li>Lista de checklists</li>
+              {infoEliminar && infoEliminar.compras > 0 && (
+                <li className="text-orange-600 font-medium">
+                  {infoEliminar.compras} compra{infoEliminar.compras !== 1 ? 's' : ''} registrada{infoEliminar.compras !== 1 ? 's' : ''}
+                </li>
+              )}
+              {infoEliminar && infoEliminar.pagos > 0 && (
+                <li className="text-orange-600 font-medium">
+                  {infoEliminar.pagos} pago{infoEliminar.pagos !== 1 ? 's' : ''} del cliente
+                </li>
+              )}
+              {infoEliminar && infoEliminar.ajustes > 0 && (
+                <li className="text-orange-600 font-medium">
+                  {infoEliminar.ajustes} ajuste{infoEliminar.ajustes !== 1 ? 's' : ''} IPC
+                </li>
+              )}
+            </ul>
+            {infoEliminar && (infoEliminar.compras > 0 || infoEliminar.pagos > 0 || infoEliminar.ajustes > 0) && (
+              <p className="text-orange-600 text-xs font-semibold mt-2">Esta acción no se puede deshacer.</p>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => startTransition(async () => {
                 await eliminarEvento(eliminando.id)
                 setEliminando(null)
+                setInfoEliminar(null)
                 router.refresh()
               })}
               disabled={pending}
@@ -1228,7 +1259,7 @@ export default function EventosClient({
             >
               {pending ? 'Eliminando…' : 'Sí, eliminar'}
             </button>
-            <button onClick={() => setEliminando(null)} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            <button onClick={() => { setEliminando(null); setInfoEliminar(null) }} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
               Cancelar
             </button>
           </div>
