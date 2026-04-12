@@ -17,7 +17,7 @@ export async function crearEvento(data: {
   estimacion_tragos_pp: number
   margen_seguridad: number
   notas: string
-  receta_ids?: string[]
+  receta_ids?: { receta_id: string; porcentaje_consumo: number }[]
 }) {
   const supabase = createAdminClient()
   const { data: evento, error } = await supabase.from('eventos').insert({
@@ -36,13 +36,10 @@ export async function crearEvento(data: {
 
   const ids = data.receta_ids ?? []
   if (ids.length > 0) {
-    const pct = parseFloat((100 / ids.length).toFixed(2))
-    const rows = ids.map((receta_id, i) => ({
+    const rows = ids.map(item => ({
       evento_id: evento.id,
-      receta_id,
-      porcentaje_consumo: i === ids.length - 1
-        ? parseFloat((100 - pct * (ids.length - 1)).toFixed(2))
-        : pct,
+      receta_id: item.receta_id,
+      porcentaje_consumo: item.porcentaje_consumo,
     }))
     await supabase.from('evento_tragos').insert(rows)
   }
@@ -101,19 +98,16 @@ export async function eliminarEvento(id: string) {
 
 export async function setTragosEvento(
   eventoId: string,
-  recetaIds: string[]
+  recetaIds: { receta_id: string; porcentaje_consumo: number }[]
 ) {
   const supabase = createAdminClient()
   await supabase.from('evento_tragos').delete().eq('evento_id', eventoId)
   if (recetaIds.length === 0) { revalidatePath('/eventos'); return { error: null } }
 
-  const pct = parseFloat((100 / recetaIds.length).toFixed(2))
-  const rows = recetaIds.map((receta_id, i) => ({
+  const rows = recetaIds.map(item => ({
     evento_id: eventoId,
-    receta_id,
-    porcentaje_consumo: i === recetaIds.length - 1
-      ? parseFloat((100 - pct * (recetaIds.length - 1)).toFixed(2))
-      : pct,
+    receta_id: item.receta_id,
+    porcentaje_consumo: item.porcentaje_consumo,
   }))
   const { error } = await supabase.from('evento_tragos').insert(rows)
   if (error) return { error: error.message }

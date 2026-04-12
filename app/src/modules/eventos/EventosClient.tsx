@@ -168,6 +168,26 @@ function EventoForm({
   const initialTragos = inicial?.evento_tragos?.map(t => t.receta_id) ?? []
   const [selectedTragos, setSelectedTragos] = useState<string[]>(initialTragos)
 
+  // Porcentajes por trago (receta_id -> %)
+  function pctIguales(ids: string[]): Record<string, number> {
+    if (ids.length === 0) return {}
+    const base = parseFloat((100 / ids.length).toFixed(2))
+    const acc: Record<string, number> = {}
+    ids.forEach((id, i) => {
+      acc[id] = i === ids.length - 1
+        ? parseFloat((100 - base * (ids.length - 1)).toFixed(2))
+        : base
+    })
+    return acc
+  }
+  const initialPct = inicial?.evento_tragos
+    ? Object.fromEntries(inicial.evento_tragos.map(t => [t.receta_id, t.porcentaje_consumo]))
+    : pctIguales(initialTragos)
+  const [pctPorTrago, setPctPorTrago] = useState<Record<string, number>>(initialPct)
+
+  const totalPct = selectedTragos.reduce((s, id) => s + (pctPorTrago[id] ?? 0), 0)
+  const pctValido = Math.abs(totalPct - 100) < 0.1
+
   function seleccionarPropuesta(p: Propuesta) {
     setPropuestaId(p.id)
     if (!precio || precio === 0) setPrecio(PROPUESTA_PRECIO[p.tipo] ?? 0)
@@ -180,12 +200,19 @@ function EventoForm({
     const cats = tiers[p.tipo] ?? []
     const ids = recetas.filter(r => cats.includes(r.categoria)).map(r => r.id)
     setSelectedTragos(ids)
+    setPctPorTrago(pctIguales(ids))
   }
 
   function toggleTrago(id: string) {
-    setSelectedTragos(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
+    setSelectedTragos(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      setPctPorTrago(pctIguales(next))
+      return next
+    })
+  }
+
+  function cambiarPct(id: string, val: number) {
+    setPctPorTrago(prev => ({ ...prev, [id]: val }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -193,7 +220,13 @@ function EventoForm({
     if (!nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (!fecha) { setError('La fecha es obligatoria.'); return }
     if (!tipo) { setError('El tipo de evento es obligatorio.'); return }
+    if (selectedTragos.length > 0 && !pctValido) { setError('Los porcentajes de consumo deben sumar 100%.'); return }
     setError(null)
+
+    const tragosConPct = selectedTragos.map(id => ({
+      receta_id: id,
+      porcentaje_consumo: pctPorTrago[id] ?? 0,
+    }))
 
     startTransition(async () => {
       const payload = {
@@ -205,9 +238,9 @@ function EventoForm({
       let res: { error: string | null }
       if (inicial) {
         res = await editarEvento(inicial.id, payload)
-        if (!res.error) await setTragosEvento(inicial.id, selectedTragos)
+        if (!res.error) await setTragosEvento(inicial.id, tragosConPct)
       } else {
-        res = await crearEvento({ ...payload, receta_ids: selectedTragos })
+        res = await crearEvento({ ...payload, receta_ids: tragosConPct })
       }
       if (res.error) { setError(res.error); return }
       router.refresh()
@@ -439,6 +472,49 @@ function EventoForm({
               )
             })}
           </div>
+
+          {/* Porcentajes de consumo */}
+          {selectedTragos.length > 0 && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">Estimación de consumo por trago</p>
+                <span className={cn(
+                  'text-xs font-semibold px-2 py-0.5 rounded-full',
+                  pctValido ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                )}>
+                  {totalPct.toFixed(0)}% / 100%
+                </span>
+              </div>
+              <div className="space-y-2">
+                {selectedTragos.map(id => {
+                  const receta = recetas.find(r => r.id === id)
+                  if (!receta) return null
+                  return (
+                    <div key={id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                      <span className="text-sm text-gray-700 flex-1">{receta.nombre_trago}</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={pctPorTrago[id] ?? 0}
+                          onChange={e => cambiarPct(id, parseFloat(e.target.value) || 0)}
+                          className="w-16 text-right border border-gray-300 rounded px-2 py-1 text-sm"
+                        />
+                        <span className="text-sm text-gray-400">%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {!pctValido && (
+                <p className="text-xs text-red-500 mt-1.5">
+                  La suma debe ser exactamente 100%. Diferencia: {(totalPct - 100).toFixed(1)}%
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
