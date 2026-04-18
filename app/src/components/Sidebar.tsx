@@ -5,21 +5,22 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, CalendarDays, Package, BookOpen,
   ShoppingCart, Archive, DollarSign, Menu, X,
-  ClipboardList, LogOut,
+  ClipboardList, LogOut, Tag,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
-  { href: '/',            label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/eventos',     label: 'Eventos',      icon: CalendarDays },
-  { href: '/checklists',  label: 'Checklists',   icon: ClipboardList },
-  { href: '/proveedores', label: 'Proveedores',  icon: Package },
-  { href: '/recetas',     label: 'Recetas',      icon: BookOpen },
-  { href: '/compras',     label: 'Compras',      icon: ShoppingCart },
-  { href: '/stock',       label: 'Stock',        icon: Archive },
-  { href: '/finanzas',    label: 'Finanzas',     icon: DollarSign },
+  { href: '/',              label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/eventos',       label: 'Eventos',        icon: CalendarDays },
+  { href: '/checklists',    label: 'Checklists',     icon: ClipboardList },
+  { href: '/proveedores',   label: 'Proveedores',    icon: Package },
+  { href: '/recetas',       label: 'Recetas',        icon: BookOpen },
+  { href: '/compras',       label: 'Compras',        icon: ShoppingCart },
+  { href: '/stock',         label: 'Stock',          icon: Archive },
+  { href: '/cotizaciones',  label: 'Cotizaciones',   icon: Tag },
+  { href: '/finanzas',      label: 'Finanzas',       icon: DollarSign },
 ]
 
 export function Sidebar() {

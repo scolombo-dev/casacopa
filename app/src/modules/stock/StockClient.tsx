@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Pencil, Trash2, X, ChevronDown, ChevronRight,
   Package, AlertTriangle, ArrowDownCircle, History, ShoppingBag,
+  LayoutList, Rows3,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { agregarStock, ajustarCantidad, eliminarLote, obtenerMovimientos, registrarVenta } from './actions'
@@ -642,6 +643,7 @@ export default function StockClient({ stock, productos, eventos }: {
   const [verHistorial, setVerHistorial] = useState<Lote | null>(null)
   const [vendiendo, setVendiendo] = useState<Lote | null>(null)
   const [filtro, setFiltro] = useState<'todos' | 'disponible' | 'agotado'>('disponible')
+  const [vistaTabla, setVistaTabla] = useState(false)
 
   const grupos = useMemo(() => agruparPorInsumo(stock), [stock])
 
@@ -650,6 +652,16 @@ export default function StockClient({ stock, productos, eventos }: {
     if (filtro === 'agotado') return g.totalEnvases === 0
     return true
   })
+
+  // Lotes planos para la vista tabla
+  const lotesPlanos = useMemo(() => {
+    const lotes = stock.filter(l => {
+      if (filtro === 'disponible') return l.cantidad_envases > 0
+      if (filtro === 'agotado') return l.cantidad_envases === 0
+      return true
+    })
+    return [...lotes].sort((a, b) => getInsumo(a).localeCompare(getInsumo(b)))
+  }, [stock, filtro])
 
   const totalEnvases = grupos.reduce((s, g) => s + g.totalEnvases, 0)
   const totalValor = grupos.reduce((s, g) => s + g.valorTotal, 0)
@@ -687,8 +699,8 @@ export default function StockClient({ stock, productos, eventos }: {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      {/* Filtros + toggle de vista */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
         {(['todos', 'disponible', 'agotado'] as const).map(f => (
           <button
             key={f}
@@ -701,34 +713,142 @@ export default function StockClient({ stock, productos, eventos }: {
             {f === 'todos' ? `Todos (${grupos.length})` : f === 'disponible' ? `Con stock (${grupos.filter(g => g.totalEnvases > 0).length})` : `Agotados (${insumosSinStock})`}
           </button>
         ))}
+        <div className="ml-auto flex rounded-lg border overflow-hidden">
+          <button
+            onClick={() => setVistaTabla(false)}
+            title="Vista agrupada"
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+              !vistaTabla ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+            )}
+          >
+            <Rows3 size={14} /> Agrupado
+          </button>
+          <button
+            onClick={() => setVistaTabla(true)}
+            title="Vista tabla"
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l',
+              vistaTabla ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+            )}
+          >
+            <LayoutList size={14} /> Tabla
+          </button>
+        </div>
       </div>
 
-      {/* Lista */}
-      {gruposFiltrados.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <Package size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">
-            {filtro === 'agotado' ? 'No hay insumos agotados.' : 'No hay stock registrado aún.'}
-          </p>
-          {filtro !== 'agotado' && (
-            <button onClick={() => setModalIngreso(true)} className="mt-3 text-sm text-blue-600 hover:underline">
-              + Agregar primer stock
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {gruposFiltrados.map(grupo => (
-            <GrupoRow
-              key={grupo.insumo}
-              grupo={grupo}
-              onAjustar={setAjustando}
-              onEliminar={setEliminando}
-              onHistorial={setVerHistorial}
-              onVender={setVendiendo}
-            />
-          ))}
-        </div>
+      {/* Vista Agrupada */}
+      {!vistaTabla && (
+        gruposFiltrados.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <Package size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">
+              {filtro === 'agotado' ? 'No hay insumos agotados.' : 'No hay stock registrado aún.'}
+            </p>
+            {filtro !== 'agotado' && (
+              <button onClick={() => setModalIngreso(true)} className="mt-3 text-sm text-blue-600 hover:underline">
+                + Agregar primer stock
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {gruposFiltrados.map(grupo => (
+              <GrupoRow
+                key={grupo.insumo}
+                grupo={grupo}
+                onAjustar={setAjustando}
+                onEliminar={setEliminando}
+                onHistorial={setVerHistorial}
+                onVender={setVendiendo}
+              />
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Vista Tabla plana */}
+      {vistaTabla && (
+        lotesPlanos.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <Package size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No hay stock registrado aún.</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
+                  <th className="text-left px-5 py-3 font-medium">Insumo</th>
+                  <th className="text-left px-3 py-3 font-medium">Marca</th>
+                  <th className="text-center px-3 py-3 font-medium">Presentación</th>
+                  <th className="text-center px-3 py-3 font-medium">Disponible</th>
+                  <th className="text-right px-3 py-3 font-medium">P. compra</th>
+                  <th className="text-right px-3 py-3 font-medium">Valor total</th>
+                  <th className="text-left px-3 py-3 font-medium">Fecha ingreso</th>
+                  <th className="text-left px-3 py-3 font-medium">Proveedor</th>
+                  <th className="text-left px-3 py-3 font-medium">Origen</th>
+                  <th className="w-20 px-3 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {lotesPlanos.map(lote => {
+                  const insumo = getInsumo(lote)
+                  const ev = Array.isArray(lote.eventos) ? lote.eventos[0] : lote.eventos
+                  const valorLote = lote.cantidad_envases * lote.precio_unitario_compra
+                  return (
+                    <tr key={lote.id} className="border-b last:border-0 hover:bg-gray-50 group">
+                      <td className="px-5 py-3 font-medium text-gray-700">{insumo}</td>
+                      <td className="px-3 py-3 font-medium text-gray-900">{lote.marca}</td>
+                      <td className="px-3 py-3 text-center text-gray-500 text-xs">{lote.ml_por_envase}ml</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={cn(
+                          'font-semibold tabular-nums',
+                          lote.cantidad_envases === 0 ? 'text-red-500' : 'text-emerald-600'
+                        )}>
+                          {lote.cantidad_envases}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums text-gray-600 text-xs">
+                        {lote.precio_unitario_compra > 0 ? formatARS(lote.precio_unitario_compra) : '—'}
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums text-gray-700 text-xs font-medium">
+                        {valorLote > 0 ? formatARS(valorLote) : '—'}
+                      </td>
+                      <td className="px-3 py-3 text-gray-500 text-xs">{formatFecha(lote.fecha_ingreso)}</td>
+                      <td className="px-3 py-3 text-gray-500 text-xs">{lote.proveedor || '—'}</td>
+                      <td className="px-3 py-3 text-xs text-gray-400">{ev?.nombre ?? '—'}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 justify-end">
+                          <button onClick={() => setVerHistorial(lote)} title="Historial"
+                            className="p-1.5 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100">
+                            <History size={13} />
+                          </button>
+                          {lote.cantidad_envases > 0 && (
+                            <button onClick={() => setVendiendo(lote)} title="Venta"
+                              className="p-1.5 text-gray-400 hover:text-purple-600 rounded hover:bg-purple-50">
+                              <ShoppingBag size={13} />
+                            </button>
+                          )}
+                          <button onClick={() => setAjustando(lote)} title="Ajustar"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                            <Pencil size={13} />
+                          </button>
+                          {lote.cantidad_envases === 0 && (
+                            <button onClick={() => setEliminando(lote)} title="Eliminar"
+                              className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* Modal: Ingreso manual */}

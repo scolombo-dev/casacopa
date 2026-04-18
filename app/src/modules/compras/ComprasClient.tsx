@@ -27,7 +27,6 @@ type EventoConTragos = {
   margen_seguridad: number
   evento_tragos: {
     porcentaje_consumo: number
-    // Supabase devuelve el join como objeto o array según la relación
     recetas: {
       receta_ingredientes: { insumo_base: string; ml_por_trago: number }[]
     } | {
@@ -68,8 +67,20 @@ function calcularStockPorInsumo(stock: StockRaw[]): Record<string, { envases: nu
   return acc
 }
 
-/** Insumos necesarios para el evento, en ml totales */
-function calcularInsumosEvento(ev: EventoConTragos): Record<string, { ml: number; botellas: number }> {
+// Tipos para estimación con catálogo
+type PresentacionEstimada = { ml_envase: number; botellas: number }
+
+type InsumoEstimado = {
+  ml: number
+  presentaciones: PresentacionEstimada[]
+  enCatalogo: boolean
+}
+
+/** Insumos necesarios para el evento, con estimaciones por presentación del catálogo */
+function calcularInsumosEvento(
+  ev: EventoConTragos,
+  productos: ProductoConProv[]
+): Record<string, InsumoEstimado> {
   const acc: Record<string, number> = {}
   for (const et of ev.evento_tragos) {
     if (!et.recetas) continue
@@ -82,12 +93,23 @@ function calcularInsumosEvento(ev: EventoConTragos): Record<string, { ml: number
     }
   }
   const margen = 1 + ev.margen_seguridad
-  const result: Record<string, { ml: number; botellas: number }> = {}
+  const result: Record<string, InsumoEstimado> = {}
   for (const [insumo, ml] of Object.entries(acc)) {
     const mlConMargen = Math.ceil(ml * margen)
-    result[insumo] = { ml: mlConMargen, botellas: Math.ceil(mlConMargen / 750) }
+    // Buscar en catálogo (sin importar mayúsculas)
+    const prods = productos.filter(p => p.insumo_base.toLowerCase() === insumo.toLowerCase())
+    const enCatalogo = prods.length > 0
+    const presentaciones: PresentacionEstimada[] = enCatalogo
+      ? [...new Set(prods.map(p => p.ml_por_envase))].sort((a, b) => a - b)
+          .map(ml_envase => ({ ml_envase, botellas: Math.ceil(mlConMargen / ml_envase) }))
+      : []
+    result[insumo] = { ml: mlConMargen, presentaciones, enCatalogo }
   }
   return result
+}
+
+function fmtMl(ml: number): string {
+  return ml >= 1000 ? `${(ml / 1000).toFixed(ml % 1000 === 0 ? 0 : 2)}L` : `${ml}ml`
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
@@ -114,86 +136,98 @@ function Modal({ titulo, onClose, children, wide }: {
 
 // ─── Planificador de compra ───────────────────────────────────────────────────
 
-type Decision = 'nuevo' | 'stock'
-
 function Planificador({
-  compra, evento, stockPorInsumo, onGenerarItems,
+  evento, stockPorInsumo, productos, onGenerarItems,
 }: {
-  compra: CompraCompleta
   evento: EventoConTragos | undefined
   stockPorInsumo: Record<string, { envases: number; ml: number }>
-  onGenerarItems: (items: { insumo: string; botellas: number }[]) => void
+  productos: ProductoConProv[]
+  onGenerarItems: (items: { insumo: string; botellas: number; mlNecesario: number }[]) => void
 }) {
   const insumos = useMemo(
-    () => evento ? calcularInsumosEvento(evento) : {},
-    [evento]
+    () => evento ? calcularInsumosEvento(evento, productos) : {},
+    [evento, productos]
   )
 
-  const [decisiones, setDecisiones] = useState<Record<string, Decision>>(() => {
-    const d: Record<string, Decision> = {}
+  const [usarDelStock, setUsarDelStock] = useState<Record<string, number>>(() =>
+    Object.fromEntries(Object.keys(insumos).map(k => [k, 0]))
+  )
+
+  if (!evento) return (
+    <p className="text-xs text-gray-400 italic py-2">
+      El evento de esta compra no tiene tragos asignados. Configuralos en Eventos.
+    </p>
+  )
+
+  if (Object.keys(insumos).length === 0) return (
+    <p className="text-xs text-gray-400 italic py-2">
+      El evento no tiene tragos con ingredientes definidos.
+    </p>
+  )
+
+  function mlPromedioEnvase(insumo: string): number {
+    const s = stockPorInsumo[insumo]
+    if (!s || s.envases === 0) return 750
+    return s.ml / s.envases
+  }
+
+  function calcMlRestante(insumo: string): number {
+    const est = insumos[insumo]
+    if (!est) return 0
+    const usando = usarDelStock[insumo] ?? 0
+    return Math.max(0, est.ml - usando * mlPromedioEnvase(insumo))
+  }
+
+  function setUsarMax() {
+    const next: Record<string, number> = {}
     for (const insumo of Object.keys(insumos)) {
-      const stockDisp = stockPorInsumo[insumo]?.envases ?? 0
-      d[insumo] = stockDisp > 0 ? 'stock' : 'nuevo'
+      next[insumo] = stockPorInsumo[insumo]?.envases ?? 0
     }
-    return d
-  })
-
-  if (!evento) {
-    return (
-      <p className="text-xs text-gray-400 italic py-2">
-        El evento de esta compra no tiene tragos asignados. Andá a Eventos para configurarlos.
-      </p>
-    )
+    setUsarDelStock(next)
   }
 
-  if (Object.keys(insumos).length === 0) {
-    return (
-      <p className="text-xs text-gray-400 italic py-2">
-        El evento no tiene tragos con ingredientes definidos.
-      </p>
-    )
+  function setUsarNada() {
+    setUsarDelStock(Object.fromEntries(Object.keys(insumos).map(k => [k, 0])))
   }
 
-  function setTodo(d: Decision) {
-    const next: Record<string, Decision> = {}
-    for (const k of Object.keys(decisiones)) next[k] = d
-    setDecisiones(next)
-  }
-
-  function toggle(insumo: string) {
-    setDecisiones(prev => ({ ...prev, [insumo]: prev[insumo] === 'nuevo' ? 'stock' : 'nuevo' }))
-  }
+  const insumosOrdenados = Object.entries(insumos).sort(([a], [b]) => a.localeCompare(b))
+  const insumosSinCatalogo = insumosOrdenados.filter(([, est]) => !est.enCatalogo)
+  const insumosAComprar = insumosOrdenados.filter(([insumo, est]) => est.enCatalogo && calcMlRestante(insumo) > 0)
+  const insumosCubiertos = insumosOrdenados.filter(([insumo, est]) => est.enCatalogo && calcMlRestante(insumo) === 0)
 
   function handleGenerar() {
-    const items = Object.entries(decisiones)
-      .filter(([, d]) => d === 'nuevo')
-      .map(([insumo]) => ({ insumo, botellas: insumos[insumo]?.botellas ?? 1 }))
+    const items = insumosAComprar.map(([insumo, est]) => {
+      const mlRestante = calcMlRestante(insumo)
+      const menorPresent = est.presentaciones[0]!
+      return {
+        insumo,
+        botellas: Math.ceil(mlRestante / menorPresent.ml_envase),
+        mlNecesario: mlRestante,
+      }
+    })
     onGenerarItems(items)
   }
-
-  const cantNuevo = Object.values(decisiones).filter(d => d === 'nuevo').length
-  const cantStock = Object.values(decisiones).filter(d => d === 'stock').length
 
   return (
     <div>
       {/* Botones rápidos */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <button
-          onClick={() => setTodo('nuevo')}
+          onClick={setUsarNada}
           className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
         >
           Todo nuevo
         </button>
         <button
-          onClick={() => setTodo('stock')}
+          onClick={setUsarMax}
           className="text-xs px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium"
         >
-          Todo stock
+          Usar todo el stock disponible
         </button>
         <span className="text-xs text-gray-400 ml-auto">
-          {cantNuevo > 0 && `${cantNuevo} a comprar`}
-          {cantNuevo > 0 && cantStock > 0 && ' · '}
-          {cantStock > 0 && `${cantStock} del stock`}
+          {insumosAComprar.length > 0 && `${insumosAComprar.length} a comprar`}
+          {insumosAComprar.length > 0 && insumosCubiertos.length > 0 && ' · '}
+          {insumosCubiertos.length > 0 && `${insumosCubiertos.length} cubierto${insumosCubiertos.length !== 1 ? 's' : ''} con stock`}
         </span>
       </div>
 
@@ -203,65 +237,91 @@ function Planificador({
           <thead>
             <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wide">
               <th className="text-left px-4 py-2.5 font-medium">Insumo</th>
-              <th className="text-center px-3 py-2.5 font-medium">Estimado</th>
-              <th className="text-center px-3 py-2.5 font-medium">Stock actual</th>
-              <th className="text-center px-3 py-2.5 font-medium">Decisión</th>
+              <th className="text-center px-3 py-2.5 font-medium">Total necesario</th>
+              <th className="text-center px-3 py-2.5 font-medium">Stock disp.</th>
+              <th className="text-center px-3 py-2.5 font-medium">Usar del stock</th>
+              <th className="text-center px-3 py-2.5 font-medium">A comprar</th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(insumos).sort(([a], [b]) => a.localeCompare(b)).map(([insumo, est]) => {
+            {insumosOrdenados.map(([insumo, est]) => {
               const stock = stockPorInsumo[insumo]
-              const decision = decisiones[insumo] ?? 'nuevo'
+              const maxStock = stock?.envases ?? 0
+              const usando = usarDelStock[insumo] ?? 0
+              const mlRestante = calcMlRestante(insumo)
+
               return (
                 <tr key={insumo} className="border-b last:border-0 hover:bg-gray-50">
+                  {/* Insumo */}
                   <td className="px-4 py-3 font-medium text-gray-800">{insumo}</td>
-                  <td className="px-3 py-3 text-center text-gray-600">
-                    <div className="text-xs font-semibold text-gray-700">{(est.ml / 1000).toFixed(1)}L total</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {Math.ceil(est.ml / 750)} bot. 750ml
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {Math.ceil(est.ml / 1000)} bot. 1L
-                    </div>
-                  </td>
+
+                  {/* Total necesario */}
                   <td className="px-3 py-3 text-center">
-                    {stock ? (
-                      <span className={cn(
-                        'font-semibold',
-                        stock.envases > 0 ? 'text-emerald-600' : 'text-gray-400'
-                      )}>
-                        {stock.envases} env.
-                        <div className="text-xs font-normal text-gray-400">{(stock.ml / 1000).toFixed(1)}L</div>
-                      </span>
+                    <div className="text-xs font-semibold text-gray-700">
+                      {(est.ml / 1000).toFixed(1)}L
+                    </div>
+                    {est.enCatalogo ? (
+                      <div className="mt-0.5 space-y-0.5">
+                        {est.presentaciones.map(p => (
+                          <div key={p.ml_envase} className="text-xs text-gray-500">
+                            {p.botellas} bot. {fmtMl(p.ml_envase)}
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <span className="text-gray-300 text-xs">Sin stock</span>
+                      <div className="text-xs text-amber-600 mt-0.5 font-medium">Sin catálogo</div>
                     )}
                   </td>
+
+                  {/* Stock disponible */}
                   <td className="px-3 py-3 text-center">
-                    <div className="flex rounded-lg border overflow-hidden mx-auto w-fit">
-                      <button
-                        onClick={() => setDecisiones(prev => ({ ...prev, [insumo]: 'nuevo' }))}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-medium transition-colors',
-                          decision === 'nuevo'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-500 hover:bg-gray-50'
-                        )}
-                      >
-                        Nuevo
-                      </button>
-                      <button
-                        onClick={() => setDecisiones(prev => ({ ...prev, [insumo]: 'stock' }))}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-medium transition-colors border-l',
-                          decision === 'stock'
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-white text-gray-500 hover:bg-gray-50'
-                        )}
-                      >
-                        Stock
-                      </button>
-                    </div>
+                    {stock && maxStock > 0 ? (
+                      <div>
+                        <span className="font-semibold text-emerald-600">{maxStock} env.</span>
+                        <div className="text-xs text-gray-400">{(stock.ml / 1000).toFixed(1)}L</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
+
+                  {/* Usar del stock */}
+                  <td className="px-3 py-3 text-center">
+                    {maxStock > 0 ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={maxStock}
+                          value={usando}
+                          onChange={e => setUsarDelStock(prev => ({
+                            ...prev,
+                            [insumo]: Math.min(maxStock, Math.max(0, parseInt(e.target.value) || 0)),
+                          }))}
+                          className="w-14 text-center border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                        <span className="text-xs text-gray-400">/ {maxStock}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </td>
+
+                  {/* A comprar */}
+                  <td className="px-3 py-3 text-center">
+                    {!est.enCatalogo ? (
+                      <span className="text-xs text-amber-600 italic">Agregar manual</span>
+                    ) : mlRestante === 0 ? (
+                      <span className="text-xs text-emerald-600 font-medium">Cubierto ✓</span>
+                    ) : (
+                      <div className="space-y-0.5">
+                        {est.presentaciones.map(p => (
+                          <div key={p.ml_envase} className="text-xs font-semibold text-blue-700">
+                            {Math.ceil(mlRestante / p.ml_envase)} bot. {fmtMl(p.ml_envase)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
@@ -270,12 +330,21 @@ function Planificador({
         </table>
       </div>
 
-      {cantNuevo > 0 ? (
+      {/* Aviso de insumos sin catálogo */}
+      {insumosSinCatalogo.length > 0 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+          <strong>{insumosSinCatalogo.map(([k]) => k).join(', ')}</strong>
+          {insumosSinCatalogo.length === 1 ? ' no está' : ' no están'} en el catálogo de Proveedores.
+          Agregalo{insumosSinCatalogo.length !== 1 ? 's' : ''} para ver la estimación de botellas — por ahora tenés que cargarlo manualmente en los items.
+        </div>
+      )}
+
+      {insumosAComprar.length > 0 ? (
         <button
           onClick={handleGenerar}
           className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
         >
-          Pre-cargar {cantNuevo} item{cantNuevo !== 1 ? 's' : ''} para comprar →
+          Pre-cargar {insumosAComprar.length} item{insumosAComprar.length !== 1 ? 's' : ''} para comprar →
         </button>
       ) : (
         <div className="text-center text-sm text-emerald-600 bg-emerald-50 rounded-lg py-2 border border-emerald-200">
@@ -369,19 +438,19 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
 
 // ─── Formulario de Item ───────────────────────────────────────────────────────
 
-function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeridas, onClose }: {
+function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeridas, mlNecesario, onClose }: {
   compraId: string
   inicial?: CompraItem
   productos: ProductoConProv[]
   insumoSugerido?: string
   botellosSugeridas?: number
+  mlNecesario?: number
   onClose: () => void
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Pre-filtrar productos del catálogo que coincidan con el insumo sugerido
   const productosSugeridos = insumoSugerido
     ? productos.filter(p => p.insumo_base.toLowerCase() === insumoSugerido.toLowerCase())
     : productos
@@ -404,6 +473,10 @@ function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeri
     setPresentacion(p.presentacion)
     setMlEnvase(p.ml_por_envase)
     setPrecio(p.precio_lista)
+    // Auto-calcular cantidad basada en ml necesarios
+    if (mlNecesario && mlNecesario > 0 && p.ml_por_envase > 0) {
+      setCantidad(Math.ceil(mlNecesario / p.ml_por_envase))
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -427,11 +500,15 @@ function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeri
       {insumoSugerido && (
         <div className="flex items-center gap-2 text-xs text-blue-700 font-medium mb-1">
           <span className="bg-blue-100 px-2 py-0.5 rounded">{insumoSugerido}</span>
-          {productosSugeridos.length > 0 && <span className="text-blue-400">— {productosSugeridos.length} en catálogo</span>}
+          {mlNecesario && mlNecesario > 0 && (
+            <span className="text-blue-500">— necesitás {(mlNecesario / 1000).toFixed(1)}L</span>
+          )}
+          {productosSugeridos.length > 0 && (
+            <span className="text-blue-400 ml-auto">{productosSugeridos.length} en catálogo</span>
+          )}
         </div>
       )}
 
-      {/* Selector de catálogo */}
       {!inicial && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -520,13 +597,12 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
   const [vista, setVista] = useState<'items' | 'planificador'>('items')
   const [agregandoItem, setAgregandoItem] = useState(false)
   const [editandoItem, setEditandoItem] = useState<CompraItem | null>(null)
-  // Items pre-cargados desde el planificador
-  const [itemsPreCargados, setItemsPreCargados] = useState<{ insumo: string; botellas: number }[]>([])
+  const [itemsPreCargados, setItemsPreCargados] = useState<{ insumo: string; botellas: number; mlNecesario: number }[]>([])
   const [itemPreCargadoIdx, setItemPreCargadoIdx] = useState(0)
 
   const evento = eventosConTragos.find(ev => ev.id === compra.evento_id)
 
-  function handleGenerarItems(items: { insumo: string; botellas: number }[]) {
+  function handleGenerarItems(items: { insumo: string; botellas: number; mlNecesario: number }[]) {
     setItemsPreCargados(items)
     setItemPreCargadoIdx(0)
     setVista('items')
@@ -599,9 +675,9 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
           {/* Vista: Planificador */}
           {vista === 'planificador' && (
             <Planificador
-              compra={compra}
               evento={evento}
               stockPorInsumo={stockPorInsumo}
+              productos={productos}
               onGenerarItems={handleGenerarItems}
             />
           )}
@@ -613,14 +689,14 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
               {itemsPreCargados.length > 0 && itemPreCargadoIdx < itemsPreCargados.length && (
                 <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                   <p className="text-sm font-medium text-amber-800 mb-2">
-                    Completá los detalles de los items pre-cargados
-                    ({itemPreCargadoIdx + 1}/{itemsPreCargados.length}):
+                    Completá los detalles del item ({itemPreCargadoIdx + 1}/{itemsPreCargados.length}):
                   </p>
                   <ItemForm
                     compraId={compra.id}
                     productos={productos}
                     insumoSugerido={itemActualPreCargado.insumo}
                     botellosSugeridas={itemActualPreCargado.botellas}
+                    mlNecesario={itemActualPreCargado.mlNecesario}
                     onClose={() => {
                       if (itemPreCargadoIdx + 1 < itemsPreCargados.length) {
                         setItemPreCargadoIdx(prev => prev + 1)
