@@ -84,8 +84,8 @@ Si no encontrás productos: []`
         })
 
     const mensaje = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
       messages: [
         {
           role: 'user',
@@ -101,7 +101,11 @@ Si no encontrás productos: []`
 
     let productos
     try {
-      const texto = bloque.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+      let texto = bloque.text.trim()
+      // Intentar extraer el array JSON aunque Claude agregue texto extra
+      const match = texto.match(/\[[\s\S]*\]/)
+      if (match) texto = match[0]
+      else texto = texto.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       productos = JSON.parse(texto)
       if (!Array.isArray(productos)) throw new Error('No es un array')
     } catch {
