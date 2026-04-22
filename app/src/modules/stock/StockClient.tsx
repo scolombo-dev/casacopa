@@ -420,15 +420,13 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onVender }: {
                       >
                         <Pencil size={13} />
                       </button>
-                      {lote.cantidad_envases === 0 && (
                         <button
                           onClick={() => onEliminar(lote)}
-                          title="Eliminar lote vacío"
+                          title="Eliminar lote"
                           className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50"
                         >
                           <Trash2 size={13} />
                         </button>
-                      )}
                     </div>
                   </td>
                 </tr>
@@ -640,6 +638,7 @@ export default function StockClient({ stock, productos, eventos }: {
   const [modalSobrante, setModalSobrante] = useState(false)
   const [ajustando, setAjustando] = useState<Lote | null>(null)
   const [eliminando, setEliminando] = useState<Lote | null>(null)
+  const [justificacionElim, setJustificacionElim] = useState('')
   const [verHistorial, setVerHistorial] = useState<Lote | null>(null)
   const [vendiendo, setVendiendo] = useState<Lote | null>(null)
   const [filtro, setFiltro] = useState<'todos' | 'disponible' | 'agotado'>('disponible')
@@ -834,12 +833,10 @@ export default function StockClient({ stock, productos, eventos }: {
                             className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
                             <Pencil size={13} />
                           </button>
-                          {lote.cantidad_envases === 0 && (
-                            <button onClick={() => setEliminando(lote)} title="Eliminar"
-                              className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
-                              <Trash2 size={13} />
-                            </button>
-                          )}
+                          <button onClick={() => setEliminando(lote)} title="Eliminar"
+                            className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -894,25 +891,43 @@ export default function StockClient({ stock, productos, eventos }: {
         </Modal>
       )}
 
-      {/* Modal: Eliminar lote vacío */}
+      {/* Modal: Eliminar lote */}
       {eliminando && (
-        <Modal titulo="Eliminar lote" onClose={() => setEliminando(null)}>
+        <Modal titulo="Eliminar lote" onClose={() => { setEliminando(null); setJustificacionElim('') }}>
           <p className="text-sm text-gray-600 mb-4">
-            ¿Eliminar el lote de <strong>{eliminando.marca}</strong> ({eliminando.ml_por_envase}ml) que está en 0?
+            Vas a eliminar el lote de <strong>{eliminando.marca}</strong> ({eliminando.ml_por_envase}ml)
+            {eliminando.cantidad_envases > 0 && (
+              <span className="block mt-1 text-orange-600 font-medium">
+                Atención: este lote todavía tiene {eliminando.cantidad_envases} envase{eliminando.cantidad_envases !== 1 ? 's' : ''} disponible{eliminando.cantidad_envases !== 1 ? 's' : ''}.
+              </span>
+            )}
           </p>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Justificación <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={justificacionElim}
+              onChange={e => setJustificacionElim(e.target.value)}
+              placeholder="Ej: producto vencido, error de carga, etc."
+              rows={3}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+            />
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => startTransition(async () => {
-                await eliminarLote(eliminando.id)
+                await eliminarLote(eliminando.id, justificacionElim)
                 setEliminando(null)
+                setJustificacionElim('')
                 router.refresh()
               })}
-              disabled={pending}
+              disabled={pending || justificacionElim.trim() === ''}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >
               {pending ? 'Eliminando…' : 'Eliminar'}
             </button>
-            <button onClick={() => setEliminando(null)} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            <button onClick={() => { setEliminando(null); setJustificacionElim('') }} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
               Cancelar
             </button>
           </div>

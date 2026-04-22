@@ -126,10 +126,29 @@ export async function consumirStock(data: {
   return { error: null }
 }
 
-// ─── Eliminar lote (solo si está en 0) ───────────────────────────────────────
+// ─── Eliminar lote ───────────────────────────────────────────────────────────
 
-export async function eliminarLote(id: string) {
+export async function eliminarLote(id: string, justificacion: string) {
   const supabase = createAdminClient()
+
+  const { data: lote, error: fetchError } = await supabase
+    .from('stock')
+    .select('cantidad_envases')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) return { error: fetchError.message }
+
+  if (lote.cantidad_envases > 0) {
+    await supabase.from('movimientos_stock').insert({
+      stock_id: id,
+      tipo: 'ajuste',
+      cantidad: -lote.cantidad_envases,
+      notas: `Eliminación manual: ${justificacion}`,
+      fecha: new Date().toISOString().slice(0, 10),
+    })
+  }
+
   const { error } = await supabase.from('stock').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/stock')
