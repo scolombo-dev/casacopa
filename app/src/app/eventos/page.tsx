@@ -10,7 +10,7 @@ export default async function EventosPage() {
       .select(`
         *,
         propuestas(id, nombre, tipo),
-        evento_tragos(*, recetas(id, nombre_trago, categoria)),
+        evento_tragos(id, receta_id, porcentaje_consumo, cantidad_fija, recetas(id, nombre_trago, categoria)),
         evento_staff(*),
         evento_extras(*),
         compras(id, fecha_compra, proveedor_id, total, notas, compra_items(*))

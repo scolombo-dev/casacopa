@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
 
   const formData = await request.formData()
   const archivo = formData.get('archivo') as File | null
+  const especificaciones = (formData.get('especificaciones') as string | null)?.trim() || ''
   const insumosDeseados = (formData.get('insumos_deseados') as string | null)?.trim() || ''
 
   if (!archivo) {
@@ -36,6 +37,9 @@ export async function POST(request: NextRequest) {
   const bytes = await archivo.arrayBuffer()
   const base64 = Buffer.from(bytes).toString('base64')
 
+  const contexto = especificaciones
+    ? `\n\nCONTEXTO SOBRE ESTA LISTA: ${especificaciones}`
+    : ''
   const filtro = insumosDeseados
     ? `\n\nFILTRO: Solo extraé productos de estos insumos y descartá el resto: ${insumosDeseados}.`
     : ''
@@ -54,7 +58,7 @@ Para cada producto devolvé estos campos:
 Reglas:
 - Ignorá productos que no sean bebidas (vasos, snacks, etc.)
 - Ignorá encabezados, totales y notas que no sean productos
-- Si un precio tiene centavos, redondéalo${filtro}
+- Si un precio tiene centavos, redondéalo${contexto}${filtro}
 
 Respondé ÚNICAMENTE con un JSON array válido, sin texto adicional, sin markdown, sin bloque de código.
 Formato exacto: [{"insumo_base":"Ron","marca":"Havana Club 3 años","presentacion":"750ml","ml_por_envase":750,"precio_lista":8500}]

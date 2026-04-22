@@ -286,6 +286,7 @@ function CargarListaModal({
   const [pending, startTransition] = useTransition()
   const [paso, setPaso] = useState<'upload' | 'preview' | 'guardado'>('upload')
   const [archivo, setArchivo] = useState<File | null>(null)
+  const [especificaciones, setEspecificaciones] = useState('')
   const [insumos, setInsumos] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -310,6 +311,7 @@ function CargarListaModal({
     try {
       const fd = new FormData()
       fd.append('archivo', archivo)
+      if (especificaciones.trim()) fd.append('especificaciones', especificaciones.trim())
       if (insumos.trim()) fd.append('insumos_deseados', insumos.trim())
       const res = await fetch('/api/procesar-lista', { method: 'POST', body: fd })
       const data = await res.json()
@@ -378,10 +380,27 @@ function CargarListaModal({
             />
           </div>
 
-          {/* Filtro opcional */}
+          {/* Especificaciones para la IA */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              ¿Qué insumos necesitás? <span className="text-gray-400 font-normal">(opcional)</span>
+              Especificaciones para la IA <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <textarea
+              rows={3}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              value={especificaciones}
+              onChange={e => setEspecificaciones(e.target.value)}
+              placeholder={'Ej: "Los precios están en la columna derecha, sin IVA. Ignorar productos de la sección Vinos Premium."'}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Contale a la IA algo sobre cómo está organizada la lista para que la lea mejor.
+            </p>
+          </div>
+
+          {/* Filtro de insumos */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              ¿Qué productos buscar? <span className="text-gray-400 font-normal">(opcional)</span>
             </label>
             <input
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -389,7 +408,7 @@ function CargarListaModal({
               onChange={e => setInsumos(e.target.value)}
               placeholder="Ej: Ron, Vodka, Gin, Gaseosa"
             />
-            <p className="text-xs text-gray-400 mt-1">Dejalo vacío para extraer todos los productos de la lista.</p>
+            <p className="text-xs text-gray-400 mt-1">Dejalo vacío para extraer todos los productos. Separalos con comas.</p>
           </div>
 
           {error && <p className="text-red-600 text-sm bg-red-50 rounded-lg p-2">{error}</p>}

@@ -17,7 +17,7 @@ export async function crearEvento(data: {
   estimacion_tragos_pp: number
   margen_seguridad: number
   notas: string
-  receta_ids?: { receta_id: string; porcentaje_consumo: number }[]
+  receta_ids?: { receta_id: string; porcentaje_consumo: number; cantidad_fija?: number | null }[]
 }) {
   const supabase = createAdminClient()
   const { data: evento, error } = await supabase.from('eventos').insert({
@@ -40,6 +40,7 @@ export async function crearEvento(data: {
       evento_id: evento.id,
       receta_id: item.receta_id,
       porcentaje_consumo: item.porcentaje_consumo,
+      cantidad_fija: item.cantidad_fija ?? null,
     }))
     await supabase.from('evento_tragos').insert(rows)
   }
@@ -116,7 +117,7 @@ export async function eliminarEvento(id: string) {
 
 export async function setTragosEvento(
   eventoId: string,
-  recetaIds: { receta_id: string; porcentaje_consumo: number }[]
+  recetaIds: { receta_id: string; porcentaje_consumo: number; cantidad_fija?: number | null }[]
 ) {
   const supabase = createAdminClient()
   await supabase.from('evento_tragos').delete().eq('evento_id', eventoId)
@@ -126,6 +127,7 @@ export async function setTragosEvento(
     evento_id: eventoId,
     receta_id: item.receta_id,
     porcentaje_consumo: item.porcentaje_consumo,
+    cantidad_fija: item.cantidad_fija ?? null,
   }))
   const { error } = await supabase.from('evento_tragos').insert(rows)
   if (error) return { error: error.message }

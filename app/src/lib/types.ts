@@ -121,6 +121,7 @@ export type EventoTrago = {
   evento_id: string
   receta_id: string
   porcentaje_consumo: number
+  cantidad_fija: number | null    // para cerveza: total de unidades, ignora el %
   // Join
   recetas?: Receta
 }

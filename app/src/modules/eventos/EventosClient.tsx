@@ -24,7 +24,7 @@ import {
 
 type RecetaMin = Pick<Receta, 'id' | 'nombre_trago' | 'categoria'>
 
-type EventoTragoConReceta = EventoTrago & { recetas: RecetaMin }
+type EventoTragoConReceta = EventoTrago & { recetas: RecetaMin; cantidad_fija: number | null }
 
 type CompraItem = {
   id: string
@@ -168,25 +168,36 @@ function EventoForm({
   const initialTragos = inicial?.evento_tragos?.map(t => t.receta_id) ?? []
   const [selectedTragos, setSelectedTragos] = useState<string[]>(initialTragos)
 
-  // Porcentajes por trago (receta_id -> %)
+  // IDs de recetas de categoría Cerveza
+  const idsCerveza = new Set(recetas.filter(r => r.categoria === 'Cerveza').map(r => r.id))
+
+  // Porcentajes por trago (receta_id -> %) — solo para tragos que NO son cerveza
   function pctIguales(ids: string[]): Record<string, number> {
-    if (ids.length === 0) return {}
-    const base = parseFloat((100 / ids.length).toFixed(2))
+    const sinCerveza = ids.filter(id => !idsCerveza.has(id))
+    if (sinCerveza.length === 0) return {}
+    const base = parseFloat((100 / sinCerveza.length).toFixed(2))
     const acc: Record<string, number> = {}
-    ids.forEach((id, i) => {
-      acc[id] = i === ids.length - 1
-        ? parseFloat((100 - base * (ids.length - 1)).toFixed(2))
+    sinCerveza.forEach((id, i) => {
+      acc[id] = i === sinCerveza.length - 1
+        ? parseFloat((100 - base * (sinCerveza.length - 1)).toFixed(2))
         : base
     })
     return acc
   }
   const initialPct = inicial?.evento_tragos
-    ? Object.fromEntries(inicial.evento_tragos.map(t => [t.receta_id, t.porcentaje_consumo]))
+    ? Object.fromEntries(inicial.evento_tragos.filter(t => !idsCerveza.has(t.receta_id)).map(t => [t.receta_id, t.porcentaje_consumo]))
     : pctIguales(initialTragos)
   const [pctPorTrago, setPctPorTrago] = useState<Record<string, number>>(initialPct)
 
-  const totalPct = selectedTragos.reduce((s, id) => s + (pctPorTrago[id] ?? 0), 0)
-  const pctValido = Math.abs(totalPct - 100) < 0.1
+  // Cantidad fija para tragos de Cerveza (receta_id -> unidades)
+  const initialCantFija = inicial?.evento_tragos
+    ? Object.fromEntries(inicial.evento_tragos.filter(t => idsCerveza.has(t.receta_id)).map(t => [t.receta_id, t.cantidad_fija ?? 0]))
+    : {}
+  const [cantFijaPorTrago, setCantFijaPorTrago] = useState<Record<string, number>>(initialCantFija)
+
+  const tragosNoCerveza = selectedTragos.filter(id => !idsCerveza.has(id))
+  const totalPct = tragosNoCerveza.reduce((s, id) => s + (pctPorTrago[id] ?? 0), 0)
+  const pctValido = tragosNoCerveza.length === 0 || Math.abs(totalPct - 100) < 0.1
 
   function seleccionarPropuesta(p: Propuesta) {
     setPropuestaId(p.id)
@@ -201,12 +212,15 @@ function EventoForm({
     const ids = recetas.filter(r => cats.includes(r.categoria)).map(r => r.id)
     setSelectedTragos(ids)
     setPctPorTrago(pctIguales(ids))
+    setCantFijaPorTrago({})
   }
 
   function toggleTrago(id: string) {
     setSelectedTragos(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-      setPctPorTrago(pctIguales(next))
+      if (!idsCerveza.has(id)) {
+        setPctPorTrago(pctIguales(next))
+      }
       return next
     })
   }
@@ -225,7 +239,8 @@ function EventoForm({
 
     const tragosConPct = selectedTragos.map(id => ({
       receta_id: id,
-      porcentaje_consumo: pctPorTrago[id] ?? 0,
+      porcentaje_consumo: idsCerveza.has(id) ? 0 : (pctPorTrago[id] ?? 0),
+      cantidad_fija: idsCerveza.has(id) ? (cantFijaPorTrago[id] ?? 0) : null,
     }))
 
     startTransition(async () => {
@@ -473,45 +488,84 @@ function EventoForm({
             })}
           </div>
 
-          {/* Porcentajes de consumo */}
+          {/* Porcentajes de consumo + cantidades fijas de cerveza */}
           {selectedTragos.length > 0 && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-700">Estimación de consumo por trago</p>
-                <span className={cn(
-                  'text-xs font-semibold px-2 py-0.5 rounded-full',
-                  pctValido ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-                )}>
-                  {totalPct.toFixed(0)}% / 100%
-                </span>
-              </div>
-              <div className="space-y-2">
-                {selectedTragos.map(id => {
-                  const receta = recetas.find(r => r.id === id)
-                  if (!receta) return null
-                  return (
-                    <div key={id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-sm text-gray-700 flex-1">{receta.nombre_trago}</span>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={pctPorTrago[id] ?? 0}
-                          onChange={e => cambiarPct(id, parseFloat(e.target.value) || 0)}
-                          className="w-16 text-right border border-gray-300 rounded px-2 py-1 text-sm"
-                        />
-                        <span className="text-sm text-gray-400">%</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              {!pctValido && (
-                <p className="text-xs text-red-500 mt-1.5">
-                  La suma debe ser exactamente 100%. Diferencia: {(totalPct - 100).toFixed(1)}%
-                </p>
+            <div className="mt-4 space-y-3">
+              {/* Tragos normales — porcentaje */}
+              {tragosNoCerveza.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-gray-700">Estimación de consumo por trago</p>
+                    <span className={cn(
+                      'text-xs font-semibold px-2 py-0.5 rounded-full',
+                      pctValido ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                    )}>
+                      {totalPct.toFixed(0)}% / 100%
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {tragosNoCerveza.map(id => {
+                      const receta = recetas.find(r => r.id === id)
+                      if (!receta) return null
+                      return (
+                        <div key={id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                          <span className="text-sm text-gray-700 flex-1">{receta.nombre_trago}</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={pctPorTrago[id] ?? 0}
+                              onChange={e => cambiarPct(id, parseFloat(e.target.value) || 0)}
+                              className="w-16 text-right border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                            <span className="text-sm text-gray-400">%</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {!pctValido && (
+                    <p className="text-xs text-red-500 mt-1.5">
+                      La suma debe ser exactamente 100%. Diferencia: {(totalPct - 100).toFixed(1)}%
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Cervezas — cantidad fija */}
+              {selectedTragos.filter(id => idsCerveza.has(id)).length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Cervezas — cantidad total estimada para la noche
+                  </p>
+                  <div className="space-y-2">
+                    {selectedTragos.filter(id => idsCerveza.has(id)).map(id => {
+                      const receta = recetas.find(r => r.id === id)
+                      if (!receta) return null
+                      return (
+                        <div key={id} className="flex items-center gap-3 bg-emerald-50 rounded-lg px-3 py-2">
+                          <span className="text-sm text-gray-700 flex-1">{receta.nombre_trago}</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={cantFijaPorTrago[id] ?? 0}
+                              onChange={e => setCantFijaPorTrago(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
+                              className="w-20 text-right border border-emerald-300 rounded px-2 py-1 text-sm"
+                            />
+                            <span className="text-sm text-gray-500">unidades</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Ingresá cuántas cervezas estimás que se consumen en total (independiente de los tragos por persona).
+                  </p>
+                </div>
               )}
             </div>
           )}

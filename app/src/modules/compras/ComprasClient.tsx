@@ -27,6 +27,7 @@ type EventoConTragos = {
   margen_seguridad: number
   evento_tragos: {
     porcentaje_consumo: number
+    cantidad_fija: number | null
     recetas: {
       receta_ingredientes: { insumo_base: string; ml_por_trago: number }[]
     } | {
@@ -86,8 +87,9 @@ function calcularInsumosEvento(
     if (!et.recetas) continue
     const receta = Array.isArray(et.recetas) ? et.recetas[0] : et.recetas
     if (!receta) continue
-    const pct = et.porcentaje_consumo / 100
-    const tragosDeEsteTrago = ev.cantidad_personas * ev.estimacion_tragos_pp * pct
+    const tragosDeEsteTrago = et.cantidad_fija != null
+      ? et.cantidad_fija
+      : ev.cantidad_personas * ev.estimacion_tragos_pp * (et.porcentaje_consumo / 100)
     for (const ing of receta.receta_ingredientes) {
       acc[ing.insumo_base] = (acc[ing.insumo_base] ?? 0) + tragosDeEsteTrago * ing.ml_por_trago
     }

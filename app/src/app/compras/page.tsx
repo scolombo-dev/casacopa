@@ -24,6 +24,7 @@ export default async function ComprasPage() {
         cantidad_personas, estimacion_tragos_pp, margen_seguridad,
         evento_tragos(
           porcentaje_consumo,
+          cantidad_fija,
           recetas(receta_ingredientes(insumo_base, ml_por_trago))
         )
       `)
