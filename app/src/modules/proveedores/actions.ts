@@ -69,6 +69,8 @@ export async function crearProducto(data: {
   presentacion: string
   ml_por_envase: number
   precio_lista: number
+  unidades_por_pack?: number
+  precio_pack?: number | null
 }) {
   const supabase = createAdminClient()
   const { error } = await supabase.from('productos').insert({
@@ -78,6 +80,8 @@ export async function crearProducto(data: {
     presentacion: data.presentacion.trim(),
     ml_por_envase: data.ml_por_envase,
     precio_lista: data.precio_lista,
+    unidades_por_pack: data.unidades_por_pack ?? 1,
+    precio_pack: data.precio_pack ?? null,
     fecha_actualizacion: new Date().toISOString().split('T')[0],
   })
   if (error) return { error: error.message }
@@ -93,6 +97,8 @@ export async function editarProducto(
     presentacion: string
     ml_por_envase: number
     precio_lista: number
+    unidades_por_pack?: number
+    precio_pack?: number | null
   }
 ) {
   const supabase = createAdminClient()
@@ -104,6 +110,8 @@ export async function editarProducto(
       presentacion: data.presentacion.trim(),
       ml_por_envase: data.ml_por_envase,
       precio_lista: data.precio_lista,
+      unidades_por_pack: data.unidades_por_pack ?? 1,
+      precio_pack: data.precio_pack ?? null,
       fecha_actualizacion: new Date().toISOString().split('T')[0],
     })
     .eq('id', id)
@@ -120,6 +128,8 @@ export async function guardarProductosBatch(
     presentacion: string
     ml_por_envase: number
     precio_lista: number
+    unidades_por_pack?: number
+    precio_pack?: number | null
   }>
 ) {
   if (productos.length === 0) return { error: null, guardados: 0 }
@@ -132,6 +142,8 @@ export async function guardarProductosBatch(
     presentacion: p.presentacion.trim(),
     ml_por_envase: p.ml_por_envase,
     precio_lista: p.precio_lista,
+    unidades_por_pack: p.unidades_por_pack ?? 1,
+    precio_pack: p.precio_pack ?? null,
     fecha_actualizacion: fecha,
   }))
   const { error, data } = await supabase.from('productos').insert(registros).select()

@@ -161,14 +161,29 @@ function ProductoForm({
   const [presentacion, setPresentacion] = useState(inicial?.presentacion ?? '')
   const [ml, setMl] = useState(String(inicial?.ml_por_envase ?? ''))
   const [precio, setPrecio] = useState(String(inicial?.precio_lista ?? ''))
+  const [esPack, setEsPack] = useState((inicial?.unidades_por_pack ?? 1) > 1)
+  const [unidadesPack, setUnidadesPack] = useState(String(inicial?.unidades_por_pack && inicial.unidades_por_pack > 1 ? inicial.unidades_por_pack : ''))
+  const [precioPack, setPrecioPack] = useState(String(inicial?.precio_pack ?? ''))
+
+  const precioUnitarioCalculado = esPack && Number(precioPack) > 0 && Number(unidadesPack) > 1
+    ? Math.round(Number(precioPack) / Number(unidadesPack))
+    : null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!insumoBase.trim()) { setError('El insumo es obligatorio'); return }
     if (!marca.trim()) { setError('La marca es obligatoria'); return }
     if (!ml || Number(ml) <= 0) { setError('Los ml deben ser mayores a 0'); return }
-    if (!precio || Number(precio) <= 0) { setError('El precio debe ser mayor a 0'); return }
+    if (esPack) {
+      if (!unidadesPack || Number(unidadesPack) < 2) { setError('El pack debe tener al menos 2 unidades'); return }
+      if (!precioPack || Number(precioPack) <= 0) { setError('El precio del pack debe ser mayor a 0'); return }
+    } else {
+      if (!precio || Number(precio) <= 0) { setError('El precio debe ser mayor a 0'); return }
+    }
     setError(null)
+    const precioUnitario = esPack
+      ? Math.round(Number(precioPack) / Number(unidadesPack))
+      : Number(precio)
     startTransition(async () => {
       const data = {
         insumo_base: insumoBase,
@@ -176,7 +191,9 @@ function ProductoForm({
         proveedor_id: proveedorId,
         presentacion,
         ml_por_envase: Number(ml),
-        precio_lista: Number(precio),
+        precio_lista: precioUnitario,
+        unidades_por_pack: esPack ? Number(unidadesPack) : 1,
+        precio_pack: esPack ? Number(precioPack) : null,
       }
       const result = inicial
         ? await editarProducto(inicial.id, data)
@@ -234,17 +251,69 @@ function ProductoForm({
           />
         </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Precio de lista (ARS) *</label>
+
+      {/* Toggle pack */}
+      <label className="flex items-center gap-2 cursor-pointer select-none">
         <input
-          type="number"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={precio}
-          onChange={e => setPrecio(e.target.value)}
-          placeholder="8500"
-          min={1}
+          type="checkbox"
+          checked={esPack}
+          onChange={e => {
+            setEsPack(e.target.checked)
+            if (!e.target.checked) { setUnidadesPack(''); setPrecioPack('') }
+          }}
+          className="rounded"
         />
-      </div>
+        <span className="text-sm font-medium">Se vende en pack / caja</span>
+      </label>
+
+      {esPack ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Unidades en el pack *</label>
+              <input
+                type="number"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                value={unidadesPack}
+                onChange={e => setUnidadesPack(e.target.value)}
+                placeholder="Ej: 24"
+                min={2}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Precio del pack (ARS) *</label>
+              <input
+                type="number"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                value={precioPack}
+                onChange={e => setPrecioPack(e.target.value)}
+                placeholder="Ej: 14400"
+                min={1}
+              />
+            </div>
+          </div>
+          {precioUnitarioCalculado !== null && (
+            <p className="text-sm text-amber-800">
+              Precio por unidad (calculado):{' '}
+              <span className="font-semibold">{formatARS(precioUnitarioCalculado)}</span>
+              {' '}— este es el precio que se guardará en la base de datos.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium mb-1">Precio de lista (ARS) *</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={precio}
+            onChange={e => setPrecio(e.target.value)}
+            placeholder="8500"
+            min={1}
+          />
+        </div>
+      )}
+
       {error && <p className="text-red-600 text-sm">{error}</p>}
       <div className="flex gap-3 pt-1">
         <button
@@ -269,6 +338,8 @@ type ProductoExtraido = {
   marca: string
   presentacion: string
   ml_por_envase: number
+  unidades_por_pack: number
+  precio_pack: number | null
   precio_lista: number
   seleccionado: boolean
 }
@@ -455,21 +526,36 @@ function CargarListaModal({
 
           <div className="overflow-y-auto max-h-64 border rounded-lg divide-y text-sm">
             {productos.map((p, i) => (
-              <label key={i} className={cn('flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50', p.seleccionado ? 'bg-white' : 'bg-gray-50 opacity-60')}>
+              <label key={i} className={cn('flex items-start gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50', p.seleccionado ? 'bg-white' : 'bg-gray-50 opacity-60')}>
                 <input
                   type="checkbox"
                   checked={p.seleccionado}
                   onChange={() => toggleProducto(i)}
-                  className="rounded"
+                  className="rounded mt-0.5"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{p.insumo_base}</span>
                     <span className="font-medium truncate">{p.marca}</span>
                     <span className="text-gray-400 text-xs">{p.presentacion}</span>
+                    {p.unidades_por_pack > 1 && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                        Pack x{p.unidades_por_pack}
+                      </span>
+                    )}
                   </div>
+                  {p.unidades_por_pack > 1 && p.precio_pack && (
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Pack: {formatARS(p.precio_pack)} · Por unidad: {formatARS(p.precio_lista)}
+                    </p>
+                  )}
                 </div>
-                <span className="text-gray-700 font-medium whitespace-nowrap">{formatARS(p.precio_lista)}</span>
+                <div className="text-right whitespace-nowrap">
+                  <span className="text-gray-700 font-medium">{formatARS(p.precio_lista)}</span>
+                  {p.unidades_por_pack > 1 && (
+                    <p className="text-xs text-gray-400">por unidad</p>
+                  )}
+                </div>
               </label>
             ))}
           </div>
@@ -524,6 +610,8 @@ function ProductoRow({
   const vencido = precioVencido(producto.fecha_actualizacion)
   const pml = precioPorMl(producto.precio_lista, producto.ml_por_envase)
 
+  const esPack = producto.unidades_por_pack > 1
+
   return (
     <div className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-50 group">
       <div className="flex-1 min-w-0">
@@ -535,11 +623,22 @@ function ProductoRow({
           {producto.presentacion && (
             <span className="text-xs text-gray-400">{producto.presentacion}</span>
           )}
+          {esPack && (
+            <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+              Pack x{producto.unidades_por_pack}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3 mt-0.5">
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-sm font-semibold text-gray-900">
             {formatARS(producto.precio_lista)}
+            {esPack && <span className="font-normal text-gray-500 text-xs"> /unidad</span>}
           </span>
+          {esPack && producto.precio_pack && (
+            <span className="text-xs text-amber-600 font-medium">
+              Pack: {formatARS(producto.precio_pack)}
+            </span>
+          )}
           <span className="text-xs text-gray-400">
             ${pml.toFixed(1)}/ml
           </span>
@@ -749,18 +848,32 @@ function ComparadorPrecios({ productos }: { productos: ProductoConProveedor[] })
               {filtrados.map((p, i) => (
                 <tr key={p.id} className={i === 0 ? 'bg-green-50' : ''}>
                   <td className="py-2.5 pr-4 font-medium">
-                    {p.marca}
-                    {i === 0 && (
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                        más barato
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {p.marca}
+                      {i === 0 && (
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                          más barato
+                        </span>
+                      )}
+                      {p.unidades_por_pack > 1 && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                          Pack x{p.unidades_por_pack}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2.5 pr-4 text-gray-500">
                     {p.proveedores?.nombre ?? '—'}
                   </td>
                   <td className="py-2.5 pr-4 text-gray-500">{p.presentacion}</td>
-                  <td className="py-2.5 pr-4 text-right">{formatARS(p.precio_lista)}</td>
+                  <td className="py-2.5 pr-4 text-right">
+                    <span>{formatARS(p.precio_lista)}</span>
+                    {p.unidades_por_pack > 1 && p.precio_pack && (
+                      <p className="text-xs text-amber-600 whitespace-nowrap">
+                        Pack: {formatARS(p.precio_pack)}
+                      </p>
+                    )}
+                  </td>
                   <td className={cn(
                     'py-2.5 pr-4 text-right font-semibold',
                     i === 0 ? 'text-green-700' : 'text-gray-900'

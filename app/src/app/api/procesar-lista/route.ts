@@ -51,9 +51,16 @@ Analizá esta lista de precios y extraé TODOS los productos que encuentres.
 Para cada producto devolvé estos campos:
 - insumo_base: categoría genérica. Usá siempre una de estas: Ron, Vodka, Gin, Fernet, Whisky, Tequila, Champagne, Cerveza, Vino Tinto, Vino Blanco, Gaseosa, Agua Tónica, Agua con Gas, Agua, Jugo de Limón, Jugo de Naranja, Energizante, Aperitivo, Licor, Sidra. Si no encaja en ninguna, usá la más apropiada.
 - marca: nombre completo incluyendo variedad (ej: "Havana Club 3 años", "Fernet Branca", "Coca Cola", "Smirnoff 21")
-- presentacion: formato del envase tal como aparece en la lista (ej: "750ml", "1L", "330ml", "2.25L", "caja x12")
-- ml_por_envase: cantidad en mililitros como número entero. Si el formato es "750ml" → 750. Si es "1L" → 1000. Si es "330cc" → 330. Si no podés determinarlo, poné el estándar del producto.
-- precio_lista: precio en pesos argentinos como número entero sin puntos ni comas ni símbolo $. Ej: si dice "$8.500" → 8500. Si dice "$ 16.500,00" → 16500. Si hay precio unitario y precio por caja, usá siempre el precio UNITARIO.
+- presentacion: formato del envase INDIVIDUAL tal como aparece en la lista (ej: "750ml", "1L", "330ml", "2.25L"). Si el producto se vende en caja/pack, indicá el formato de la unidad, no de la caja (ej: "330ml", no "caja x24").
+- ml_por_envase: cantidad en mililitros de CADA ENVASE INDIVIDUAL como número entero. Si el formato es "750ml" → 750. Si es "1L" → 1000. Si es "330cc" → 330. Si no podés determinarlo, poné el estándar del producto.
+- unidades_por_pack: si el producto se vende en caja o pack de más de una unidad, indicá cuántas unidades trae. Si se vende por unidad suelta, poné 1.
+- precio_pack: si el producto se vende en pack/caja (unidades_por_pack > 1), poné el precio del pack completo en pesos argentinos como número entero. Si se vende por unidad, poné null.
+- precio_lista: precio POR UNIDAD en pesos argentinos como número entero sin puntos ni comas ni símbolo $. Si se vende por unidad: es el precio directo. Si se vende en pack/caja: calculalo dividiendo precio_pack por unidades_por_pack y redondéalo al entero más cercano.
+
+Ejemplos:
+- Vodka Smirnoff 750ml a $9.500 la unidad → unidades_por_pack:1, precio_pack:null, precio_lista:9500
+- Cerveza Brahma 354ml, caja x24 a $14.400 → unidades_por_pack:24, precio_pack:14400, precio_lista:600
+- Coca Cola 2.25L, pack x6 a $12.000 → unidades_por_pack:6, precio_pack:12000, precio_lista:2000
 
 Reglas:
 - Ignorá productos que no sean bebidas (vasos, snacks, etc.)
@@ -61,7 +68,7 @@ Reglas:
 - Si un precio tiene centavos, redondéalo${contexto}${filtro}
 
 Respondé ÚNICAMENTE con un JSON array válido, sin texto adicional, sin markdown, sin bloque de código.
-Formato exacto: [{"insumo_base":"Ron","marca":"Havana Club 3 años","presentacion":"750ml","ml_por_envase":750,"precio_lista":8500}]
+Formato exacto: [{"insumo_base":"Ron","marca":"Havana Club 3 años","presentacion":"750ml","ml_por_envase":750,"unidades_por_pack":1,"precio_pack":null,"precio_lista":8500}]
 Si no encontrás productos: []`
 
   try {

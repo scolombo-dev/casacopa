@@ -20,7 +20,9 @@ export type Producto = {
   proveedor_id: string
   presentacion: string
   ml_por_envase: number
-  precio_lista: number
+  precio_lista: number          // precio POR UNIDAD siempre
+  unidades_por_pack: number     // 1 = se vende por unidad, >1 = pack
+  precio_pack: number | null    // precio del pack completo (null si unidades_por_pack = 1)
   fecha_actualizacion: string
   activo: boolean
   creado_en: string
