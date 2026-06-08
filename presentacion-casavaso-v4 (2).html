@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Vaso — Presentación</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Great+Vibes&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bordo:#5C0A0A;--bordo-dk:#3a0606;
+  --dorado:#C9A961;--crema:#F5EDE0;--crema7:rgba(245,237,224,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a0202;font-family:'DM Sans',sans-serif}
+
+/* ─── SLIDE ENGINE ─── */
+.deck{width:100%;height:100%;position:relative}
+.slide{
+  position:absolute;inset:0;opacity:0;pointer-events:none;
+  transition:opacity .45s ease,transform .45s ease;
+  transform:translateY(16px);
+  background:linear-gradient(140deg,var(--bordo) 0%,var(--bordo-dk) 100%);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateY(0)}
+
+/* ─── NAV BAR ─── */
+#nav{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;z-index:9999;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(14px);
+  border:1px solid rgba(201,169,97,.25);border-radius:40px;padding:7px 14px;
+}
+.nbtn{width:30px;height:30px;border-radius:50%;border:1px solid rgba(201,169,97,.3);
+  background:none;color:var(--dorado);cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s}
+.nbtn:hover{background:var(--dorado);color:var(--bordo)}
+#ctr{font-size:11px;color:rgba(201,169,97,.65);min-width:44px;text-align:center;font-family:'DM Sans',sans-serif}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(201,169,97,.25);cursor:pointer;transition:all .2s}
+.dot.active{background:var(--dorado);width:16px;border-radius:3px}
+
+/* ─── EDIT HINT ─── */
+#hint{position:fixed;top:14px;right:14px;z-index:9999;font-size:11px;
+  color:rgba(201,169,97,.5);background:rgba(0,0,0,.35);
+  border:1px solid rgba(201,169,97,.15);border-radius:5px;padding:4px 9px;pointer-events:none}
+
+/* ─── EDITABLE ─── */
+[contenteditable]{outline:none;cursor:text;border-radius:2px;
+  border-bottom:1px dashed transparent;transition:border-color .15s}
+[contenteditable]:hover{border-bottom:1px dashed rgba(201,169,97,.4)}
+[contenteditable]:focus{border-bottom:1px dashed var(--dorado);background:rgba(201,169,97,.07)}
+
+/* ─── SHARED ─── */
+.sep{font-size:11px;letter-spacing:.35em;color:var(--dorado);font-family:'DM Sans',sans-serif}
+.glass{background:rgba(10,0,0,.4);backdrop-filter:blur(10px);border:1px solid rgba(201,169,97,.18);border-radius:4px}
+.script{font-family:'Great Vibes',cursive;color:var(--dorado)}
+.serif{font-family:'Cormorant Garamond',serif}
+
+/* ═══════════════════════════════
+   SLIDE 1 — HERO
+═══════════════════════════════ */
+#s1{display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+#s1 .bg-img{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2000')center/cover;opacity:.15}
+#s1 .bg-grad{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,var(--bordo-dk)100%)}
+#s1 .content{position:relative;z-index:1;padding:0 5%}
+#s1 h1{font-family:'Great Vibes',cursive;font-size:clamp(64px,10vw,130px);color:var(--dorado);line-height:1}
+#s1 .subtitle{font-family:'Cormorant Garamond',serif;font-size:clamp(16px,2.5vw,30px);letter-spacing:.5em;text-transform:uppercase;color:var(--crema);font-weight:300;margin:14px 0}
+#s1 .tagline{font-family:'Cormorant Garamond',serif;font-size:clamp(14px,1.6vw,20px);font-style:italic;color:var(--crema7);max-width:520px}
+#s1 .loc{font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--dorado);margin-top:22px;opacity:.75}
+#s1 .line{width:50px;height:1px;background:var(--dorado);margin:18px auto;opacity:.45}
+
+/* ═══════════════════════════════
+   SLIDE 2 — NOSOTROS
+═══════════════════════════════ */
+#s2{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden}
+#s2 .col{padding:60px 5%}
+#s2 .col-l{display:flex;flex-direction:column;justify-content:center;border-right:1px solid rgba(201,169,97,.15)}
+#s2 .col-l h2{font-family:'Great Vibes',cursive;font-size:clamp(44px,6vw,80px);color:var(--dorado);line-height:1;margin:10px 0}
+#s2 .col-l p{font-family:'Cormorant Garamond',serif;font-size:clamp(15px,1.5vw,19px);color:var(--crema7);line-height:1.85;margin-bottom:10px}
+#s2 .col-r{display:flex;flex-direction:column;justify-content:center;gap:20px}
+#s2 .pillar{display:flex;gap:14px;align-items:flex-start;padding:14px;background:rgba(10,0,0,.35);border:1px solid rgba(201,169,97,.14);border-radius:4px}
+#s2 .pnum{font-family:'Cormorant Garamond',serif;font-size:52px;color:var(--dorado);opacity:.25;line-height:1;min-width:42px}
+#s2 .pbody h3{font-family:'Cormorant Garamond',serif;font-size:clamp(14px,1.4vw,18px);color:var(--dorado);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+#s2 .pbody p{font-size:clamp(11px,1vw,13px);color:var(--crema7);line-height:1.65}
+
+/* ═══════════════════════════════
+   SLIDES 3-5 — BARRAS
+═══════════════════════════════ */
+.sbarra{display:flex;flex-direction:column;overflow:hidden;padding:44px 6%}
+.bh{display:flex;justify-content:space-between;align-items:flex-end;
+  border-bottom:1px solid rgba(201,169,97,.18);padding-bottom:16px;margin-bottom:24px;flex-wrap:wrap;gap:10px}
+.bh h2{font-family:'Great Vibes',cursive;font-size:clamp(40px,6vw,74px);color:var(--dorado)}
+.bh .pr{text-align:right}
+.bh .pr-lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dorado)}
+.bh .pr-val{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,3vw,44px);color:var(--crema);font-weight:300}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;flex:1}
+.dcard{padding:13px 15px;background:rgba(10,0,0,.38);border:1px solid rgba(201,169,97,.16);border-radius:4px;transition:transform .2s}
+.dcard:hover{transform:translateY(-2px)}
+.dcard .dn{font-family:'Cormorant Garamond',serif;font-size:clamp(13px,1.3vw,17px);color:var(--dorado);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.dcard .di{font-size:clamp(10px,.9vw,12px);color:var(--crema7);margin-top:4px;line-height:1.5}
+.dcard .dm{font-size:10px;color:rgba(201,169,97,.4);margin-top:5px}
+.incl{font-size:11px;color:rgba(201,169,97,.6);font-style:italic;margin-bottom:14px}
+
+/* ═══════════════════════════════
+   SLIDE 6 — VINOS
+═══════════════════════════════ */
+#s6{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+#s6 .vcol{padding:48px 5%;overflow:hidden;display:flex;flex-direction:column}
+#s6 .vcol:first-child{border-right:1px solid rgba(201,169,97,.15)}
+#s6 h2{font-family:'Great Vibes',cursive;font-size:clamp(34px,4.5vw,58px);color:var(--dorado);margin:8px 0 16px}
+#s6 .sec{font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--dorado);opacity:.65;margin:16px 0 8px}
+#s6 .pi{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(201,169,97,.1)}
+#s6 .pi:last-child{border:none}
+#s6 .pn{font-family:'Cormorant Garamond',serif;font-size:clamp(14px,1.4vw,17px);color:var(--crema)}
+#s6 .ps{font-size:10px;color:rgba(245,237,224,.35);display:block;margin-top:2px}
+#s6 .pp{font-family:'Cormorant Garamond',serif;font-size:clamp(13px,1.3vw,16px);color:var(--dorado);white-space:nowrap;margin-left:10px}
+
+/* ═══════════════════════════════
+   SLIDE 7 — CALCULADORA
+   Arquitectura nueva: sin scroll anidado
+═══════════════════════════════ */
+#s7{
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+/* Header fijo */
+#calc-hdr{
+  flex-shrink:0;
+  background:rgba(0,0,0,.65);
+  border-bottom:1px solid rgba(201,169,97,.2);
+  padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+#calc-hdr .title{font-family:'Great Vibes',cursive;font-size:30px;color:var(--dorado)}
+.calc-pills{display:flex;gap:5px;flex-wrap:wrap}
+.cpill{padding:4px 13px;font-size:11px;border:1px solid rgba(201,169,97,.3);background:none;
+  color:var(--dorado);border-radius:20px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.cpill:hover{background:rgba(201,169,97,.12)}
+.cpill.on{background:var(--dorado);color:var(--bordo);font-weight:500;border-color:var(--dorado)}
+
+/* Área que ocupa el resto de la altura */
+#calc-main{
+  flex:1;min-height:0; /* crucial para que flex no desborde */
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* Panel desplegable (ocupa espacio propio, empuja contenido abajo) */
+#calc-panel{
+  flex-shrink:0;
+  display:none;
+  border-bottom:1px solid rgba(201,169,97,.18);
+  background:rgba(0,0,0,.5);
+  max-height:42vh;
+  overflow-y:auto;
+  padding:14px 20px;
+}
+#calc-panel.show{display:block}
+#calc-panel::-webkit-scrollbar{width:5px}
+#calc-panel::-webkit-scrollbar-thumb{background:var(--dorado);border-radius:3px}
+
+/* Contenido scrollable de la calc */
+#calc-scroll{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  padding:14px 20px 80px;
+}
+#calc-scroll::-webkit-scrollbar{width:5px}
+#calc-scroll::-webkit-scrollbar-thumb{background:var(--dorado);border-radius:3px}
+
+/* Panel inner tabs */
+.ptabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.ptab{padding:4px 12px;font-size:11px;border:1px solid rgba(201,169,97,.25);border-radius:4px;
+  cursor:pointer;color:rgba(245,237,224,.55);background:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+.ptab:hover{color:var(--dorado);border-color:var(--dorado)}
+.ptab.on{background:var(--dorado);color:var(--bordo);border-color:var(--dorado)}
+
+/* Controls */
+.cc-box{border:1px solid rgba(201,169,97,.15);border-radius:8px;padding:11px 14px;margin-bottom:10px;background:rgba(0,0,0,.2)}
+.cc-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.cc-row:last-child{margin-bottom:0}
+.cc-lbl{font-size:11px;color:rgba(245,237,224,.55);width:148px;flex-shrink:0}
+.cbtng{display:flex;gap:4px}
+.cbtn{padding:5px 12px;font-size:11px;border:1px solid rgba(201,169,97,.22);background:none;
+  color:rgba(245,237,224,.55);border-radius:5px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.cbtn:hover{border-color:var(--dorado);color:var(--dorado)}
+.cbtn.on{background:var(--dorado);color:var(--bordo);border-color:var(--dorado)}
+
+/* Bar tabs */
+.btabs{display:flex;border-bottom:1px solid rgba(201,169,97,.18);margin-bottom:11px}
+.btab{padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;
+  color:rgba(245,237,224,.45);background:none;border-top:none;border-left:none;border-right:none;
+  font-family:'DM Sans',sans-serif;transition:all .15s}
+.btab:hover{color:var(--dorado)}
+.btab.on{color:var(--dorado);border-bottom:2px solid var(--dorado)}
+
+/* Summary cards */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:11px}
+.sc{background:rgba(0,0,0,.4);border:1px solid rgba(201,169,97,.14);border-radius:7px;padding:10px 12px}
+.sc-l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:rgba(245,237,224,.45);margin-bottom:3px}
+.sc-v{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--crema)}
+.sc-v.g{color:#6aab8a}.sc-v.a{color:#e09a3a}
+.sc-s{font-size:10px;color:rgba(245,237,224,.3);margin-top:2px}
+
+/* Table */
+.tw{overflow-x:auto;border:1px solid rgba(201,169,97,.14);border-radius:7px}
+.ctbl{width:100%;border-collapse:collapse;font-size:12px;font-family:'DM Sans',sans-serif;min-width:480px}
+.ctbl th{text-align:left;padding:7px 10px;font-size:10px;font-weight:500;
+  color:rgba(245,237,224,.4);border-bottom:1px solid rgba(201,169,97,.14);
+  text-transform:uppercase;letter-spacing:.04em;background:rgba(0,0,0,.3)}
+.ctbl td{padding:7px 10px;border-bottom:1px solid rgba(201,169,97,.07);color:var(--crema);vertical-align:middle}
+.ctbl tr:last-child td{border-bottom:none}
+.ctbl tr:hover td{background:rgba(201,169,97,.04)}
+.ttr td{font-weight:600;background:rgba(0,0,0,.3);color:var(--dorado)}
+.bp{background:rgba(224,154,58,.2);color:#e09a3a;font-size:10px;padding:2px 6px;border-radius:3px}
+.alcd{color:var(--dorado);font-size:8px;margin-right:2px}
+.mixd{color:#6aab8a;font-size:8px;margin-right:2px}
+
+/* Recipe cards */
+.rcrd{border:1px solid rgba(201,169,97,.14);border-radius:7px;padding:11px 13px;margin-bottom:8px;background:rgba(0,0,0,.2)}
+.rcrd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:4px}
+.rcrd-n{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--dorado)}
+.rcrd-s{font-size:11px;color:rgba(245,237,224,.45)}
+.iring{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(201,169,97,.07)}
+.iring:last-child{border:none}
+.iring-k{font-size:11px;width:145px;flex-shrink:0;color:rgba(245,237,224,.8)}
+.iring-i{width:56px;font-size:12px;padding:3px 6px;border:1px solid rgba(201,169,97,.2);
+  border-radius:4px;background:rgba(0,0,0,.3);color:var(--crema);text-align:right}
+.iring-i:focus{outline:none;border-color:var(--dorado)}
+.iring-u{font-size:10px;color:rgba(245,237,224,.3);width:16px}
+.bbar{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;min-width:30px}
+.bfil{height:100%;border-radius:3px}
+.bfil.a{background:var(--dorado)}.bfil.m{background:#6aab8a}
+.bpct{font-size:11px;color:rgba(245,237,224,.4);width:30px;text-align:right}
+
+/* Dist */
+.dg-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;
+  color:rgba(245,237,224,.4);padding:8px 0 3px;border-bottom:1px solid rgba(201,169,97,.14);margin-bottom:3px}
+.drow{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(201,169,97,.06)}
+.drow-n{font-size:12px;width:158px;flex-shrink:0;color:rgba(245,237,224,.8)}
+.drow-i{width:50px;font-size:12px;padding:3px 5px;border:1px solid rgba(201,169,97,.2);
+  border-radius:4px;background:rgba(0,0,0,.3);color:var(--crema);text-align:right}
+.drow-i:focus{outline:none;border-color:var(--dorado)}
+.drow-u{font-size:10px;color:rgba(245,237,224,.35);width:22px}
+.dbbar{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.dbfil{height:100%;background:var(--dorado);border-radius:3px}
+.dpct{font-size:12px;font-weight:500;width:44px;text-align:right;color:var(--dorado)}
+.dtot{font-size:11px;color:rgba(245,237,224,.4);text-align:right;padding-top:8px;
+  border-top:1px solid rgba(201,169,97,.14);margin-top:5px}
+
+/* Price editor */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+.pcat{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;
+  color:rgba(245,237,224,.4);padding:8px 0 3px;border-bottom:1px solid rgba(201,169,97,.14);margin-bottom:3px}
+.prow{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(201,169,97,.05)}
+.prow:last-child{border:none}
+.prow-n{font-size:12px;flex:1;color:rgba(245,237,224,.8)}
+.prow-i{width:82px;font-size:12px;padding:3px 6px;border:1px solid rgba(201,169,97,.2);
+  border-radius:4px;background:rgba(0,0,0,.3);color:var(--crema);text-align:right}
+.prow-i:focus{outline:none;border-color:var(--dorado)}
+.prow-i.ms{border-color:#e09a3a;background:rgba(224,154,58,.1)}
+.prow-u{font-size:10px;color:rgba(245,237,224,.35);min-width:56px;text-align:right}
+.cnote{font-size:11px;color:rgba(245,237,224,.4);border:1px solid rgba(201,169,97,.12);
+  border-radius:6px;padding:8px 12px;margin-top:10px;line-height:1.6}
+
+/* ═══════════════════════════════
+   SLIDE 8 — CONTACTO
+═══════════════════════════════ */
+#s8{display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+#s8 .bg-img{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1575023782549-62ca0d244b39?auto=format&fit=crop&q=80&w=2000')center/cover;opacity:.1}
+#s8 .content{position:relative;z-index:1;padding:0 6%;max-width:580px}
+#s8 h2{font-family:'Great Vibes',cursive;font-size:clamp(60px,9vw,110px);color:var(--dorado);line-height:1}
+#s8 .clist{display:flex;flex-direction:column;gap:18px;margin-top:28px;text-align:left}
+#s8 .ci{display:flex;align-items:center;gap:14px}
+#s8 .ci-ico{width:40px;height:40px;border-radius:50%;border:1px solid rgba(201,169,97,.35);
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+#s8 .ci-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--dorado);margin-bottom:3px}
+#s8 .ci-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--crema)}
+
+@media(max-width:680px){
+  #s2{grid-template-columns:1fr}
+  #s6{grid-template-columns:1fr}
+  .sgrid{grid-template-columns:repeat(2,1fr)}
+  .pgrid{grid-template-columns:1fr}
+  .dgrid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="hint">✎ Doble click para editar cualquier texto</div>
+<div id="saved-ind" style="position:fixed;top:14px;left:14px;z-index:9999;font-size:11px;color:rgba(201,169,97,.85);background:rgba(0,0,0,.45);border:1px solid rgba(201,169,97,.2);border-radius:5px;padding:4px 10px;opacity:0;transition:opacity .3s;pointer-events:none">✓ Guardado</div>
+<button onclick="memReset()" title="Volver a los valores originales" style="position:fixed;top:14px;left:110px;z-index:9999;font-size:10px;color:rgba(201,169,97,.4);background:rgba(0,0,0,.3);border:1px solid rgba(201,169,97,.1);border-radius:5px;padding:4px 9px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='rgba(201,169,97,.9)'" onmouseout="this.style.color='rgba(201,169,97,.4)'">↺ Resetear</button>
+
+<div class="deck">
+
+<!-- ══ S1 HERO ══ -->
+<div class="slide" id="s1">
+  <div class="bg-img"></div><div class="bg-grad"></div>
+  <div class="content">
+    <h1 contenteditable spellcheck="false">Casa Vaso</h1>
+    <div class="line"></div>
+    <div class="subtitle serif" contenteditable spellcheck="false">Barra de Autor para Eventos</div>
+    <div class="tagline" contenteditable spellcheck="false">Coctelería clásica preparada con precisión. Ingredientes frescos y atención al detalle.</div>
+    <div class="loc" contenteditable spellcheck="false">● CABA, Argentina</div>
+  </div>
+</div>
+
+<!-- ══ S2 NOSOTROS ══ -->
+<div class="slide" id="s2">
+  <div class="col col-l">
+    <div class="sep" contenteditable spellcheck="false">+ + +</div>
+    <h2 contenteditable spellcheck="false">Quiénes somos</h2>
+    <p contenteditable spellcheck="false">Casa Vaso es una barra de tragos donde la coctelería se vive como ritual. Cada preparación es un gesto cuidado, una búsqueda de equilibrio entre tradición y precisión.</p>
+    <p contenteditable spellcheck="false">Trabajamos con ingredientes frescos y una estética que respeta el oficio. Más de <strong>50 eventos realizados</strong> en CABA y GBA.</p>
+  </div>
+  <div class="col col-r">
+    <div class="pillar">
+      <div class="pnum">01</div>
+      <div class="pbody"><h3 contenteditable spellcheck="false">Coctelería clásica</h3><p contenteditable spellcheck="false">Respetamos las recetas icónicas y las preparamos con precisión absoluta. Cada trago es técnica y equilibrio.</p></div>
+    </div>
+    <div class="pillar">
+      <div class="pnum">02</div>
+      <div class="pbody"><h3 contenteditable spellcheck="false">Ingredientes frescos</h3><p contenteditable spellcheck="false">Frutas de estación, hierbas aromáticas, destilados premium y cítricos recién exprimidos. Sin atajos.</p></div>
+    </div>
+    <div class="pillar">
+      <div class="pnum">03</div>
+      <div class="pbody"><h3 contenteditable spellcheck="false">Atención al detalle</h3><p contenteditable spellcheck="false">Desde el hielo hasta la cristalería. Cada elemento está pensado para crear una experiencia memorable.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S3 ESTÁNDAR ══ -->
+<div class="slide sbarra" id="s3">
+  <div class="bh">
+    <div><div class="sep" contenteditable spellcheck="false">+ + +</div><h2 contenteditable spellcheck="false">Barra Estándar</h2></div>
+    <div class="pr"><div class="pr-lbl" contenteditable spellcheck="false">Precio por persona</div><div class="pr-val" contenteditable spellcheck="false">$18.000</div></div>
+  </div>
+  <div class="dgrid">
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Gin Tonic</div><div class="di" contenteditable spellcheck="false">gin · tónica · hielo · limón</div><div class="dm">50ml gin · 150ml tónica · 10ml limón</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Campari Naranja</div><div class="di" contenteditable spellcheck="false">Campari · jugo de naranja · hielo</div><div class="dm">50ml Campari · 100ml jugo</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Gancia Sprite</div><div class="di" contenteditable spellcheck="false">Gancia · Sprite · hielo · limón</div><div class="dm">60ml Gancia · 150ml Sprite</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Aperol Spritz</div><div class="di" contenteditable spellcheck="false">Aperol · espumante · jugo naranja · hielo</div><div class="dm">60ml Aperol · 90ml espumante · 30ml jugo</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Vodka Tonic</div><div class="di" contenteditable spellcheck="false">vodka · tónica · hielo · limón</div><div class="dm">50ml vodka · 150ml tónica</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Vodka Jugo</div><div class="di" contenteditable spellcheck="false">vodka · jugo de naranja · hielo</div><div class="dm">50ml vodka · 150ml jugo</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Fernet con Coca</div><div class="di" contenteditable spellcheck="false">Fernet Branca · Coca Cola · hielo</div><div class="dm">60ml Fernet · 180ml Coca</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Tinto de Verano</div><div class="di" contenteditable spellcheck="false">vino tinto · gaseosa · limón · hielo</div><div class="dm">100ml vino · 120ml gaseosa</div></div>
+  </div>
+</div>
+
+<!-- ══ S4 PLUS ══ -->
+<div class="slide sbarra" id="s4">
+  <div class="bh">
+    <div><div class="sep" contenteditable spellcheck="false">+ + +</div><h2 contenteditable spellcheck="false">Barra Plus</h2></div>
+    <div class="pr"><div class="pr-lbl" contenteditable spellcheck="false">Precio por persona</div><div class="pr-val" contenteditable spellcheck="false">$26.000</div></div>
+  </div>
+  <div class="incl" contenteditable spellcheck="false">✦ Incluye todos los tragos de Barra Estándar, más:</div>
+  <div class="dgrid">
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Negroni</div><div class="di" contenteditable spellcheck="false">Campari · gin · Martini Rosso · hielo</div><div class="dm">30ml cada uno · 90ml total</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Cuba Libre</div><div class="di" contenteditable spellcheck="false">ron · Coca Cola · limón · hielo</div><div class="dm">50ml ron · 150ml Coca</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Caipiroska</div><div class="di" contenteditable spellcheck="false">vodka · lima · azúcar · hielo triturado</div><div class="dm">60ml vodka · 20ml lima · 15g azúcar</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Vermut</div><div class="di" contenteditable spellcheck="false">vermut · soda · hielo · naranja</div><div class="dm">80ml vermut · 60ml soda</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Imperial / Miller</div><div class="di" contenteditable spellcheck="false">cerveza Imperial Golden · cerveza Miller</div><div class="dm">330ml · el cliente elige</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Red Label</div><div class="di" contenteditable spellcheck="false">Johnnie Walker Red Label · hielo</div><div class="dm">50ml whisky</div></div>
+  </div>
+</div>
+
+<!-- ══ S5 AUTOR ══ -->
+<div class="slide sbarra" id="s5">
+  <div class="bh">
+    <div><div class="sep" contenteditable spellcheck="false">+ + +</div><h2 contenteditable spellcheck="false">Barra Autor</h2></div>
+    <div class="pr"><div class="pr-lbl" contenteditable spellcheck="false">Precio por persona</div><div class="pr-val" contenteditable spellcheck="false">$30.000</div></div>
+  </div>
+  <div class="incl" contenteditable spellcheck="false">✦ Incluye todos los tragos de Estándar y Plus, más:</div>
+  <div class="dgrid">
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Vino Septima</div><div class="di" contenteditable spellcheck="false">Malbec o Chardonnay</div><div class="dm">150ml por copa</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Caipirinha</div><div class="di" contenteditable spellcheck="false">cachaça · lima · azúcar · hielo triturado</div><div class="dm">60ml cachaça · 20ml lima · 15g azúcar</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Espumante Codorniu</div><div class="di" contenteditable spellcheck="false">Septima Extra Brut</div><div class="dm">150ml por copa</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Heineken</div><div class="di" contenteditable spellcheck="false">cerveza Heineken</div><div class="dm">330ml</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">Penicillin</div><div class="di" contenteditable spellcheck="false">whisky · jengibre · miel · limón</div><div class="dm">60ml whisky · 22ml limón · 22ml miel · 15ml jengibre</div></div>
+    <div class="dcard"><div class="dn" contenteditable spellcheck="false">JW Red Label</div><div class="di" contenteditable spellcheck="false">Johnnie Walker Red Label · hielo</div><div class="dm">50ml whisky</div></div>
+  </div>
+</div>
+
+<!-- ══ S6 VINOS ══ -->
+<div class="slide" id="s6">
+  <div class="vcol">
+    <div class="sep" contenteditable spellcheck="false">+ + +</div>
+    <h2 contenteditable spellcheck="false">Vinos y Espumantes</h2>
+    <div class="sec" contenteditable spellcheck="false">Vinos</div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Salentine</span><span class="ps" contenteditable spellcheck="false">Malbec · Cabernet · Pinot · Rosado</span></div><span class="pp" contenteditable spellcheck="false">$9.800/bot</span></div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Luigi Bosca</span><span class="ps" contenteditable spellcheck="false">Malbec</span></div><span class="pp" contenteditable spellcheck="false">$11.200/bot</span></div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Saint Felicien</span><span class="ps" contenteditable spellcheck="false">Malbec · Chardonnay</span></div><span class="pp" contenteditable spellcheck="false">$7.500/bot</span></div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Vino Septima</span><span class="ps" contenteditable spellcheck="false">Malbec · Chardonnay · incluido en Autor</span></div><span class="pp" contenteditable spellcheck="false">Consultar</span></div>
+    <div class="sec" contenteditable spellcheck="false">Espumantes</div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Chandon</span><span class="ps" contenteditable spellcheck="false">Extra brut · Délice rosé</span></div><span class="pp" contenteditable spellcheck="false">$17.500/bot</span></div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Salentine</span><span class="ps" contenteditable spellcheck="false">Brut nature · Rosé</span></div><span class="pp" contenteditable spellcheck="false">$13.000/bot</span></div>
+    <div class="pi"><div><span class="pn" contenteditable spellcheck="false">Codorniu Extra Brut</span><span class="ps" contenteditable spellcheck="false">Incluido en Barra Autor</span></div><span class="pp" contenteditable spellcheck="false">Consultar</span></div>
+  </div>
+  <div class="vcol">
+    <div class="sep" contenteditable spellcheck="false">+ + +</div>
+    <h2 contenteditable spellcheck="false">Adicionales</h2>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Energizante 250cc</span><span class="pp" contenteditable spellcheck="false">$1.800</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Jäger</span><span class="pp" contenteditable spellcheck="false">$22.000</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Black Label 1L</span><span class="pp" contenteditable spellcheck="false">$80.000</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Gold Label 750ml</span><span class="pp" contenteditable spellcheck="false">$110.000</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Absolut 700ml</span><span class="pp" contenteditable spellcheck="false">$22.000</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Corona</span><span class="pp" contenteditable spellcheck="false">$50.000</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Beefeater</span><span class="pp" contenteditable spellcheck="false">Consultar</span></div>
+    <div class="pi"><span class="pn" contenteditable spellcheck="false">Tequila Jose Cuervo</span><span class="pp" contenteditable spellcheck="false">$33.000</span></div>
+  </div>
+</div>
+
+<!-- ══ S7 CALCULADORA ══ -->
+<div class="slide" id="s7">
+  <!-- Header fijo -->
+  <div id="calc-hdr">
+    <span class="title">Calculadora de insumos</span>
+    <div class="calc-pills">
+      <button class="cpill" id="pp-btn" onclick="togglePanel('precios')">Precios</button>
+      <button class="cpill" id="pr-btn" onclick="togglePanel('recetas')">Recetas y ml</button>
+      <button class="cpill" id="pd-btn" onclick="togglePanel('dist')">Distribución %</button>
+    </div>
+  </div>
+
+  <!-- Panel desplegable (se abre encima del scroll) -->
+  <div id="calc-panel">
+    <!-- Precios -->
+    <div id="pp-content" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--crema)">Precios de insumos (mayorista)</span>
+        <span id="mc" style="font-size:11px"></span>
+      </div>
+      <div class="pgrid" id="pgrid"></div>
+    </div>
+    <!-- Recetas -->
+    <div id="pr-content" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--crema)">Recetas · ml por trago</span>
+        <span style="font-size:11px;color:rgba(245,237,224,.45)"><span style="color:var(--dorado)">⬤</span> alc · <span style="color:#6aab8a">⬤</span> mixer</span>
+      </div>
+      <div class="ptabs" id="r-tabs">
+        <button class="ptab on" onclick="setTab('r','estandar',this)">Estándar (8)</button>
+        <button class="ptab" onclick="setTab('r','plus',this)">Plus (6)</button>
+        <button class="ptab" onclick="setTab('r','autor',this)">Autor (6)</button>
+      </div>
+      <div id="r-body"></div>
+    </div>
+    <!-- Distribución -->
+    <div id="pd-content" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--crema)">Distribución de pedidos</span>
+        <span style="font-size:11px;color:rgba(245,237,224,.45)">Puntos → se normalizan al 100%</span>
+      </div>
+      <div class="ptabs" id="d-tabs">
+        <button class="ptab on" onclick="setTab('d','estandar',this)">Estándar (8)</button>
+        <button class="ptab" onclick="setTab('d','plus',this)">Plus (14)</button>
+        <button class="ptab" onclick="setTab('d','autor',this)">Autor (20)</button>
+      </div>
+      <div id="d-body"></div>
+    </div>
+  </div>
+
+  <!-- Scroll area -->
+  <div id="calc-scroll">
+    <!-- Controls -->
+    <div class="cc-box">
+      <div class="cc-row">
+        <span class="cc-lbl">Invitados</span>
+        <div class="cbtng" id="g-guests">
+          <button class="cbtn on" onclick="pick('guests',100,'g-guests',this)">100</button>
+          <button class="cbtn" onclick="pick('guests',150,'g-guests',this)">150</button>
+          <button class="cbtn" onclick="pick('guests',200,'g-guests',this)">200</button>
+        </div>
+      </div>
+      <div class="cc-row">
+        <span class="cc-lbl">Duración</span>
+        <div class="cbtng" id="g-hours">
+          <button class="cbtn" onclick="pick('hours',3,'g-hours',this)">3 hs</button>
+          <button class="cbtn on" onclick="pick('hours',4,'g-hours',this)">4 hs</button>
+          <button class="cbtn" onclick="pick('hours',5,'g-hours',this)">5 hs</button>
+        </div>
+      </div>
+      <div class="cc-row">
+        <span class="cc-lbl">Tragos/persona/hora</span>
+        <input type="range" min="1" max="3" step="0.5" value="1.5" oninput="setSlider('tph',parseFloat(this.value),'v-tph',function(v){return v;})" style="width:110px;accent-color:var(--dorado)">
+        <span id="v-tph" style="font-size:13px;font-weight:600;color:var(--dorado);min-width:24px">1.5</span>
+      </div>
+      <div class="cc-row">
+        <span class="cc-lbl">Margen desperdicio</span>
+        <input type="range" min="0" max="30" step="5" value="15" oninput="setSlider('marg',parseInt(this.value),'v-marg',function(v){return v+'%';})" style="width:110px;accent-color:var(--dorado)">
+        <span id="v-marg" style="font-size:13px;font-weight:600;color:var(--dorado);min-width:30px">15%</span>
+      </div>
+    </div>
+
+    <!-- Bar selector -->
+    <div class="btabs">
+      <button class="btab on" onclick="setBar('estandar',this)">Estándar · $18.000/pers</button>
+      <button class="btab" onclick="setBar('plus',this)">Plus · $26.000/pers</button>
+      <button class="btab" onclick="setBar('autor',this)">Autor · $30.000/pers</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="sgrid" id="summ"></div>
+
+    <!-- Table -->
+    <div class="tw">
+      <table class="ctbl">
+        <thead><tr>
+          <th style="width:22%">Ingrediente</th>
+          <th style="width:10%">Litros</th>
+          <th style="width:25%">Unidades</th>
+          <th style="width:19%">Precio unit.</th>
+          <th style="width:24%">Costo total</th>
+        </tr></thead>
+        <tbody id="ctbody"></tbody>
+      </table>
+    </div>
+    <div id="cfooter"></div>
+  </div>
+</div>
+
+<!-- ══ S8 CONTACTO ══ -->
+<div class="slide" id="s8">
+  <div class="bg-img"></div>
+  <div class="content">
+    <div class="sep" contenteditable spellcheck="false" style="margin-bottom:8px">+ + +</div>
+    <h2 contenteditable spellcheck="false">Hablemos</h2>
+    <div class="clist">
+      <div class="ci"><div class="ci-ico">📱</div><div><div class="ci-lbl" contenteditable spellcheck="false">WhatsApp</div><div class="ci-val" contenteditable spellcheck="false">+54 9 11 3699-5826</div></div></div>
+      <div class="ci"><div class="ci-ico">📸</div><div><div class="ci-lbl" contenteditable spellcheck="false">Instagram</div><div class="ci-val" contenteditable spellcheck="false">@casavaso</div></div></div>
+      <div class="ci"><div class="ci-ico">✉️</div><div><div class="ci-lbl" contenteditable spellcheck="false">Email</div><div class="ci-val" contenteditable spellcheck="false">contacto@casavaso.com.ar</div></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nbtn" onclick="go(-1)">←</button>
+  <div id="dots" style="display:flex;gap:5px;align-items:center"></div>
+  <span id="ctr">1 / 8</span>
+  <button class="nbtn" onclick="go(1)">→</button>
+</div>
+
+<script>
+/* ─── SLIDES ─── */
+var slides=document.querySelectorAll('.slide'),N=slides.length,cur=0;
+function buildDots(){
+  var d=document.getElementById('dots');d.innerHTML='';
+  for(var i=0;i<N;i++){
+    var b=document.createElement('div');b.className='dot'+(i===0?' active':'');
+    (function(idx){b.onclick=function(){goTo(idx);};})(i);
+    d.appendChild(b);
+  }
+}
+function goTo(n){
+  slides.forEach(function(s,i){s.classList.toggle('active',i===n);});
+  document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active',i===n);});
+  cur=n;
+  document.getElementById('ctr').textContent=(n+1)+' / '+N;
+}
+function go(d){goTo(Math.max(0,Math.min(N-1,cur+d)));}
+document.addEventListener('keydown',function(e){
+  // Don't steal keys from inputs/editables or when on calc slide
+  if(e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].indexOf(e.target.tagName)>-1)return;
+  if(cur===6)return; // calc slide
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();go(1);}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();go(-1);}
+});
+// Prevent wheel from changing slides on calc slide
+document.getElementById('s7').addEventListener('wheel',function(e){e.stopPropagation();},{passive:true});
+buildDots();goTo(0);
+
+/* ─── CALC DATA ─── */
+var CS={guests:100,hours:4,tph:1.5,bar:'estandar',marg:15};
+var CTAB={r:'estandar',d:'estandar'};
+var OPEN=null; // which panel is open
+
+var ING={
+  'Fernet Branca':    {p:14500,vol:750, unit:'750ml', alc:1,cat:'Destilados'},
+  'Gin Gordons':      {p:11600,vol:700, unit:'700ml', alc:1,cat:'Destilados'},
+  'Vodka Smirnoff':   {p:7450, vol:700, unit:'700ml', alc:1,cat:'Destilados'},
+  'Ron Havana':       {p:15310,vol:750, unit:'750ml', alc:1,cat:'Destilados'},
+  'Whisky JW Red':    {p:28050,vol:1000,unit:'1L',    alc:1,cat:'Destilados'},
+  'Cachaça':          {p:null, vol:750, unit:'750ml', alc:1,cat:'Destilados'},
+  'Aperol':           {p:7950, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Campari':          {p:7750, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Gancia':           {p:6100, vol:950, unit:'950ml', alc:1,cat:'Aperitivos'},
+  'Cinzano Vermut':   {p:6600, vol:1000,unit:'1L',    alc:1,cat:'Aperitivos'},
+  'Martini Rosso':    {p:null, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Espumante':        {p:null, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Vino tinto':       {p:null, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Vino Septima':     {p:null, vol:750, unit:'750ml', alc:1,cat:'Aperitivos'},
+  'Heineken':         {p:2300, vol:330, unit:'330ml', alc:1,cat:'Cervezas'},
+  'Miller':           {p:2167, vol:330, unit:'330ml', alc:1,cat:'Cervezas'},
+  'Coca Cola':        {p:3438, vol:2250,unit:'2.25L', alc:0,cat:'Mixers',note:'pack x8=$27.500'},
+  'Sprite/Gaseosa':   {p:3563, vol:2250,unit:'2.25L', alc:0,cat:'Mixers',note:'pack x8=$28.500'},
+  'Tónica Cunnington':{p:611,  vol:500, unit:'500ml', alc:0,cat:'Mixers'},
+  'Soda':             {p:null, vol:500, unit:'500ml', alc:0,cat:'Mixers'},
+  'Jugo naranja':     {p:null, vol:1000,unit:'L',     alc:0,cat:'Frescos'},
+  'Jugo limón/lima':  {p:null, vol:1000,unit:'L',     alc:0,cat:'Frescos'},
+  'Azúcar':           {p:null, vol:1000,unit:'kg',    alc:0,cat:'Frescos'},
+  'Syrup miel':       {p:null, vol:500, unit:'500ml', alc:0,cat:'Frescos'},
+  'Jugo jengibre':    {p:null, vol:200, unit:'200ml', alc:0,cat:'Frescos'},
+};
+
+var DR={
+  estandar:[
+    {name:'Fernet con Coca', w:22,ing:[{k:'Fernet Branca',ml:60},{k:'Coca Cola',ml:180}]},
+    {name:'Aperol Spritz',   w:18,ing:[{k:'Aperol',ml:60},{k:'Espumante',ml:90},{k:'Jugo naranja',ml:30}]},
+    {name:'Gin Tonic',       w:15,ing:[{k:'Gin Gordons',ml:50},{k:'Tónica Cunnington',ml:150},{k:'Jugo limón/lima',ml:10}]},
+    {name:'Vodka Tonic',     w:12,ing:[{k:'Vodka Smirnoff',ml:50},{k:'Tónica Cunnington',ml:150},{k:'Jugo limón/lima',ml:10}]},
+    {name:'Gancia Sprite',   w:10,ing:[{k:'Gancia',ml:60},{k:'Sprite/Gaseosa',ml:150},{k:'Jugo limón/lima',ml:10}]},
+    {name:'Campari Naranja', w:9, ing:[{k:'Campari',ml:50},{k:'Jugo naranja',ml:100}]},
+    {name:'Vodka Jugo',      w:8, ing:[{k:'Vodka Smirnoff',ml:50},{k:'Jugo naranja',ml:150}]},
+    {name:'Tinto de Verano', w:6, ing:[{k:'Vino tinto',ml:100},{k:'Sprite/Gaseosa',ml:120},{k:'Jugo limón/lima',ml:10}]},
+  ],
+  plus:[
+    {name:'Cuba Libre',      w:18,ing:[{k:'Ron Havana',ml:50},{k:'Coca Cola',ml:150},{k:'Jugo limón/lima',ml:15}]},
+    {name:'Imperial/Miller', w:22,ing:[{k:'Miller',ml:330}]},
+    {name:'Red Label',       w:20,ing:[{k:'Whisky JW Red',ml:50}]},
+    {name:'Negroni',         w:12,ing:[{k:'Gin Gordons',ml:30},{k:'Campari',ml:30},{k:'Martini Rosso',ml:30}]},
+    {name:'Caipiroska',      w:14,ing:[{k:'Vodka Smirnoff',ml:60},{k:'Jugo limón/lima',ml:20},{k:'Azúcar',ml:15}]},
+    {name:'Vermut',          w:14,ing:[{k:'Cinzano Vermut',ml:80},{k:'Soda',ml:60}]},
+  ],
+  autor:[
+    {name:'Heineken',        w:20,ing:[{k:'Heineken',ml:330}]},
+    {name:'Vino Septima',    w:20,ing:[{k:'Vino Septima',ml:150}]},
+    {name:'Espumante Cod.',  w:18,ing:[{k:'Espumante',ml:150}]},
+    {name:'Caipirinha',      w:15,ing:[{k:'Cachaça',ml:60},{k:'Jugo limón/lima',ml:20},{k:'Azúcar',ml:15}]},
+    {name:'JW Red Label',    w:15,ing:[{k:'Whisky JW Red',ml:50}]},
+    {name:'Penicillin',      w:12,ing:[{k:'Whisky JW Red',ml:60},{k:'Jugo limón/lima',ml:22},{k:'Syrup miel',ml:22},{k:'Jugo jengibre',ml:15}]},
+  ]
+};
+
+function fmt(n){return Math.round(n).toLocaleString('es-AR');}
+function allDrinks(t){var a=DR.estandar.slice();if(t==='plus'||t==='autor')a=a.concat(DR.plus);if(t==='autor')a=a.concat(DR.autor);return a;}
+
+function calcMap(){
+  var td=Math.round(CS.guests*CS.hours*CS.tph),mf=1+CS.marg/100;
+  var all=allDrinks(CS.bar),tw=all.reduce(function(s,d){return s+d.w;},0),map={};
+  all.forEach(function(d){
+    var cnt=td*(d.w/(tw||1));
+    d.ing.forEach(function(i){if(!map[i.k])map[i.k]=0;map[i.k]+=cnt*i.ml*mf;});
+  });
+  return {td:td,map:map};
+}
+
+function render(){
+  var r=calcMap(),keys=Object.keys(r.map).sort(function(a,b){return r.map[b]-r.map[a];});
+  var pp=CS.bar==='estandar'?18000:CS.bar==='plus'?26000:30000;
+  var rev=CS.guests*pp,cost=0,miss=[];
+  keys.forEach(function(k){
+    var i=ING[k];if(!i)return;
+    var u=Math.ceil(r.map[k]/i.vol);
+    if(i.p!=null)cost+=u*i.p;
+    else if(miss.indexOf(k)<0)miss.push(k);
+  });
+  var mg=rev-cost,mp=rev>0?Math.round(mg/rev*100):0;
+
+  document.getElementById('summ').innerHTML=
+    '<div class="sc"><div class="sc-l">Tragos estimados</div><div class="sc-v">'+fmt(r.td)+'</div><div class="sc-s">'+CS.guests+'p × '+CS.hours+'hs × '+CS.tph+'/hs</div></div>'+
+    '<div class="sc"><div class="sc-l">Costo insumos</div><div class="sc-v '+(miss.length?'a':'')+'">$'+fmt(cost)+'</div><div class="sc-s">'+(miss.length?miss.length+' pendientes':'Completo')+'</div></div>'+
+    '<div class="sc"><div class="sc-l">Ingreso bruto</div><div class="sc-v">$'+fmt(rev)+'</div><div class="sc-s">$'+fmt(pp)+'/persona</div></div>'+
+    '<div class="sc"><div class="sc-l">Margen s/ insumos</div><div class="sc-v '+(mp>=50?'g':'a')+'">'+mp+'%</div><div class="sc-s">$'+fmt(mg)+' disponible</div></div>';
+
+  var rows='',shown=0;
+  keys.forEach(function(k){
+    var i=ING[k];if(!i)return;
+    var u=Math.ceil(r.map[k]/i.vol),c=i.p!=null?u*i.p:null;
+    if(c!=null)shown+=c;
+    rows+='<tr>'+
+      '<td>'+(i.alc?'<span class="alcd">⬤</span>':'<span class="mixd">⬤</span>')+k+(i.note?'<br><small style="color:rgba(245,237,224,.3)">'+i.note+'</small>':'')+'</td>'+
+      '<td>'+(r.map[k]/1000).toFixed(2)+'</td>'+
+      '<td><strong>'+u+'</strong><span style="font-size:10px;color:rgba(245,237,224,.4)"> × '+i.unit+'</span></td>'+
+      '<td>'+(i.p!=null?'$'+fmt(i.p):'<span class="bp">pendiente</span>')+'</td>'+
+      '<td style="font-weight:600">'+(c!=null?'$'+fmt(c):'<span style="color:#e09a3a;font-style:italic;font-size:11px">—</span>')+'</td></tr>';
+  });
+  rows+='<tr class="ttr"><td colspan="3">'+(miss.length?'Subtotal (sin pendientes)':'Total insumos')+'</td><td></td><td>$'+fmt(shown)+'</td></tr>';
+  document.getElementById('ctbody').innerHTML=rows;
+  document.getElementById('cfooter').innerHTML=
+    '<div class="cnote">Margen desperdicio: '+CS.marg+'%'+(miss.length?' · <span style="color:#e09a3a">Pendientes: '+miss.join(', ')+'</span>':'')+'</div>';
+}
+
+/* ─ PANEL TOGGLE ─ */
+function togglePanel(name){
+  var panel=document.getElementById('calc-panel');
+  var btnIds={precios:'pp-btn',recetas:'pr-btn',dist:'pd-btn'};
+  var contentIds={precios:'pp-content',recetas:'pr-content',dist:'pd-content'};
+  if(OPEN===name){
+    // close
+    panel.classList.remove('show');
+    document.getElementById(btnIds[name]).classList.remove('on');
+    OPEN=null;
+  } else {
+    // switch
+    if(OPEN){
+      document.getElementById(btnIds[OPEN]).classList.remove('on');
+      document.getElementById(contentIds[OPEN]).style.display='none';
+    }
+    OPEN=name;
+    document.getElementById(btnIds[name]).classList.add('on');
+    // build content
+    if(name==='precios') buildPrices();
+    if(name==='recetas') buildRecipes(CTAB.r);
+    if(name==='dist') buildDist(CTAB.d);
+    document.getElementById(contentIds[name]).style.display='block';
+    panel.classList.add('show');
+  }
+}
+
+/* ─ PRICES ─ */
+function buildPrices(){
+  var cats={},ord=['Destilados','Aperitivos','Cervezas','Mixers','Frescos'];
+  Object.keys(ING).forEach(function(k){var c=ING[k].cat;if(!cats[c])cats[c]=[];cats[c].push(k);});
+  var html='';
+  ord.forEach(function(cat){
+    if(!cats[cat])return;
+    html+='<div style="margin-bottom:8px"><div class="pcat">'+cat+'</div>';
+    cats[cat].forEach(function(k){
+      var i=ING[k];
+      var safe=k.replace(/[^a-z0-9]/gi,'_');
+      html+='<div class="prow">'+
+        '<span class="prow-n">'+(i.alc?'<span class="alcd">⬤</span>':'<span class="mixd">⬤</span>')+k+'</span>'+
+        '<input class="prow-i'+(i.p===null?' ms':'')+'" id="pi_'+safe+'" type="number" value="'+(i.p!=null?i.p:'')+'" placeholder="—" oninput="updPrice(\''+k+'\',this)">'+
+        '<span class="prow-u">'+i.unit+'</span></div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('pgrid').innerHTML=html;
+  updMissCount();
+}
+function updPrice(key,inp){
+  var v=parseFloat(inp.value);
+  ING[key].p=(isNaN(v)||v<=0)?null:v;
+  inp.classList.toggle('ms',ING[key].p===null);
+  updMissCount();render();memSave();
+}
+function updMissCount(){
+  var m=Object.keys(ING).filter(function(k){return ING[k].p===null;}).length;
+  var el=document.getElementById('mc');
+  el.textContent=m>0?m+' precios pendientes':'Todos los precios cargados';
+  el.style.color=m>0?'#e09a3a':'#6aab8a';
+}
+
+/* ─ RECIPES ─ */
+function buildRecipes(tab){
+  var html='';
+  DR[tab].forEach(function(d,di){
+    var tot=d.ing.reduce(function(s,i){return s+i.ml;},0);
+    var alc=d.ing.reduce(function(s,i){return s+(ING[i.k]&&ING[i.k].alc?i.ml:0);},0);
+    var ap=tot>0?Math.round(alc/tot*100):0;
+    html+='<div class="rcrd"><div class="rcrd-h">'+
+      '<span class="rcrd-n">'+d.name+'</span>'+
+      '<span class="rcrd-s">'+tot+' ml total · <span style="color:var(--dorado)">'+alc+' ml alc ('+ap+'%)</span></span></div>';
+    d.ing.forEach(function(ing,ii){
+      var pct=tot>0?ing.ml/tot*100:0,isA=ING[ing.k]&&ING[ing.k].alc;
+      html+='<div class="iring">'+
+        '<span class="iring-k">'+(isA?'<span class="alcd">⬤</span>':'<span class="mixd">⬤</span>')+ing.k+'</span>'+
+        '<input class="iring-i" type="number" min="0" max="999" value="'+ing.ml+'" oninput="updMl(\''+tab+'\','+di+','+ii+',this.value)">'+
+        '<span class="iring-u">ml</span>'+
+        '<div class="bbar"><div class="bfil '+(isA?'a':'m')+'" style="width:'+Math.min(100,pct).toFixed(1)+'%"></div></div>'+
+        '<span class="bpct">'+Math.round(pct)+'%</span></div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('r-body').innerHTML=html;
+}
+function updMl(tier,di,ii,val){
+  var v=parseFloat(val);DR[tier][di].ing[ii].ml=isNaN(v)||v<0?0:v;
+  buildRecipes(tier);render();memSave();
+}
+
+/* ─ DIST ─ */
+function buildDist(tab){
+  var all=allDrinks(tab),tw=all.reduce(function(s,d){return s+d.w;},0);
+  var grps=[{l:'Estándar',dr:DR.estandar,t:'estandar'}];
+  if(tab==='plus'||tab==='autor')grps.push({l:'Plus — adicionales',dr:DR.plus,t:'plus'});
+  if(tab==='autor')grps.push({l:'Autor — adicionales',dr:DR.autor,t:'autor'});
+  var html='';
+  grps.forEach(function(g){
+    html+='<div class="dg-lbl">'+g.l+'</div>';
+    g.dr.forEach(function(d,di){
+      var pct=tw>0?d.w/tw*100:0;
+      html+='<div class="drow">'+
+        '<span class="drow-n">'+d.name+'</span>'+
+        '<input class="drow-i" type="number" min="0" max="999" value="'+d.w+'" oninput="updW(\''+g.t+'\','+di+',this.value,\''+tab+'\')">'+
+        '<span class="drow-u">pts</span>'+
+        '<div class="dbbar"><div class="dbfil" style="width:'+Math.min(100,pct).toFixed(1)+'%"></div></div>'+
+        '<span class="dpct">'+pct.toFixed(1)+'%</span></div>';
+    });
+  });
+  html+='<div class="dtot">Total: <strong>'+tw+'</strong> pts → 100%</div>';
+  document.getElementById('d-body').innerHTML=html;
+}
+function updW(tier,di,val,tab){
+  var v=parseFloat(val);DR[tier][di].w=isNaN(v)||v<0?0:v;
+  buildDist(tab);render();memSave();
+}
+
+/* ─ TAB / PICK / SLIDER ─ */
+function setTab(panel,tab,btn){
+  CTAB[panel]=tab;
+  var tabsId=panel===('r')?'r-tabs':'d-tabs';
+  document.querySelectorAll('#'+tabsId+' .ptab').forEach(function(t){t.classList.remove('on');});
+  btn.classList.add('on');
+  if(panel==='r')buildRecipes(tab);
+  if(panel==='d')buildDist(tab);
+}
+function pick(key,val,gId,btn){
+  CS[key]=val;
+  document.getElementById(gId).querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  render();
+}
+function setSlider(key,val,outId,fn){CS[key]=val;document.getElementById(outId).textContent=fn(val);render();}
+function setBar(b,btn){
+  CS.bar=b;
+  document.querySelectorAll('.btab').forEach(function(t){t.classList.remove('on');});
+  btn.classList.add('on');
+  render();
+}
+
+/* ─── MEMORIA (localStorage) ─── */
+var MEM='casavaso_v1';
+
+function memSave(){
+  try{
+    // Precios
+    var prices={};
+    Object.keys(ING).forEach(function(k){prices[k]=ING[k].p;});
+    // Recetas (ml) y distribución (w)
+    var dr={
+      estandar:DR.estandar.map(function(d){return {w:d.w,ing:d.ing.map(function(i){return {k:i.k,ml:i.ml};})};}),
+      plus:    DR.plus.map(function(d){return {w:d.w,ing:d.ing.map(function(i){return {k:i.k,ml:i.ml};})};}),
+      autor:   DR.autor.map(function(d){return {w:d.w,ing:d.ing.map(function(i){return {k:i.k,ml:i.ml};})};})
+    };
+    // Textos editables (por índice de aparición en el DOM)
+    var texts=[];
+    document.querySelectorAll('[contenteditable]').forEach(function(el){texts.push(el.innerHTML);});
+    localStorage.setItem(MEM,JSON.stringify({prices:prices,dr:dr,texts:texts}));
+    // Indicador visual
+    var si=document.getElementById('saved-ind');
+    if(si){si.style.opacity='1';clearTimeout(window._st);window._st=setTimeout(function(){si.style.opacity='0';},1800);}
+  }catch(e){console.warn('memSave error:',e);}
+}
+
+function memLoad(){
+  try{
+    var raw=localStorage.getItem(MEM);
+    if(!raw)return;
+    var d=JSON.parse(raw);
+    // Precios
+    if(d.prices)Object.keys(d.prices).forEach(function(k){if(ING[k])ING[k].p=d.prices[k];});
+    // Recetas y distribución
+    if(d.dr)['estandar','plus','autor'].forEach(function(t){
+      if(!d.dr[t])return;
+      d.dr[t].forEach(function(dd,di){
+        if(!DR[t][di])return;
+        DR[t][di].w=dd.w;
+        dd.ing.forEach(function(i,ii){
+          if(DR[t][di].ing[ii])DR[t][di].ing[ii].ml=i.ml;
+        });
+      });
+    });
+    // Textos (se aplican después de que el DOM esté listo)
+    if(d.texts)window._memTexts=d.texts;
+  }catch(e){console.warn('memLoad error:',e);}
+}
+
+function memLoadTexts(){
+  if(!window._memTexts)return;
+  var els=document.querySelectorAll('[contenteditable]');
+  window._memTexts.forEach(function(txt,i){
+    if(els[i]&&txt!==undefined&&txt!==null)els[i].innerHTML=txt;
+  });
+}
+
+function memReset(){
+  if(!confirm('¿Resetear todo al estado original?\n\nSe borrarán los precios, ml, distribución y textos que hayas editado.'))return;
+  localStorage.removeItem(MEM);
+  location.reload();
+}
+
+// Arranque: cargar datos, renderizar, luego aplicar textos
+memLoad();
+render();
+memLoadTexts();
+
+// Guardar textos automáticamente al salir de un campo editable
+document.querySelectorAll('[contenteditable]').forEach(function(el){
+  el.addEventListener('blur',memSave);
+});
+</script>
+</body>
+</html>
