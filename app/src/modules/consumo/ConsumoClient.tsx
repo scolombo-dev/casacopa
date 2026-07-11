@@ -3,10 +3,10 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, X, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Plus, X, ArrowLeft, CheckCircle2, Pencil } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import type { EstadoEvento } from '@/lib/types'
-import { guardarCierre } from './actions'
+import { guardarCierre, guardarDistribucion } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ export default function ConsumoClient(props: Props) {
 
 function VistaConsumo({
   eventoId, eventoNombre, eventoFecha, eventoCantidadPersonas,
-  cierreExistente, distribucionExistente,
+  tragos, cierreExistente, distribucionExistente,
 }: Props) {
   const totalMl = cierreExistente.reduce(
     (sum, item) => sum + item.cantidad_consumida * item.ml_por_envase, 0
@@ -163,58 +163,181 @@ function VistaConsumo({
       </section>
 
       {/* Distribución de tragos */}
-      {litrosPorTrago.length > 0 && (
-        <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-            Distribución estimada de tragos
-          </h2>
-          <p className="text-xs text-gray-400 mb-3">
-            Basada en los porcentajes que declaraste. Es una aproximación.
-          </p>
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
-                  <th className="text-left px-4 py-2.5 font-medium">Trago</th>
-                  <th className="text-center px-3 py-2.5 font-medium">% declarado</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Litros estimados</th>
-                </tr>
-              </thead>
-              <tbody>
-                {litrosPorTrago.map((t, i) => (
-                  <tr key={i} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-gray-800">{t.nombre}</td>
-                    <td className="px-3 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-24 bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className="bg-teal-500 h-1.5 rounded-full"
-                            style={{ width: `${Math.min(t.porcentaje, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-gray-600 tabular-nums w-10 text-right">{t.porcentaje}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-700 font-medium tabular-nums">
-                      {t.litros.toFixed(2)}L
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {litrosPorTrago.length === 0 && (
-        <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Distribución de tragos
-          </h2>
-          <p className="text-sm text-gray-400 italic">No se declaró distribución de tragos para este evento.</p>
-        </section>
-      )}
+      <DistribucionEditor
+        eventoId={eventoId}
+        tragos={tragos}
+        distribucionInicial={distribucionExistente}
+        totalMl={totalMl}
+      />
     </div>
+  )
+}
+
+// ─── Editor de distribución de tragos (en vista post-cierre) ─────────────────
+
+function DistribucionEditor({
+  eventoId, tragos, distribucionInicial, totalMl,
+}: {
+  eventoId: string
+  tragos: TragoForm[]
+  distribucionInicial: DistribucionRow[]
+  totalMl: number
+}) {
+  const [editando, setEditando] = useState(false)
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [distribucion, setDistribucion] = useState<DistribucionRow[]>(distribucionInicial)
+  const [porcentajes, setPorcentajes] = useState<Record<string, number>>(() =>
+    Object.fromEntries(distribucionInicial.map(d => [d.receta_id ?? '', Number(d.porcentaje)]))
+  )
+
+  const totalPct = Object.values(porcentajes).reduce((s, v) => s + (v || 0), 0)
+
+  function handleGuardar() {
+    startTransition(async () => {
+      const payload = tragos
+        .filter(t => (porcentajes[t.receta_id] ?? 0) > 0)
+        .map(t => ({
+          receta_id: t.receta_id,
+          nombre_trago: t.nombre_trago,
+          porcentaje: porcentajes[t.receta_id] ?? 0,
+        }))
+      const res = await guardarDistribucion(eventoId, payload)
+      if (res.error) { setError(res.error); return }
+      setDistribucion(payload.map(d => ({ id: '', receta_id: d.receta_id, nombre_trago: d.nombre_trago, porcentaje: d.porcentaje })))
+      setEditando(false)
+    })
+  }
+
+  const litrosPorTrago = distribucion.map(d => ({
+    nombre: d.nombre_trago,
+    porcentaje: Number(d.porcentaje),
+    litros: (Number(d.porcentaje) / 100) * totalMl / 1000,
+  }))
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+          Distribución estimada de tragos
+        </h2>
+        {!editando && (
+          <button
+            onClick={() => {
+              setPorcentajes(Object.fromEntries(tragos.map(t => {
+                const existing = distribucion.find(d => d.receta_id === t.receta_id)
+                return [t.receta_id, existing ? Number(existing.porcentaje) : 0]
+              })))
+              setEditando(true)
+            }}
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <Pencil size={12} /> {distribucion.length > 0 ? 'Editar' : 'Agregar distribución'}
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 mb-3">
+        {distribucion.length > 0
+          ? 'Aproximación basada en los % que declaraste.'
+          : 'Todavía no declaraste la distribución de tragos para este evento.'}
+      </p>
+
+      {editando ? (
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
+                <th className="text-left px-4 py-2.5 font-medium">Trago</th>
+                <th className="text-center px-4 py-2.5 font-medium w-36">% del total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tragos.map(t => (
+                <tr key={t.receta_id} className="border-b last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-800">{t.nombre_trago}</div>
+                    <div className="text-xs text-gray-400 capitalize">{t.categoria}</div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={porcentajes[t.receta_id] ?? 0}
+                        onChange={e => setPorcentajes(prev => ({
+                          ...prev,
+                          [t.receta_id]: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
+                        }))}
+                        className="w-16 text-center border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-200"
+                      />
+                      <span className="text-gray-400 text-sm">%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t bg-gray-50">
+                <td className="px-4 py-2.5 text-sm text-gray-500 font-medium">Total</td>
+                <td className="px-4 py-2.5 text-center">
+                  <span className={cn('text-sm font-semibold tabular-nums',
+                    totalPct === 100 ? 'text-teal-600' : totalPct > 100 ? 'text-red-500' : 'text-amber-600'
+                  )}>
+                    {totalPct.toFixed(0)}%
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          {error && <p className="px-4 py-2 text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2 px-4 py-3 border-t bg-gray-50">
+            <button
+              onClick={handleGuardar}
+              disabled={pending}
+              className="flex-1 bg-teal-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
+            >
+              {pending ? 'Guardando…' : 'Guardar distribución'}
+            </button>
+            <button
+              onClick={() => setEditando(false)}
+              className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : distribucion.length > 0 ? (
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
+                <th className="text-left px-4 py-2.5 font-medium">Trago</th>
+                <th className="text-center px-3 py-2.5 font-medium">%</th>
+                <th className="text-right px-4 py-2.5 font-medium">Litros est.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {litrosPorTrago.map((t, i) => (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="px-4 py-3 font-medium text-gray-800">{t.nombre}</td>
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-20 bg-gray-100 rounded-full h-1.5">
+                        <div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${Math.min(t.porcentaje, 100)}%` }} />
+                      </div>
+                      <span className="text-gray-600 tabular-nums w-8 text-right">{t.porcentaje}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-700 font-medium tabular-nums">{t.litros.toFixed(2)}L</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -234,10 +357,6 @@ function FormConsumo({
 
   const [consignaciones, setConsignaciones] = useState<ConsignItem[]>([])
 
-  const [porcentajes, setPorcentajes] = useState<Record<string, number>>(() =>
-    Object.fromEntries(tragos.map(t => [t.receta_id, 0]))
-  )
-
   // Totales en tiempo real
   const totalMlCompras = compraItems.reduce(
     (sum, ci) => sum + (consumidos[ci.id] ?? ci.cantidad) * ci.ml_por_envase, 0
@@ -254,8 +373,6 @@ function FormConsumo({
     (sum, c) => sum + (c.cantidad_consumida || 0) * (c.precio_unitario || 0), 0
   )
   const totalCost = totalCostCompras + totalCostConsign
-
-  const totalPct = Object.values(porcentajes).reduce((s, v) => s + (v || 0), 0)
 
   function addConsignacion() {
     setConsignaciones(prev => [...prev, {
@@ -302,15 +419,7 @@ function FormConsumo({
         presentacion: ci.presentacion,
       }))
 
-      const distribucionPayload = tragos
-        .filter(t => (porcentajes[t.receta_id] ?? 0) > 0)
-        .map(t => ({
-          receta_id: t.receta_id,
-          nombre_trago: t.nombre_trago,
-          porcentaje: porcentajes[t.receta_id] ?? 0,
-        }))
-
-      const res = await guardarCierre(eventoId, consumosPayload, consignaciones, distribucionPayload)
+      const res = await guardarCierre(eventoId, consumosPayload, consignaciones, [])
       if (res.error) { setError(res.error); return }
       router.push('/eventos')
       router.refresh()
@@ -490,74 +599,6 @@ function FormConsumo({
           </button>
         </section>
 
-        {/* ─── Sección 3: Distribución de tragos ──────────────────── */}
-        {tragos.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Distribución de tragos</h2>
-            <p className="text-xs text-gray-400 mb-3">
-              Indicá qué porcentaje del alcohol consumió cada trago. No tiene que ser exacto — es una aproximación para llevar registro.
-            </p>
-
-            <div className="bg-white border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
-                    <th className="text-left px-4 py-2.5 font-medium">Trago</th>
-                    <th className="text-center px-4 py-2.5 font-medium w-32">% del total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tragos.map(t => (
-                    <tr key={t.receta_id} className="border-b last:border-0">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-800">{t.nombre_trago}</div>
-                        <div className="text-xs text-gray-400 capitalize">{t.categoria}</div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={porcentajes[t.receta_id] ?? 0}
-                            onChange={e => setPorcentajes(prev => ({
-                              ...prev,
-                              [t.receta_id]: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
-                            }))}
-                            className="w-16 text-center border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-200"
-                          />
-                          <span className="text-gray-400 text-sm">%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t bg-gray-50">
-                    <td className="px-4 py-2.5 text-sm text-gray-500 font-medium">Total</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span className={cn(
-                        'text-sm font-semibold tabular-nums',
-                        totalPct === 100 ? 'text-teal-600' :
-                        totalPct > 100 ? 'text-red-500' : 'text-amber-600'
-                      )}>
-                        {totalPct}%
-                      </span>
-                      {totalPct === 100 && <span className="ml-1.5 text-xs text-teal-500">✓</span>}
-                      {totalPct !== 100 && totalPct > 0 && (
-                        <span className="ml-1.5 text-xs text-amber-500">
-                          {totalPct > 100 ? '↑ supera 100' : '↓ no llega a 100'}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </section>
-        )}
-
         {/* ─── Resumen + Guardar ───────────────────────────────────── */}
         <section className="bg-gray-50 border rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
@@ -572,12 +613,6 @@ function FormConsumo({
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-4">
               {error}
-            </div>
-          )}
-
-          {totalPct > 0 && totalPct !== 100 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-700 mb-4">
-              Los porcentajes de tragos suman {totalPct}% en lugar de 100%. Podés guardar igual — la distribución será aproximada.
             </div>
           )}
 

@@ -3,6 +3,32 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+export async function guardarDistribucion(
+  eventoId: string,
+  distribucion: Array<{
+    receta_id: string
+    nombre_trago: string
+    porcentaje: number
+  }>
+) {
+  const supabase = createAdminClient()
+  await supabase.from('distribucion_tragos_evento').delete().eq('evento_id', eventoId)
+  const rows = distribucion
+    .filter(d => d.porcentaje > 0)
+    .map(d => ({
+      evento_id: eventoId,
+      receta_id: d.receta_id,
+      nombre_trago: d.nombre_trago,
+      porcentaje: d.porcentaje,
+    }))
+  if (rows.length > 0) {
+    const { error } = await supabase.from('distribucion_tragos_evento').insert(rows)
+    if (error) return { error: error.message }
+  }
+  revalidatePath(`/eventos/${eventoId}/consumo`)
+  return { error: null }
+}
+
 export async function guardarCierre(
   eventoId: string,
   consumos: Array<{
