@@ -126,22 +126,24 @@ export async function eliminarItem(id: string, compraId: string) {
   return { error: null }
 }
 
-// ─── Lazy load: datos completos de un evento para el planificador ──────────────
+// ─── Insumos requeridos por un evento ─────────────────────────────────────────
 
-export async function obtenerEventoParaPlanificador(eventoId: string) {
+export async function obtenerInsumosEvento(eventoId: string): Promise<string[]> {
   const supabase = createAdminClient()
   const { data } = await supabase
-    .from('eventos')
-    .select(`
-      id, nombre, fecha, estado,
-      cantidad_personas, estimacion_tragos_pp, margen_seguridad,
-      evento_tragos(
-        porcentaje_consumo,
-        cantidad_fija,
-        recetas(receta_ingredientes(insumo_base, ml_por_trago))
-      )
-    `)
-    .eq('id', eventoId)
-    .single()
-  return data
+    .from('evento_tragos')
+    .select('recetas(receta_ingredientes(insumo_base))')
+    .eq('evento_id', eventoId)
+  if (!data) return []
+  const insumos = new Set<string>()
+  for (const et of data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const receta = Array.isArray(et.recetas) ? (et.recetas as any)[0] : et.recetas
+    if (!receta) continue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const ing of (receta as any).receta_ingredientes ?? []) {
+      if (ing.insumo_base) insumos.add(ing.insumo_base)
+    }
+  }
+  return [...insumos].sort()
 }
