@@ -16,18 +16,11 @@ export default async function ComprasPage() {
       .select(`*, eventos(id, nombre, fecha), proveedores(id, nombre), compra_items(*)`)
       .order('fecha_compra', { ascending: false }),
 
-    // Eventos con tragos + ingredientes para el planificador
+    // Solo datos básicos: los tragos e ingredientes se cargan on-demand
+    // en el Planificador cuando el usuario selecciona un evento específico
     supabase
       .from('eventos')
-      .select(`
-        id, nombre, fecha, estado,
-        cantidad_personas, estimacion_tragos_pp, margen_seguridad,
-        evento_tragos(
-          porcentaje_consumo,
-          cantidad_fija,
-          recetas(receta_ingredientes(insumo_base, ml_por_trago))
-        )
-      `)
+      .select('id, nombre, fecha, estado')
       .order('fecha', { ascending: false }),
 
     supabase.from('proveedores').select('id, nombre').order('nombre'),
@@ -39,7 +32,6 @@ export default async function ComprasPage() {
       .order('insumo_base')
       .order('marca'),
 
-    // Stock actual por insumo
     supabase
       .from('stock')
       .select('cantidad_envases, ml_por_envase, productos(insumo_base)'),

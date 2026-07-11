@@ -12,10 +12,7 @@ import { crearPago, eliminarPago } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type EventoFinanciero = ResultadoNetoEvento & {
-  estado: EstadoEvento
-  tipo_evento: string
-}
+type EventoFinanciero = ResultadoNetoEvento
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 

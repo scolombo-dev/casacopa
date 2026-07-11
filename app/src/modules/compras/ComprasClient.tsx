@@ -11,6 +11,7 @@ import type { Compra, CompraItem, Proveedor, Evento, Producto } from '@/lib/type
 import {
   crearCompra, editarCompra, eliminarCompra,
   crearItem, editarItem, eliminarItem,
+  obtenerEventoParaPlanificador,
 } from './actions'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
@@ -35,6 +36,8 @@ type EventoConTragos = {
     }[] | null
   }[]
 }
+
+type EventoParaPlanificador = EventoConTragos | null
 
 type ProductoConProv = Pick<Producto, 'id' | 'insumo_base' | 'marca' | 'presentacion' | 'ml_por_envase' | 'precio_lista'> & {
   proveedores?: { nombre: string } | { nombre: string }[] | null
@@ -585,9 +588,8 @@ function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeri
 
 // ─── Card de Compra ───────────────────────────────────────────────────────────
 
-function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdit, onDelete }: {
+function CompraCard({ compra, stockPorInsumo, productos, onEdit, onDelete }: {
   compra: CompraCompleta
-  eventosConTragos: EventoConTragos[]
   stockPorInsumo: Record<string, { envases: number; ml: number }>
   productos: ProductoConProv[]
   onEdit: () => void
@@ -602,7 +604,22 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
   const [itemsPreCargados, setItemsPreCargados] = useState<{ insumo: string; botellas: number; mlNecesario: number }[]>([])
   const [itemPreCargadoIdx, setItemPreCargadoIdx] = useState(0)
 
-  const evento = eventosConTragos.find(ev => ev.id === compra.evento_id)
+  // Lazy load: el evento con tragos solo se carga cuando se abre el Planificador
+  const [eventoConTragos, setEventoConTragos] = useState<EventoParaPlanificador>(null)
+  const [loadingEvento, setLoadingEvento] = useState(false)
+
+  async function cargarEventoParaPlanificador() {
+    if (eventoConTragos !== null || loadingEvento) return
+    setLoadingEvento(true)
+    const data = await obtenerEventoParaPlanificador(compra.evento_id)
+    setEventoConTragos(data as EventoConTragos | null)
+    setLoadingEvento(false)
+  }
+
+  function handleTabPlanificador() {
+    setVista('planificador')
+    cargarEventoParaPlanificador()
+  }
 
   function handleGenerarItems(items: { insumo: string; botellas: number; mlNecesario: number }[]) {
     setItemsPreCargados(items)
@@ -655,7 +672,7 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
           {/* Tabs internas */}
           <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
             <button
-              onClick={() => setVista('planificador')}
+              onClick={handleTabPlanificador}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
                 vista === 'planificador' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -676,12 +693,16 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
 
           {/* Vista: Planificador */}
           {vista === 'planificador' && (
-            <Planificador
-              evento={evento}
-              stockPorInsumo={stockPorInsumo}
-              productos={productos}
-              onGenerarItems={handleGenerarItems}
-            />
+            loadingEvento ? (
+              <p className="text-xs text-gray-400 italic py-4 text-center">Cargando datos del evento…</p>
+            ) : (
+              <Planificador
+                evento={eventoConTragos ?? undefined}
+                stockPorInsumo={stockPorInsumo}
+                productos={productos}
+                onGenerarItems={handleGenerarItems}
+              />
+            )
           )}
 
           {/* Vista: Items */}
@@ -811,7 +832,7 @@ function CompraCard({ compra, eventosConTragos, stockPorInsumo, productos, onEdi
 
 export default function ComprasClient({ compras, eventos, proveedores, productos, stock }: {
   compras: CompraCompleta[]
-  eventos: EventoConTragos[]
+  eventos: EventoMin[]
   proveedores: { id: string; nombre: string }[]
   productos: ProductoConProv[]
   stock: StockRaw[]
@@ -824,10 +845,6 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
   const [filtroEvento, setFiltroEvento] = useState<string | null>(null)
 
   const stockPorInsumo = useMemo(() => calcularStockPorInsumo(stock), [stock])
-
-  const eventosMin: EventoMin[] = eventos.map(ev => ({
-    id: ev.id, nombre: ev.nombre, fecha: ev.fecha, estado: ev.estado as Evento['estado'],
-  }))
 
   const filtradas = filtroEvento ? compras.filter(c => c.evento_id === filtroEvento) : compras
   const totalGeneral = filtradas.reduce((s, c) => s + c.total, 0)
@@ -880,7 +897,6 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
             <CompraCard
               key={c.id}
               compra={c}
-              eventosConTragos={eventos}
               stockPorInsumo={stockPorInsumo}
               productos={productos}
               onEdit={() => setEditando(c)}
@@ -892,12 +908,12 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
 
       {modalCrear && (
         <Modal titulo="Nueva compra" onClose={() => setModalCrear(false)}>
-          <CompraForm eventos={eventosMin} proveedores={proveedores} onClose={() => setModalCrear(false)} />
+          <CompraForm eventos={eventos} proveedores={proveedores} onClose={() => setModalCrear(false)} />
         </Modal>
       )}
       {editando && (
         <Modal titulo="Editar compra" onClose={() => setEditando(null)}>
-          <CompraForm inicial={editando} eventos={eventosMin} proveedores={proveedores} onClose={() => setEditando(null)} />
+          <CompraForm inicial={editando} eventos={eventos} proveedores={proveedores} onClose={() => setEditando(null)} />
         </Modal>
       )}
       {eliminando && (

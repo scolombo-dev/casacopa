@@ -25,6 +25,8 @@ export async function crearCompra(data: {
     .single()
   if (error) return { error: error.message, id: null }
   revalidatePath('/compras')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null, id: compra.id }
 }
 
@@ -52,19 +54,14 @@ export async function eliminarCompra(id: string) {
   const { error } = await supabase.from('compras').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/compras')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
 // ─── Items de Compra ──────────────────────────────────────────────────────────
-
-async function recalcularTotal(supabase: ReturnType<typeof createAdminClient>, compraId: string) {
-  const { data: items } = await supabase
-    .from('compra_items')
-    .select('precio_total_real')
-    .eq('compra_id', compraId)
-  const total = (items ?? []).reduce((s, i) => s + (i.precio_total_real ?? 0), 0)
-  await supabase.from('compras').update({ total }).eq('id', compraId)
-}
+// El total de la compra ya no se recalcula acá — lo hace un trigger en la DB
+// (ver migración 013: trg_recalcular_total_compra).
 
 export async function crearItem(data: {
   compra_id: string
@@ -89,8 +86,9 @@ export async function crearItem(data: {
     fecha_compra: new Date().toISOString().split('T')[0],
   })
   if (error) return { error: error.message }
-  await recalcularTotal(supabase, data.compra_id)
   revalidatePath('/compras')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -112,8 +110,9 @@ export async function editarItem(id: string, compraId: string, data: {
     precio_unitario_real: data.precio_unitario_real,
   }).eq('id', id)
   if (error) return { error: error.message }
-  await recalcularTotal(supabase, compraId)
   revalidatePath('/compras')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -121,7 +120,28 @@ export async function eliminarItem(id: string, compraId: string) {
   const supabase = createAdminClient()
   const { error } = await supabase.from('compra_items').delete().eq('id', id)
   if (error) return { error: error.message }
-  await recalcularTotal(supabase, compraId)
   revalidatePath('/compras')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
+}
+
+// ─── Lazy load: datos completos de un evento para el planificador ──────────────
+
+export async function obtenerEventoParaPlanificador(eventoId: string) {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('eventos')
+    .select(`
+      id, nombre, fecha, estado,
+      cantidad_personas, estimacion_tragos_pp, margen_seguridad,
+      evento_tragos(
+        porcentaje_consumo,
+        cantidad_fija,
+        recetas(receta_ingredientes(insumo_base, ml_por_trago))
+      )
+    `)
+    .eq('id', eventoId)
+    .single()
+  return data
 }

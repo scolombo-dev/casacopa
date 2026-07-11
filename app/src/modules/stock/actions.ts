@@ -46,6 +46,7 @@ export async function agregarStock(data: {
   })
 
   revalidatePath('/stock')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -84,6 +85,7 @@ export async function ajustarCantidad(data: {
   })
 
   revalidatePath('/stock')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -123,6 +125,7 @@ export async function consumirStock(data: {
   })
 
   revalidatePath('/stock')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -152,6 +155,7 @@ export async function eliminarLote(id: string, justificacion: string) {
   const { error } = await supabase.from('stock').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/stock')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -208,5 +212,6 @@ export async function registrarVenta(data: {
   })
 
   revalidatePath('/stock')
+  revalidatePath('/')
   return { error: null }
 }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ import {
   setTragosEvento,
   crearStaff, editarStaff, eliminarStaff,
   crearExtra, editarExtra, eliminarExtra,
-  finalizarEvento, chequearEliminarEvento,
+  chequearEliminarEvento,
 } from './actions'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
@@ -42,7 +42,6 @@ type Compra = {
   fecha_compra: string
   total: number
   notas: string | null
-  compra_items: CompraItem[]
 }
 
 type EventoCompleto = Evento & {
@@ -860,145 +859,18 @@ function ComprasSection({ compras }: { compras: Compra[] }) {
           <span className="text-xs text-gray-500 font-medium">{formatARS(totalComprado)} total</span>
         )}
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {compras.map(c => (
-          <div key={c.id} className="bg-gray-50 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-500">
-              <span>{formatFecha(c.fecha_compra)}</span>
-              <span className="font-medium text-gray-700">{formatARS(c.total)}</span>
-            </div>
-            <div className="divide-y divide-gray-100 border-t border-gray-100">
-              {c.compra_items.map(item => (
-                <div key={item.id} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-800">{item.marca}</span>
-                    <span className="text-gray-400">{item.ml_por_envase}ml</span>
-                    <span className="text-gray-400">×{item.cantidad}</span>
-                    {item.proveedor && (
-                      <span className="text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.proveedor}</span>
-                    )}
-                  </div>
-                  <span className="text-gray-600 tabular-nums">{formatARS(item.precio_total_real)}</span>
-                </div>
-              ))}
-            </div>
+          <div key={c.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+            <span>{formatFecha(c.fecha_compra)}</span>
+            <span className="font-medium text-gray-700">{formatARS(c.total)}</span>
           </div>
         ))}
       </div>
+      <Link href="/compras" className="text-xs text-blue-600 hover:underline mt-2 inline-block">
+        Ver detalle en Compras →
+      </Link>
     </div>
-  )
-}
-
-// ─── Modal de finalización ────────────────────────────────────────────────────
-
-function FinalizarModal({ evento, onClose }: { evento: EventoCompleto; onClose: () => void }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-
-  // Todos los items comprados para este evento
-  const todosLosItems = evento.compras.flatMap(c => c.compra_items)
-
-  // Estado: sobrante por item (id -> cantidad)
-  const [sobrantes, setSobrantes] = useState<Record<string, number>>(
-    Object.fromEntries(todosLosItems.map(item => [item.id, 0]))
-  )
-
-  function handleSobrante(id: string, val: number) {
-    const item = todosLosItems.find(i => i.id === id)!
-    setSobrantes(prev => ({ ...prev, [id]: Math.min(val, item.cantidad) }))
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    startTransition(async () => {
-      const payload = todosLosItems.map(item => ({
-        marca: item.marca,
-        proveedor: item.proveedor,
-        ml_por_envase: item.ml_por_envase,
-        precio_unitario_real: item.precio_unitario_real,
-        cantidad_sobrante: sobrantes[item.id] ?? 0,
-      }))
-      const res = await finalizarEvento(evento.id, payload)
-      if (res.error) { setError(res.error); return }
-      router.refresh()
-      onClose()
-    })
-  }
-
-  const totalSobrantes = Object.values(sobrantes).reduce((s, v) => s + v, 0)
-
-  return (
-    <Modal titulo="Finalizar evento — Registrar sobrante" onClose={onClose} wide>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-800">
-          Marcá cuántas botellas <strong>no se consumieron</strong>. Esas pasan automáticamente al stock general.
-        </div>
-
-        {todosLosItems.length === 0 ? (
-          <p className="text-sm text-gray-500 py-2">Este evento no tiene compras registradas. Igual podés finalizar.</p>
-        ) : (
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
-                  <th className="text-left px-4 py-2.5 font-medium">Producto</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Comprado</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Sobrante</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todosLosItems.map(item => (
-                  <tr key={item.id} className="border-b last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800">{item.marca}</div>
-                      <div className="text-xs text-gray-400">
-                        {item.ml_por_envase}ml
-                        {item.proveedor && <span className="ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded">{item.proveedor}</span>}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-center text-gray-600 font-medium">{item.cantidad}</td>
-                    <td className="px-3 py-3 text-center">
-                      <input
-                        type="number"
-                        min={0}
-                        max={item.cantidad}
-                        value={sobrantes[item.id] ?? 0}
-                        onChange={e => handleSobrante(item.id, parseInt(e.target.value) || 0)}
-                        className={cn(
-                          'w-16 text-center border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2',
-                          (sobrantes[item.id] ?? 0) > 0
-                            ? 'border-teal-300 bg-teal-50 text-teal-800 focus:ring-teal-400'
-                            : 'border-gray-200 focus:ring-blue-500'
-                        )}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {totalSobrantes > 0 && (
-          <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-2.5 text-sm text-teal-800">
-            Se van a agregar <strong>{totalSobrantes} envase{totalSobrantes !== 1 ? 's' : ''}</strong> al stock general.
-          </div>
-        )}
-
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-
-        <div className="flex gap-2">
-          <button type="submit" disabled={pending}
-            className="flex-1 bg-teal-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-teal-700 disabled:opacity-50">
-            {pending ? 'Finalizando…' : 'Finalizar evento' + (totalSobrantes > 0 ? ` y pasar ${totalSobrantes} env. al stock` : '')}
-          </button>
-          <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-            Cancelar
-          </button>
-        </div>
-      </form>
-    </Modal>
   )
 }
 
@@ -1017,7 +889,6 @@ function EventoCard({
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [pending, startTransition] = useTransition()
-  const [modalFinalizar, setModalFinalizar] = useState(false)
 
   const totalCostos =
     evento.evento_staff.reduce((s, x) => s + x.costo_total, 0) +
@@ -1072,21 +943,29 @@ function EventoCard({
 
         {/* Acciones + expandir */}
         <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+          {(evento.estado === 'finalizado' || evento.estado === 'cerrado') && (
+            <Link
+              href={`/eventos/${evento.id}/consumo`}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg px-2 py-1 hover:bg-purple-50"
+            >
+              Consumo
+            </Link>
+          )}
           {next && (
             next === 'finalizado' ? (
-              <button
-                onClick={() => setModalFinalizar(true)}
+              <Link
+                href={`/eventos/${evento.id}/consumo`}
                 className="text-xs text-teal-600 hover:text-teal-700 font-medium border border-teal-200 rounded-lg px-2 py-1 hover:bg-teal-50"
               >
-                → Finalizar
-              </button>
+                Registrar consumo
+              </Link>
             ) : (
               <button
                 onClick={() => startTransition(async () => { await actualizarEstado(evento.id, next); router.refresh() })}
                 disabled={pending}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50"
               >
-                → {ESTADO_LABEL[next]}
+                {ESTADO_LABEL[next]}
               </button>
             )
           )}
@@ -1140,10 +1019,7 @@ function EventoCard({
         </div>
       )}
 
-      {/* Modal finalizar */}
-      {modalFinalizar && (
-        <FinalizarModal evento={evento} onClose={() => setModalFinalizar(false)} />
-      )}
+
     </div>
   )
 }

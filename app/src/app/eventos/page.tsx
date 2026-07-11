@@ -13,7 +13,7 @@ export default async function EventosPage() {
         evento_tragos(id, receta_id, porcentaje_consumo, cantidad_fija, recetas(id, nombre_trago, categoria)),
         evento_staff(*),
         evento_extras(*),
-        compras(id, fecha_compra, proveedor_id, total, notas, compra_items(*))
+        compras(id, fecha_compra, proveedor_id, total, notas)
       `)
       .order('fecha', { ascending: false }),
     supabase.from('propuestas').select('*').eq('activo', true).order('tipo'),

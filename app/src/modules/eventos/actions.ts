@@ -46,6 +46,7 @@ export async function crearEvento(data: {
   }
 
   revalidatePath('/eventos')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -76,6 +77,8 @@ export async function editarEvento(id: string, data: {
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -84,6 +87,8 @@ export async function actualizarEstado(id: string, estado: EstadoEvento) {
   const { error } = await supabase.from('eventos').update({ estado }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -103,13 +108,14 @@ export async function chequearEliminarEvento(id: string) {
 
 export async function eliminarEvento(id: string) {
   const supabase = createAdminClient()
-  // Borrar registros con RESTRICT antes de poder eliminar el evento
   await supabase.from('pagos_cliente').delete().eq('evento_id', id)
   await supabase.from('ajustes_ipc').delete().eq('evento_id', id)
   await supabase.from('compras').delete().eq('evento_id', id)
   const { error } = await supabase.from('eventos').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -154,6 +160,8 @@ export async function crearStaff(data: {
   })
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -172,6 +180,8 @@ export async function editarStaff(id: string, data: {
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -180,6 +190,8 @@ export async function eliminarStaff(id: string) {
   const { error } = await supabase.from('evento_staff').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -204,6 +216,8 @@ export async function crearExtra(data: {
   })
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -224,6 +238,8 @@ export async function editarExtra(id: string, data: {
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -232,6 +248,8 @@ export async function eliminarExtra(id: string) {
   const { error } = await supabase.from('evento_extras').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
 }
 
@@ -287,5 +305,21 @@ export async function finalizarEvento(
 
   revalidatePath('/eventos')
   revalidatePath('/stock')
+  revalidatePath('/')
+  revalidatePath('/finanzas')
   return { error: null }
+}
+
+// ─── Lazy load: items de compras de un evento (para modal de finalización) ─────
+
+export async function obtenerItemsComprasEvento(eventoId: string) {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('compras')
+    .select(`
+      id, fecha_compra, total,
+      compra_items(id, marca, proveedor, presentacion, ml_por_envase, cantidad, precio_unitario_real, precio_total_real)
+    `)
+    .eq('evento_id', eventoId)
+  return data ?? []
 }

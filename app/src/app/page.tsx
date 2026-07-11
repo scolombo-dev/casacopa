@@ -29,28 +29,21 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const hoy = new Date().toISOString().split('T')[0]
 
+  // Una sola query: la vista ya incluye estado, tipo_evento y ajuste_ipc
   const [
     { data: financiero },
-    { data: estadosTipo },
+    { data: eventos },
     { data: stock },
   ] = await Promise.all([
     supabase.from('resultado_neto_evento').select('*'),
     supabase
       .from('eventos')
-      .select('id, estado, tipo_evento, nombre, fecha, cantidad_personas, precio_total')
+      .select('id, nombre, fecha, estado, tipo_evento, cantidad_personas, precio_total')
       .order('fecha'),
     supabase.from('stock').select('cantidad_envases, precio_unitario_compra').gt('cantidad_envases', 0),
   ])
 
-  // Enriquecer vista financiera con estado
-  const eventosFinancieros = (financiero ?? []).map(f => {
-    const ev = (estadosTipo ?? []).find(e => e.id === f.evento_id)
-    return {
-      ...f,
-      estado: (ev?.estado ?? 'presupuesto') as EstadoEvento,
-      tipo_evento: ev?.tipo_evento ?? '',
-    }
-  })
+  const eventosFinancieros = financiero ?? []
 
   // KPIs
   const activos = eventosFinancieros.filter(e => !['presupuesto', 'cerrado'].includes(e.estado))
@@ -61,14 +54,13 @@ export default async function DashboardPage() {
 
   // Próximos eventos (confirmados o más, fecha >= hoy)
   const proximosEstados: EstadoEvento[] = ['confirmado', 'en_preparacion', 'compras_realizadas', 'en_curso']
-  const proximos = (estadosTipo ?? [])
+  const proximos = (eventos ?? [])
     .filter(e => proximosEstados.includes(e.estado as EstadoEvento) && e.fecha >= hoy)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
     .slice(0, 6)
 
   // Alertas
   const alertas: { texto: string; href: string }[] = []
-
   const conDeuda = activos.filter(e => e.ingreso_bruto > e.total_cobrado)
   if (conDeuda.length > 0) {
     alertas.push({
@@ -77,7 +69,7 @@ export default async function DashboardPage() {
     })
   }
 
-  const sinCompras = (estadosTipo ?? []).filter(e =>
+  const sinCompras = (eventos ?? []).filter(e =>
     ['en_preparacion', 'compras_realizadas'].includes(e.estado) && e.fecha >= hoy
   )
   if (sinCompras.length > 0) {

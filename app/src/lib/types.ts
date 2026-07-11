@@ -220,6 +220,8 @@ export type ResumenFinancieroEvento = {
   evento_id: string
   nombre: string
   fecha: string
+  estado: EstadoEvento
+  tipo_evento: string
   cantidad_personas: number
   ingreso_bruto: number
   total_cobrado: number
@@ -227,6 +229,7 @@ export type ResumenFinancieroEvento = {
   costo_personal: number
   costo_extras: number
   valor_sobrante: number
+  ajuste_ipc: number
 }
 
 export type ResultadoNetoEvento = ResumenFinancieroEvento & {
