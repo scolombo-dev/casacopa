@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Plus, Pencil, Trash2, X, ChevronDown, ChevronRight,
-  Users, DollarSign, Calendar, FileText,
+  Users, DollarSign, Calendar, FileText, BarChart3,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import type {
@@ -909,6 +909,9 @@ function EventoCard({
           )}
           <Link href={`/eventos/${evento.id}/reporte`} title="Ver reporte" className="p-1.5 text-gray-400 hover:text-teal-600 rounded hover:bg-teal-50">
             <FileText size={15} />
+          </Link>
+          <Link href={`/eventos/${evento.id}/resultado`} title="Resultado (costos y gastos discriminados)" className="p-1.5 text-gray-400 hover:text-emerald-600 rounded hover:bg-emerald-50">
+            <BarChart3 size={15} />
           </Link>
           <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50"><Pencil size={15} /></button>
           <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50"><Trash2 size={15} /></button>
