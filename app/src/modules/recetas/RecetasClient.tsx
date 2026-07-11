@@ -10,7 +10,7 @@ import { crearReceta, editarReceta, eliminarReceta } from './actions'
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type RecetaConIng = Receta & { receta_ingredientes: RecetaIngrediente[] }
-type IngredienteLocal = { insumo_base: string; ml_por_trago: number }
+type IngredienteLocal = { insumo_base: string; ml_por_trago: number; es_alcoholico: boolean }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -78,18 +78,22 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
   const [extras, setExtras] = useState(inicial?.extras ?? '')
   const [observaciones, setObservaciones] = useState(inicial?.observaciones ?? '')
   const [ingredientes, setIngredientes] = useState<IngredienteLocal[]>(
-    inicial?.receta_ingredientes?.map(i => ({ insumo_base: i.insumo_base, ml_por_trago: i.ml_por_trago })) ?? []
+    inicial?.receta_ingredientes?.map(i => ({
+      insumo_base: i.insumo_base,
+      ml_por_trago: i.ml_por_trago,
+      es_alcoholico: i.es_alcoholico ?? true,
+    })) ?? []
   )
 
   function addIng() {
-    setIngredientes(prev => [...prev, { insumo_base: '', ml_por_trago: 0 }])
+    setIngredientes(prev => [...prev, { insumo_base: '', ml_por_trago: 0, es_alcoholico: true }])
   }
 
   function removeIng(idx: number) {
     setIngredientes(prev => prev.filter((_, i) => i !== idx))
   }
 
-  function updateIng(idx: number, field: keyof IngredienteLocal, value: string | number) {
+  function updateIng(idx: number, field: keyof IngredienteLocal, value: string | number | boolean) {
     setIngredientes(prev => prev.map((ing, i) => i === idx ? { ...ing, [field]: value } : ing))
   }
 
@@ -184,6 +188,19 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
                 placeholder="ml"
                 className="w-20 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button
+                type="button"
+                onClick={() => updateIng(idx, 'es_alcoholico', !ing.es_alcoholico)}
+                title={ing.es_alcoholico ? 'Es alcohol — clic para marcar como mixer' : 'Es mixer — clic para marcar como alcohol'}
+                className={cn(
+                  'px-2 py-1 rounded-md text-xs font-medium border transition-colors shrink-0',
+                  ing.es_alcoholico
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                    : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                )}
+              >
+                {ing.es_alcoholico ? 'Alcohol' : 'Mixer'}
+              </button>
               <button type="button" onClick={() => removeIng(idx)} className="text-gray-400 hover:text-red-500">
                 <X size={15} />
               </button>

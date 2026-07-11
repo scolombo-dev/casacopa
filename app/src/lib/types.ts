@@ -59,6 +59,7 @@ export type RecetaIngrediente = {
   receta_id: string
   insumo_base: string
   ml_por_trago: number
+  es_alcoholico: boolean
 }
 
 export type Propuesta = {

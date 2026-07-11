@@ -6,7 +6,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const supabase = await createClient()
 
-  const [eventoResult, cierreResult, distribucionResult] = await Promise.all([
+  const [eventoResult, cierreResult, distribucionResult, distribucionInsumoResult] = await Promise.all([
     supabase
       .from('eventos')
       .select(`
@@ -19,7 +19,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
         ),
         evento_tragos(
           receta_id,
-          recetas(id, nombre_trago, categoria)
+          recetas(id, nombre_trago, categoria, receta_ingredientes(insumo_base, es_alcoholico))
         )
       `)
       .eq('id', id)
@@ -34,6 +34,10 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       .select('*')
       .eq('evento_id', id)
       .order('porcentaje', { ascending: false }),
+    supabase
+      .from('distribucion_insumo_trago_evento')
+      .select('*')
+      .eq('evento_id', id),
   ])
 
   if (!eventoResult.data) notFound()
@@ -64,6 +68,10 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
         receta_id: et.receta_id as string,
         nombre_trago: (receta?.nombre_trago ?? '') as string,
         categoria: (receta?.categoria ?? '') as string,
+        ingredientes: ((receta?.receta_ingredientes ?? []) as any[]).map((ing: any) => ({
+          insumo_base: ing.insumo_base as string,
+          es_alcoholico: ing.es_alcoholico as boolean,
+        })),
       }
     })
     .filter((t: { nombre_trago: string }) => t.nombre_trago)
@@ -79,6 +87,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       tragos={tragos}
       cierreExistente={cierreResult.data ?? []}
       distribucionExistente={distribucionResult.data ?? []}
+      distribucionInsumoExistente={distribucionInsumoResult.data ?? []}
     />
   )
 }

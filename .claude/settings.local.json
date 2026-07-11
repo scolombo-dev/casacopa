@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); console.log\\('Rows3:', !!l.Rows3, 'LayoutList:', !!l.LayoutList\\)\")"
+      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); console.log\\('Rows3:', !!l.Rows3, 'LayoutList:', !!l.LayoutList\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
