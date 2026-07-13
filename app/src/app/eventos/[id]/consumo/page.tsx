@@ -6,20 +6,16 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const supabase = await createClient()
 
-  const [eventoResult, cierreResult, distribucionResult, distribucionInsumoResult] = await Promise.all([
+  const [eventoResult, cierreResult, ingredientesResult, historialConsignResult] = await Promise.all([
     supabase
       .from('eventos')
       .select(`
-        id, nombre, fecha, estado, cantidad_personas,
+        id, nombre, fecha, cantidad_personas,
         compras(
           compra_items(
             id, marca, proveedor, presentacion, ml_por_envase, cantidad, precio_unitario_real,
             productos(insumo_base)
           )
-        ),
-        evento_tragos(
-          receta_id,
-          recetas(id, nombre_trago, categoria, receta_ingredientes(insumo_base, es_alcoholico))
         )
       `)
       .eq('id', id)
@@ -30,14 +26,14 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       .eq('evento_id', id)
       .order('creado_en'),
     supabase
-      .from('distribucion_tragos_evento')
-      .select('*')
-      .eq('evento_id', id)
-      .order('porcentaje', { ascending: false }),
+      .from('receta_ingredientes')
+      .select('insumo_base, es_alcoholico, recetas!inner(activo)')
+      .eq('es_alcoholico', true)
+      .eq('recetas.activo', true),
     supabase
-      .from('distribucion_insumo_trago_evento')
-      .select('*')
-      .eq('evento_id', id),
+      .from('cierre_consumo')
+      .select('insumo_base, marca')
+      .eq('tipo_origen', 'consignacion'),
   ])
 
   if (!eventoResult.data) notFound()
@@ -61,33 +57,25 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
     })
   )
 
-  const tragos = (evento.evento_tragos ?? [])
-    .map((et: any) => {
-      const receta = Array.isArray(et.recetas) ? et.recetas[0] : et.recetas
-      return {
-        receta_id: et.receta_id as string,
-        nombre_trago: (receta?.nombre_trago ?? '') as string,
-        categoria: (receta?.categoria ?? '') as string,
-        ingredientes: ((receta?.receta_ingredientes ?? []) as any[]).map((ing: any) => ({
-          insumo_base: ing.insumo_base as string,
-          es_alcoholico: ing.es_alcoholico as boolean,
-        })),
-      }
-    })
-    .filter((t: { nombre_trago: string }) => t.nombre_trago)
+  const insumosSugeridos = Array.from(new Set([
+    ...(ingredientesResult.data ?? []).map((r: { insumo_base: string }) => r.insumo_base),
+    ...(historialConsignResult.data ?? []).map((r: { insumo_base: string }) => r.insumo_base),
+  ])).sort((a, b) => a.localeCompare(b))
+
+  const marcasSugeridas = Array.from(new Set(
+    (historialConsignResult.data ?? []).map((r: { marca: string }) => r.marca)
+  )).sort((a, b) => a.localeCompare(b))
 
   return (
     <ConsumoClient
       eventoId={evento.id}
       eventoNombre={evento.nombre}
-      eventoEstado={evento.estado}
       eventoFecha={evento.fecha}
       eventoCantidadPersonas={evento.cantidad_personas}
       compraItems={compraItems}
-      tragos={tragos}
       cierreExistente={cierreResult.data ?? []}
-      distribucionExistente={distribucionResult.data ?? []}
-      distribucionInsumoExistente={distribucionInsumoResult.data ?? []}
+      insumosSugeridos={insumosSugeridos}
+      marcasSugeridas={marcasSugeridas}
     />
   )
 }

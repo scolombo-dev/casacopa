@@ -29,32 +29,6 @@ export async function guardarDistribucionInsumos(
   return { error: null }
 }
 
-export async function guardarDistribucion(
-  eventoId: string,
-  distribucion: Array<{
-    receta_id: string
-    nombre_trago: string
-    porcentaje: number
-  }>
-) {
-  const supabase = createAdminClient()
-  await supabase.from('distribucion_tragos_evento').delete().eq('evento_id', eventoId)
-  const rows = distribucion
-    .filter(d => d.porcentaje > 0)
-    .map(d => ({
-      evento_id: eventoId,
-      receta_id: d.receta_id,
-      nombre_trago: d.nombre_trago,
-      porcentaje: d.porcentaje,
-    }))
-  if (rows.length > 0) {
-    const { error } = await supabase.from('distribucion_tragos_evento').insert(rows)
-    if (error) return { error: error.message }
-  }
-  revalidatePath(`/eventos/${eventoId}/consumo`)
-  return { error: null }
-}
-
 export async function guardarCierre(
   eventoId: string,
   consumos: Array<{
@@ -74,11 +48,6 @@ export async function guardarCierre(
     ml_por_envase: number
     cantidad_consumida: number
     precio_unitario: number
-  }>,
-  distribucion: Array<{
-    receta_id: string
-    nombre_trago: string
-    porcentaje: number
   }>
 ) {
   const supabase = createAdminClient()
@@ -115,55 +84,49 @@ export async function guardarCierre(
     if (error) return { error: error.message }
   }
 
-  const distRows = distribucion
-    .filter(d => d.porcentaje > 0)
-    .map(d => ({
-      evento_id: eventoId,
-      receta_id: d.receta_id,
-      nombre_trago: d.nombre_trago,
-      porcentaje: d.porcentaje,
-    }))
-  if (distRows.length > 0) {
-    const { error } = await supabase.from('distribucion_tragos_evento').insert(distRows)
-    if (error) return { error: error.message }
-  }
-
-  // Solo crear stock de sobrante si no hay stock de este evento (compatibilidad con flujo anterior)
-  const { count: stockExistente } = await supabase
+  // Recrea el stock de sobrante generado automáticamente por este cierre, para que
+  // editar un cierre ya guardado (cantidades distintas) actualice el stock también.
+  // Nota: si ese sobrante ya se usó o vendió en otro lado, ese movimiento posterior
+  // no se puede reconstruir — se pierde al recrear el lote.
+  const { data: stockAnterior } = await supabase
     .from('stock')
-    .select('*', { count: 'exact', head: true })
+    .select('id')
     .eq('origen_evento_id', eventoId)
 
-  if (!stockExistente || stockExistente === 0) {
-    const hoy = new Date().toISOString().split('T')[0]
-    const conSobrante = consumos.filter(c => c.cantidad_comprada - c.cantidad_consumida > 0)
+  if (stockAnterior && stockAnterior.length > 0) {
+    const idsAnteriores = stockAnterior.map(s => s.id)
+    await supabase.from('movimientos_stock').delete().in('stock_id', idsAnteriores)
+    await supabase.from('stock').delete().in('id', idsAnteriores)
+  }
 
-    for (const item of conSobrante) {
-      const sobrante = item.cantidad_comprada - item.cantidad_consumida
-      const { data: lote, error: stockError } = await supabase
-        .from('stock')
-        .insert({
-          marca: item.marca,
-          proveedor: item.proveedor,
-          cantidad_envases: sobrante,
-          ml_por_envase: item.ml_por_envase,
-          precio_unitario_compra: item.precio_unitario,
-          fecha_ingreso: hoy,
-          origen_evento_id: eventoId,
-        })
-        .select()
-        .single()
+  const hoy = new Date().toISOString().split('T')[0]
+  const conSobrante = consumos.filter(c => c.cantidad_comprada - c.cantidad_consumida > 0)
 
-      if (!stockError && lote) {
-        await supabase.from('movimientos_stock').insert({
-          stock_id: lote.id,
-          tipo: 'ingreso_sobrante',
-          cantidad: sobrante,
-          evento_id: eventoId,
-          fecha: hoy,
-          notas: 'Sobrante de compra al cerrar el evento',
-        })
-      }
+  for (const item of conSobrante) {
+    const sobrante = item.cantidad_comprada - item.cantidad_consumida
+    const { data: lote, error: stockError } = await supabase
+      .from('stock')
+      .insert({
+        marca: item.marca,
+        proveedor: item.proveedor,
+        cantidad_envases: sobrante,
+        ml_por_envase: item.ml_por_envase,
+        precio_unitario_compra: item.precio_unitario,
+        fecha_ingreso: hoy,
+        origen_evento_id: eventoId,
+      })
+      .select()
+      .single()
+
+    if (!stockError && lote) {
+      await supabase.from('movimientos_stock').insert({
+        stock_id: lote.id,
+        tipo: 'ingreso_sobrante',
+        cantidad: sobrante,
+        evento_id: eventoId,
+        fecha: hoy,
+        notas: 'Sobrante de compra al cerrar el evento',
+      })
     }
   }
 

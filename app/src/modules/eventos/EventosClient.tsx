@@ -832,16 +832,6 @@ function EventoCard({
     evento.evento_staff.reduce((s, x) => s + x.costo_total, 0) +
     evento.evento_extras.reduce((s, x) => s + x.monto, 0)
 
-  const estadoSiguiente: Partial<Record<EstadoEvento, EstadoEvento>> = {
-    presupuesto:        'confirmado',
-    confirmado:         'en_preparacion',
-    en_preparacion:     'compras_realizadas',
-    compras_realizadas: 'en_curso',
-    en_curso:           'finalizado',
-    finalizado:         'cerrado',
-  }
-  const next = estadoSiguiente[evento.estado]
-
   return (
     <div className="bg-white rounded-xl border overflow-hidden">
       {/* Header del card */}
@@ -881,32 +871,24 @@ function EventoCard({
 
         {/* Acciones + expandir */}
         <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
-          {(evento.estado === 'finalizado' || evento.estado === 'cerrado') && (
-            <Link
-              href={`/eventos/${evento.id}/consumo`}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg px-2 py-1 hover:bg-purple-50"
-            >
-              Consumo
-            </Link>
-          )}
-          {next && (
-            next === 'finalizado' ? (
-              <Link
-                href={`/eventos/${evento.id}/consumo`}
-                className="text-xs text-teal-600 hover:text-teal-700 font-medium border border-teal-200 rounded-lg px-2 py-1 hover:bg-teal-50"
-              >
-                Registrar consumo
-              </Link>
-            ) : (
-              <button
-                onClick={() => startTransition(async () => { await actualizarEstado(evento.id, next); router.refresh() })}
-                disabled={pending}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50"
-              >
-                {ESTADO_LABEL[next]}
-              </button>
-            )
-          )}
+          <Link
+            href={`/eventos/${evento.id}/consumo`}
+            className="text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg px-2 py-1 hover:bg-purple-50"
+          >
+            Consumo
+          </Link>
+          <select
+            value={evento.estado}
+            onChange={e => {
+              const nuevoEstado = e.target.value as EstadoEvento
+              startTransition(async () => { await actualizarEstado(evento.id, nuevoEstado); router.refresh() })
+            }}
+            disabled={pending}
+            title="Cambiar estado"
+            className="text-xs border border-gray-200 rounded-lg pl-1.5 pr-1 py-1 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            {ESTADOS.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+          </select>
           <Link href={`/eventos/${evento.id}/reporte`} title="Ver reporte" className="p-1.5 text-gray-400 hover:text-teal-600 rounded hover:bg-teal-50">
             <FileText size={15} />
           </Link>
@@ -1096,7 +1078,6 @@ export default function EventosClient({
             <p className="font-medium text-gray-700">Se eliminará también:</p>
             <ul className="list-disc list-inside space-y-0.5 text-gray-500">
               <li>Tragos, staff y extras del evento</li>
-              <li>Lista de checklists</li>
               {infoEliminar && infoEliminar.compras > 0 && (
                 <li className="text-orange-600 font-medium">
                   {infoEliminar.compras} compra{infoEliminar.compras !== 1 ? 's' : ''} registrada{infoEliminar.compras !== 1 ? 's' : ''}
