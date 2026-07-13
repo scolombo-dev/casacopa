@@ -83,6 +83,10 @@ export async function guardarCierre(
 ) {
   const supabase = createAdminClient()
 
+  // Borra un cierre previo (ej. de un intento anterior que falló a mitad de camino)
+  // antes de volver a insertar, para que reintentar no choque con la unique constraint.
+  await supabase.from('cierre_consumo').delete().eq('evento_id', eventoId)
+
   const cierreRows = [
     ...consumos.map(c => ({
       evento_id: eventoId,
