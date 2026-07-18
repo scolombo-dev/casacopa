@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatARS, formatFecha } from '@/lib/utils'
 import ResultadoActions from './ResultadoActions'
+import RepartoResultado from './RepartoResultado'
 
 export default async function ResultadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -15,8 +16,8 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     { data: extras },
     { data: cierre },
     { data: comprasItems },
-    { data: sobrante },
     { data: ajustesIpc },
+    { data: reparto },
   ] = await Promise.all([
     supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_por_persona, precio_total').eq('id', id).single(),
     supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
@@ -25,8 +26,8 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     supabase.from('evento_extras').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('cierre_consumo').select('*').eq('evento_id', id).order('insumo_base'),
     supabase.from('compras').select('compra_items(marca, proveedor, cantidad, precio_unitario_real, precio_total_real)').eq('evento_id', id),
-    supabase.from('stock').select('*').eq('origen_evento_id', id).gt('cantidad_envases', 0),
     supabase.from('ajustes_ipc').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('evento_reparto_resultado').select('*').eq('evento_id', id).order('fecha'),
   ])
 
   if (!evento) notFound()
@@ -52,16 +53,10 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         subtotal: ci.precio_total_real,
       }))
 
-  const sobranteData = (sobrante ?? []).map(s => ({
-    detalle: s.marca,
-    cantidad: s.cantidad_envases,
-    precioUnitario: s.precio_unitario_compra,
-    subtotal: s.cantidad_envases * s.precio_unitario_compra,
-  }))
-
   const staffData = staff ?? []
   const extrasData = extras ?? []
   const ajustesData = ajustesIpc ?? []
+  const repartoData = reparto ?? []
 
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -80,15 +75,14 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
             costoInsumos: fin?.costo_insumos_real ?? 0,
             costoPersonal: fin?.costo_personal ?? 0,
             costoExtras: fin?.costo_extras ?? 0,
-            valorSobrante: fin?.valor_sobrante ?? 0,
             resultadoNeto: fin?.resultado_neto ?? 0,
             margenPorcentaje: fin?.margen_porcentaje ?? 0,
           }}
           insumos={insumos}
           personal={staffData.map(s => ({ rol: s.rol, persona: s.nombre_persona ?? '', cantidad: s.cantidad, costoUnitario: s.costo_unitario, subtotal: s.costo_total }))}
           extras={extrasData.map(e => ({ concepto: e.concepto, categoria: e.categoria, monto: e.monto }))}
-          sobrante={sobranteData}
           pagos={pagosData.map(p => ({ tipo: p.tipo, fecha: formatFecha(p.fecha), metodo: p.metodo, monto: p.monto }))}
+          reparto={repartoData.map(r => ({ destinatario: r.destinatario, fecha: formatFecha(r.fecha), monto: r.monto, notas: r.notas }))}
         />
       </div>
 
@@ -166,30 +160,6 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
           )}
         </div>
 
-        {/* Sobrante recuperado */}
-        {sobranteData.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Sobrante recuperado (a stock)</h2>
-            <div className="border rounded-xl overflow-hidden">
-              <div className="divide-y">
-                {sobranteData.map((it, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-2 text-sm">
-                    <div>
-                      <span className="text-gray-700">{it.detalle}</span>
-                      <span className="text-gray-400 ml-2">× {it.cantidad}</span>
-                    </div>
-                    <span className="text-gray-600 tabular-nums">{formatARS(it.subtotal)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-gray-50">
-                  <span className="font-semibold text-gray-800">Subtotal sobrante</span>
-                  <span className="font-bold text-emerald-600">+ {formatARS(fin?.valor_sobrante ?? 0)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Costo de personal discriminado */}
         {staffData.length > 0 && (
           <div className="mb-6">
@@ -247,6 +217,13 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
             <span>{(fin?.resultado_neto ?? 0) >= 0 ? '+' : ''}{formatARS(fin?.resultado_neto ?? 0)} ({fin?.margen_porcentaje ?? 0}%)</span>
           </div>
         </div>
+
+        {/* Distribución del resultado */}
+        <RepartoResultado
+          eventoId={evento.id}
+          resultadoNeto={fin?.resultado_neto ?? 0}
+          repartos={repartoData.map(r => ({ id: r.id, destinatario: r.destinatario, monto: r.monto, fecha: r.fecha, notas: r.notas }))}
+        />
 
         {/* Pagos */}
         {pagosData.length > 0 && (

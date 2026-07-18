@@ -13,18 +13,17 @@ type Props = {
     costoInsumos: number
     costoPersonal: number
     costoExtras: number
-    valorSobrante: number
     resultadoNeto: number
     margenPorcentaje: number
   }
   insumos: { detalle: string; origen: string; cantidad: number; precioUnitario: number; subtotal: number }[]
   personal: { rol: string; persona: string; cantidad: number; costoUnitario: number; subtotal: number }[]
   extras: { concepto: string; categoria: string; monto: number }[]
-  sobrante: { detalle: string; cantidad: number; precioUnitario: number; subtotal: number }[]
   pagos: { tipo: string; fecha: string; metodo: string; monto: number }[]
+  reparto: { destinatario: string; fecha: string; monto: number; notas: string | null }[]
 }
 
-export default function ResultadoActions({ evento, resumen, insumos, personal, extras, sobrante, pagos }: Props) {
+export default function ResultadoActions({ evento, resumen, insumos, personal, extras, pagos, reparto }: Props) {
   function descargarExcel() {
     const wb = XLSX.utils.book_new()
 
@@ -44,7 +43,6 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
       ['Costo de insumos', -resumen.costoInsumos],
       ['Costo de personal', -resumen.costoPersonal],
       ['Gastos extra', -resumen.costoExtras],
-      ['Sobrante recuperado', resumen.valorSobrante],
       [],
       ['Resultado neto', resumen.resultadoNeto],
       ['Margen %', resumen.margenPorcentaje],
@@ -56,13 +54,6 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
         Insumo: i.detalle, Origen: i.origen, Cantidad: i.cantidad, 'Precio unitario': i.precioUnitario, Subtotal: i.subtotal,
       })))
       XLSX.utils.book_append_sheet(wb, sheet, 'Insumos')
-    }
-
-    if (sobrante.length > 0) {
-      const sheet = XLSX.utils.json_to_sheet(sobrante.map(s => ({
-        Producto: s.detalle, Cantidad: s.cantidad, 'Precio unitario': s.precioUnitario, Subtotal: s.subtotal,
-      })))
-      XLSX.utils.book_append_sheet(wb, sheet, 'Sobrante')
     }
 
     if (personal.length > 0) {
@@ -84,6 +75,13 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
         Tipo: p.tipo, Fecha: p.fecha, Método: p.metodo, Monto: p.monto,
       })))
       XLSX.utils.book_append_sheet(wb, sheet, 'Pagos')
+    }
+
+    if (reparto.length > 0) {
+      const sheet = XLSX.utils.json_to_sheet(reparto.map(r => ({
+        'A quién': r.destinatario, Fecha: r.fecha, Monto: r.monto, Nota: r.notas ?? '',
+      })))
+      XLSX.utils.book_append_sheet(wb, sheet, 'Distribución')
     }
 
     const nombreArchivo = `Resultado - ${evento.nombre}.xlsx`.replace(/[\\/:*?"<>|]/g, '')

@@ -50,10 +50,15 @@ export async function agregarStock(data: {
   return { error: null }
 }
 
-// ─── Ajustar cantidad de un lote existente ────────────────────────────────────
+// ─── Editar un lote existente (datos + cantidad) ─────────────────────────────
 
-export async function ajustarCantidad(data: {
+export async function editarLote(data: {
   stock_id: string
+  marca: string
+  proveedor: string
+  ml_por_envase: number
+  precio_unitario_compra: number
+  fecha_ingreso: string
   nueva_cantidad: number
   notas: string
 }) {
@@ -66,23 +71,34 @@ export async function ajustarCantidad(data: {
     .single()
 
   if (!lote) return { error: 'Lote no encontrado.' }
+  if (!data.marca.trim()) return { error: 'La marca es obligatoria.' }
+  if (data.nueva_cantidad < 0) return { error: 'La cantidad no puede ser negativa.' }
 
   const diff = data.nueva_cantidad - lote.cantidad_envases
 
   const { error } = await supabase
     .from('stock')
-    .update({ cantidad_envases: data.nueva_cantidad })
+    .update({
+      marca: data.marca.trim(),
+      proveedor: data.proveedor.trim(),
+      ml_por_envase: data.ml_por_envase,
+      precio_unitario_compra: data.precio_unitario_compra,
+      fecha_ingreso: data.fecha_ingreso,
+      cantidad_envases: data.nueva_cantidad,
+    })
     .eq('id', data.stock_id)
 
   if (error) return { error: error.message }
 
-  await supabase.from('movimientos_stock').insert({
-    stock_id: data.stock_id,
-    tipo: 'ajuste',
-    cantidad: diff,
-    fecha: new Date().toISOString().split('T')[0],
-    notas: data.notas.trim() || `Ajuste manual: ${lote.cantidad_envases} → ${data.nueva_cantidad}`,
-  })
+  if (diff !== 0) {
+    await supabase.from('movimientos_stock').insert({
+      stock_id: data.stock_id,
+      tipo: 'ajuste',
+      cantidad: diff,
+      fecha: new Date().toISOString().split('T')[0],
+      notas: data.notas.trim() || `Ajuste manual: ${lote.cantidad_envases} → ${data.nueva_cantidad}`,
+    })
+  }
 
   revalidatePath('/stock')
   revalidatePath('/')
@@ -165,7 +181,7 @@ export async function obtenerMovimientos(stockId: string) {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('movimientos_stock')
-    .select('id, tipo, cantidad, monto, fecha, notas, eventos(nombre)')
+    .select('id, tipo, cantidad, monto, pagado, fecha, notas, eventos(nombre)')
     .eq('stock_id', stockId)
     .order('creado_en', { ascending: false })
   if (error) return { data: null, error: error.message }
@@ -209,6 +225,51 @@ export async function registrarVenta(data: {
     monto: montoTotal,
     fecha: data.fecha,
     notas: data.notas.trim() || null,
+  })
+
+  revalidatePath('/stock')
+  revalidatePath('/')
+  return { error: null }
+}
+
+// ─── Retirar stock para uso propio (autoconsumo) ─────────────────────────────
+
+export async function retirarUsoPropio(data: {
+  stock_id: string
+  cantidad: number
+  pagado: boolean
+  monto: number | null
+  fecha: string
+  notas: string
+}) {
+  const supabase = createAdminClient()
+
+  const { data: lote } = await supabase
+    .from('stock')
+    .select('cantidad_envases')
+    .eq('id', data.stock_id)
+    .single()
+
+  if (!lote) return { error: 'Lote no encontrado.' }
+  if (data.cantidad <= 0) return { error: 'La cantidad debe ser mayor a 0.' }
+  if (data.cantidad > lote.cantidad_envases) return { error: 'No hay suficiente stock disponible.' }
+  if (!data.notas.trim()) return { error: 'Contá para qué lo usaste.' }
+
+  const { error } = await supabase
+    .from('stock')
+    .update({ cantidad_envases: lote.cantidad_envases - data.cantidad })
+    .eq('id', data.stock_id)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('movimientos_stock').insert({
+    stock_id: data.stock_id,
+    tipo: 'retiro_personal',
+    cantidad: -data.cantidad,
+    monto: data.pagado ? data.monto : null,
+    pagado: data.pagado,
+    fecha: data.fecha,
+    notas: data.notas.trim(),
   })
 
   revalidatePath('/stock')

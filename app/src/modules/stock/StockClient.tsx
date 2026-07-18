@@ -8,7 +8,7 @@ import {
   LayoutList, Rows3,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
-import { agregarStock, ajustarCantidad, eliminarLote, obtenerMovimientos, registrarVenta } from './actions'
+import { agregarStock, editarLote, eliminarLote, obtenerMovimientos, registrarVenta, retirarUsoPropio } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -236,11 +236,16 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
   )
 }
 
-// ─── Formulario de ajuste ─────────────────────────────────────────────────────
+// ─── Formulario de edición de lote ────────────────────────────────────────────
 
-function AjusteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
+function EditarLoteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [marca, setMarca] = useState(lote.marca)
+  const [proveedor, setProveedor] = useState(lote.proveedor)
+  const [mlEnvase, setMlEnvase] = useState(lote.ml_por_envase)
+  const [precio, setPrecio] = useState(lote.precio_unitario_compra)
+  const [fecha, setFecha] = useState(lote.fecha_ingreso)
   const [nueva, setNueva] = useState(lote.cantidad_envases)
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -249,9 +254,19 @@ function AjusteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!marca.trim()) { setError('La marca es obligatoria.'); return }
     if (nueva < 0) { setError('La cantidad no puede ser negativa.'); return }
+    setError(null)
     startTransition(async () => {
-      const res = await ajustarCantidad({ stock_id: lote.id, nueva_cantidad: nueva, notas })
+      const res = await editarLote({
+        stock_id: lote.id,
+        marca, proveedor,
+        ml_por_envase: mlEnvase,
+        precio_unitario_compra: precio,
+        fecha_ingreso: fecha,
+        nueva_cantidad: nueva,
+        notas,
+      })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -260,13 +275,36 @@ function AjusteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm">
-        <div className="font-medium text-gray-800">{lote.marca}</div>
-        <div className="text-gray-500">{lote.ml_por_envase}ml — Actual: {lote.cantidad_envases} envases</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
+          <input value={marca} onChange={e => setMarca(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+          <input value={proveedor} onChange={e => setProveedor(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ml por envase (alcohol)</label>
+          <input type="number" min={1} value={mlEnvase} onChange={e => setMlEnvase(parseInt(e.target.value) || 0)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Precio / envase $</label>
+          <input type="number" min={0} value={precio} onChange={e => setPrecio(parseInt(e.target.value) || 0)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de ingreso</label>
+          <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nueva cantidad (envases)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad (envases)</label>
         <input type="number" min={0} value={nueva} onChange={e => setNueva(parseInt(e.target.value) ?? 0)}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         {diff !== 0 && (
@@ -276,18 +314,20 @@ function AjusteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del ajuste</label>
-        <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: Conteo físico, rotura…"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
+      {diff !== 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del cambio de cantidad</label>
+          <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: Conteo físico, rotura…"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex gap-2">
-        <button type="submit" disabled={pending || diff === 0}
+        <button type="submit" disabled={pending}
           className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-          {pending ? 'Guardando…' : 'Confirmar ajuste'}
+          {pending ? 'Guardando…' : 'Guardar cambios'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           Cancelar
@@ -299,12 +339,12 @@ function AjusteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
 // ─── Grupo por insumo ─────────────────────────────────────────────────────────
 
-function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onVender }: {
+function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onRetirar }: {
   grupo: GrupoInsumo
   onAjustar: (lote: Lote) => void
   onEliminar: (lote: Lote) => void
   onHistorial: (lote: Lote) => void
-  onVender: (lote: Lote) => void
+  onRetirar: (lote: Lote) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const sinStock = grupo.totalEnvases === 0
@@ -406,8 +446,8 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onVender }: {
                       </button>
                       {lote.cantidad_envases > 0 && (
                         <button
-                          onClick={() => onVender(lote)}
-                          title="Registrar venta"
+                          onClick={() => onRetirar(lote)}
+                          title="Retirar stock (venta o uso propio)"
                           className="p-1.5 text-gray-400 hover:text-purple-600 rounded hover:bg-purple-50"
                         >
                           <ShoppingBag size={13} />
@@ -415,7 +455,7 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onVender }: {
                       )}
                       <button
                         onClick={() => onAjustar(lote)}
-                        title="Ajustar cantidad"
+                        title="Editar lote"
                         className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50"
                       >
                         <Pencil size={13} />
@@ -443,9 +483,10 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onVender }: {
 
 type Movimiento = {
   id: string
-  tipo: 'ingreso_sobrante' | 'uso_evento' | 'venta' | 'ajuste'
+  tipo: 'ingreso_sobrante' | 'uso_evento' | 'venta' | 'ajuste' | 'retiro_personal'
   cantidad: number
   monto: number | null
+  pagado: boolean | null
   fecha: string
   notas: string | null
   eventos: { nombre: string } | { nombre: string }[] | null
@@ -456,6 +497,7 @@ const LABELS_TIPO: Record<Movimiento['tipo'], string> = {
   uso_evento: 'Uso en evento',
   venta: 'Venta',
   ajuste: 'Ajuste manual',
+  retiro_personal: 'Uso propio',
 }
 
 const COLORES_TIPO: Record<Movimiento['tipo'], string> = {
@@ -463,6 +505,7 @@ const COLORES_TIPO: Record<Movimiento['tipo'], string> = {
   uso_evento: 'text-blue-700 bg-blue-50 border-blue-200',
   venta: 'text-purple-700 bg-purple-50 border-purple-200',
   ajuste: 'text-gray-600 bg-gray-50 border-gray-200',
+  retiro_personal: 'text-amber-700 bg-amber-50 border-amber-200',
 }
 
 function HistorialModal({ lote, onClose }: { lote: Lote; onClose: () => void }) {
@@ -515,6 +558,9 @@ function HistorialModal({ lote, onClose }: { lote: Lote; onClose: () => void }) 
                     {m.monto != null && m.monto > 0 && (
                       <div className="text-xs text-purple-600 font-medium">{formatARS(m.monto)}</div>
                     )}
+                    {m.tipo === 'retiro_personal' && m.pagado === false && (
+                      <div className="text-xs text-amber-600 font-medium">Pendiente de pago</div>
+                    )}
                   </div>
                 </div>
               )
@@ -526,13 +572,15 @@ function HistorialModal({ lote, onClose }: { lote: Lote; onClose: () => void }) 
   )
 }
 
-// ─── Formulario de venta de sobrante ─────────────────────────────────────────
+// ─── Formulario de retiro de stock (venta o uso propio) ──────────────────────
 
-function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
+function RetiroForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [modo, setModo] = useState<'venta' | 'uso_propio'>('venta')
   const [cantidad, setCantidad] = useState(1)
   const [precio, setPrecio] = useState(0)
+  const [pagado, setPagado] = useState(true)
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -543,10 +591,13 @@ function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
     e.preventDefault()
     if (cantidad <= 0) { setError('La cantidad debe ser mayor a 0.'); return }
     if (cantidad > lote.cantidad_envases) { setError(`Solo hay ${lote.cantidad_envases} envases disponibles.`); return }
-    if (precio <= 0) { setError('El precio de venta es obligatorio.'); return }
+    if (modo === 'venta' && precio <= 0) { setError('El precio de venta es obligatorio.'); return }
+    if (modo === 'uso_propio' && !notas.trim()) { setError('Contá para qué lo usaste.'); return }
     setError(null)
     startTransition(async () => {
-      const res = await registrarVenta({ stock_id: lote.id, cantidad, precio_unitario: precio, fecha, notas })
+      const res = modo === 'venta'
+        ? await registrarVenta({ stock_id: lote.id, cantidad, precio_unitario: precio, fecha, notas })
+        : await retirarUsoPropio({ stock_id: lote.id, cantidad, pagado, monto: pagado ? precio : null, fecha, notas })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -555,8 +606,26 @@ function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex gap-2">
+        {(['venta', 'uso_propio'] as const).map(m => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setModo(m)}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              modo === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            )}
+          >
+            {m === 'venta' ? 'Vendido a alguien' : 'Uso propio'}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-sm text-purple-800">
-        Registrá la venta de sobrante. El ingreso quedará registrado en el historial del lote.
+        {modo === 'venta'
+          ? 'Registrá la venta de sobrante. El ingreso quedará registrado en el historial del lote.'
+          : 'Descontá el stock que usaste vos y anotá para qué fue, y si ya lo pagaste.'}
       </div>
 
       <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm">
@@ -566,19 +635,10 @@ function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a vender</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
           <input
             type="number" min={1} max={lote.cantidad_envases} value={cantidad}
             onChange={e => setCantidad(parseInt(e.target.value) || 1)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Precio por envase $</label>
-          <input
-            type="number" min={1} value={precio || ''}
-            onChange={e => setPrecio(parseInt(e.target.value) || 0)}
-            placeholder="0"
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
@@ -590,21 +650,58 @@ function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
-        <div className="flex items-end">
-          {total > 0 && (
-            <div className="w-full bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
-              <div className="text-xs text-purple-600">Total ingreso</div>
-              <div className="font-bold text-purple-800">{formatARS(total)}</div>
+
+        {modo === 'venta' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio por envase $</label>
+              <input
+                type="number" min={1} value={precio || ''}
+                onChange={e => setPrecio(parseInt(e.target.value) || 0)}
+                placeholder="0"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
             </div>
-          )}
-        </div>
+            <div className="flex items-end">
+              {total > 0 && (
+                <div className="w-full bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
+                  <div className="text-xs text-purple-600">Total ingreso</div>
+                  <div className="font-bold text-purple-800">{formatARS(total)}</div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {modo === 'uso_propio' && (
+          <div className="col-span-2">
+            <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+              <input type="checkbox" checked={pagado} onChange={e => setPagado(e.target.checked)} />
+              Ya lo pagué
+            </label>
+            {pagado ? (
+              <input
+                type="number" min={1} value={precio || ''}
+                onChange={e => setPrecio(parseInt(e.target.value) || 0)}
+                placeholder="¿Cuánto pagaste? (por envase)"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            ) : (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Va a quedar marcado como pendiente de pago.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notas (comprador, motivo, etc.)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notas {modo === 'venta' ? '(comprador, motivo, etc.)' : <span className="text-red-500">*</span>}
+        </label>
         <input
           value={notas} onChange={e => setNotas(e.target.value)}
-          placeholder="Opcional"
+          placeholder={modo === 'venta' ? 'Opcional' : 'Ej: me llevé 1 para casa'}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
       </div>
@@ -614,7 +711,11 @@ function VentaForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
           className="flex-1 bg-purple-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-purple-700 disabled:opacity-50">
-          {pending ? 'Registrando…' : `Registrar venta — ${total > 0 ? formatARS(total) : '$0'}`}
+          {pending
+            ? 'Guardando…'
+            : modo === 'venta'
+              ? `Registrar venta — ${total > 0 ? formatARS(total) : '$0'}`
+              : 'Retirar stock'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           Cancelar
@@ -640,7 +741,7 @@ export default function StockClient({ stock, productos, eventos }: {
   const [eliminando, setEliminando] = useState<Lote | null>(null)
   const [justificacionElim, setJustificacionElim] = useState('')
   const [verHistorial, setVerHistorial] = useState<Lote | null>(null)
-  const [vendiendo, setVendiendo] = useState<Lote | null>(null)
+  const [retirando, setRetirando] = useState<Lote | null>(null)
   const [filtro, setFiltro] = useState<'todos' | 'disponible' | 'agotado'>('disponible')
   const [vistaTabla, setVistaTabla] = useState(false)
 
@@ -759,7 +860,7 @@ export default function StockClient({ stock, productos, eventos }: {
                 onAjustar={setAjustando}
                 onEliminar={setEliminando}
                 onHistorial={setVerHistorial}
-                onVender={setVendiendo}
+                onRetirar={setRetirando}
               />
             ))}
           </div>
@@ -824,12 +925,12 @@ export default function StockClient({ stock, productos, eventos }: {
                             <History size={13} />
                           </button>
                           {lote.cantidad_envases > 0 && (
-                            <button onClick={() => setVendiendo(lote)} title="Venta"
+                            <button onClick={() => setRetirando(lote)} title="Retirar stock (venta o uso propio)"
                               className="p-1.5 text-gray-400 hover:text-purple-600 rounded hover:bg-purple-50">
                               <ShoppingBag size={13} />
                             </button>
                           )}
-                          <button onClick={() => setAjustando(lote)} title="Ajustar"
+                          <button onClick={() => setAjustando(lote)} title="Editar lote"
                             className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
                             <Pencil size={13} />
                           </button>
@@ -872,10 +973,10 @@ export default function StockClient({ stock, productos, eventos }: {
         </Modal>
       )}
 
-      {/* Modal: Ajuste de cantidad */}
+      {/* Modal: Editar lote */}
       {ajustando && (
-        <Modal titulo="Ajustar cantidad" onClose={() => setAjustando(null)}>
-          <AjusteForm lote={ajustando} onClose={() => setAjustando(null)} />
+        <Modal titulo="Editar lote" onClose={() => setAjustando(null)}>
+          <EditarLoteForm lote={ajustando} onClose={() => setAjustando(null)} />
         </Modal>
       )}
 
@@ -884,10 +985,10 @@ export default function StockClient({ stock, productos, eventos }: {
         <HistorialModal lote={verHistorial} onClose={() => setVerHistorial(null)} />
       )}
 
-      {/* Modal: Venta de sobrante */}
-      {vendiendo && (
-        <Modal titulo="Registrar venta de sobrante" onClose={() => setVendiendo(null)}>
-          <VentaForm lote={vendiendo} onClose={() => setVendiendo(null)} />
+      {/* Modal: Retirar stock (venta o uso propio) */}
+      {retirando && (
+        <Modal titulo="Retirar stock" onClose={() => setRetirando(null)}>
+          <RetiroForm lote={retirando} onClose={() => setRetirando(null)} />
         </Modal>
       )}
 

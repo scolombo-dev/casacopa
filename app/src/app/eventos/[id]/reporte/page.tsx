@@ -240,12 +240,6 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
                   <span className="text-red-500">− {formatARS(fin.costo_extras)}</span>
                 </div>
               )}
-              {fin.valor_sobrante > 0 && (
-                <div className="flex justify-between px-4 py-2.5 text-sm">
-                  <span className="text-gray-500">Sobrante recuperado</span>
-                  <span className="text-emerald-500">+ {formatARS(fin.valor_sobrante)}</span>
-                </div>
-              )}
               <div className={`flex justify-between px-4 py-3 text-sm font-bold ${fin.resultado_neto >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
                 <span>Resultado neto</span>
                 <span>{fin.resultado_neto >= 0 ? '+' : ''}{formatARS(fin.resultado_neto)} ({fin.margen_porcentaje}%)</span>

@@ -281,13 +281,6 @@ function EventoFinancieroCard({
                   {ev.costo_extras > 0 ? `− ${formatARS(ev.costo_extras)}` : '—'}
                 </span>
               </div>
-              {ev.valor_sobrante > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>Sobrante recuperado</span>
-                  <span>+ {formatARS(ev.valor_sobrante)}</span>
-                </div>
-              )}
-
               <div className="border-t my-2" />
 
               {tieneResultado ? (
