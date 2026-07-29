@@ -105,46 +105,6 @@ export async function editarLote(data: {
   return { error: null }
 }
 
-// ─── Consumir stock (uso en evento) ──────────────────────────────────────────
-
-export async function consumirStock(data: {
-  stock_id: string
-  cantidad: number
-  evento_id: string | null
-  notas: string
-}) {
-  const supabase = createAdminClient()
-
-  const { data: lote } = await supabase
-    .from('stock')
-    .select('cantidad_envases')
-    .eq('id', data.stock_id)
-    .single()
-
-  if (!lote) return { error: 'Lote no encontrado.' }
-  if (data.cantidad > lote.cantidad_envases) return { error: 'No hay suficiente stock disponible.' }
-
-  const { error } = await supabase
-    .from('stock')
-    .update({ cantidad_envases: lote.cantidad_envases - data.cantidad })
-    .eq('id', data.stock_id)
-
-  if (error) return { error: error.message }
-
-  await supabase.from('movimientos_stock').insert({
-    stock_id: data.stock_id,
-    tipo: 'uso_evento',
-    cantidad: -data.cantidad,
-    evento_id: data.evento_id || null,
-    fecha: new Date().toISOString().split('T')[0],
-    notas: data.notas.trim() || null,
-  })
-
-  revalidatePath('/stock')
-  revalidatePath('/')
-  return { error: null }
-}
-
 // ─── Eliminar lote ───────────────────────────────────────────────────────────
 
 export async function eliminarLote(id: string, justificacion: string) {

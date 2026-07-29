@@ -2,28 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatARS, formatFecha } from '@/lib/utils'
 import type { EstadoEvento } from '@/lib/types'
+import { ESTADO_STYLE, ESTADO_LABEL } from '@/lib/constants'
 import { AlertCircle, Calendar, DollarSign, Package, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const ESTADO_STYLE: Record<EstadoEvento, string> = {
-  presupuesto:        'bg-gray-100 text-gray-600',
-  confirmado:         'bg-blue-100 text-blue-700',
-  en_preparacion:     'bg-amber-100 text-amber-700',
-  compras_realizadas: 'bg-orange-100 text-orange-700',
-  en_curso:           'bg-green-100 text-green-700',
-  finalizado:         'bg-teal-100 text-teal-700',
-  cerrado:            'bg-slate-100 text-slate-600',
-}
-
-const ESTADO_LABEL: Record<EstadoEvento, string> = {
-  presupuesto:        'Presupuesto',
-  confirmado:         'Confirmado',
-  en_preparacion:     'En preparación',
-  compras_realizadas: 'Compras realizadas',
-  en_curso:           'En curso',
-  finalizado:         'Finalizado',
-  cerrado:            'Cerrado',
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient()

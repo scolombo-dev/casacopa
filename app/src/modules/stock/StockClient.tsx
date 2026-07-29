@@ -3,11 +3,12 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Pencil, Trash2, X, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, ChevronDown, ChevronRight,
   Package, AlertTriangle, ArrowDownCircle, History, ShoppingBag,
   LayoutList, Rows3,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
 import { agregarStock, editarLote, eliminarLote, obtenerMovimientos, registrarVenta, retirarUsoPropio } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -68,25 +69,6 @@ function agruparPorInsumo(stock: Lote[]): GrupoInsumo[] {
       valorTotal: lotes.reduce((s, l) => s + l.cantidad_envases * l.precio_unitario_compra, 0),
     }))
     .sort((a, b) => a.insumo.localeCompare(b.insumo))
-}
-
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children }: {
-  titulo: string; onClose: () => void; children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white rounded-t-xl">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
-        </div>
-        <div className="px-5 py-5">{children}</div>
-      </div>
-    </div>
-  )
 }
 
 // ─── Formulario de ingreso de stock ──────────────────────────────────────────

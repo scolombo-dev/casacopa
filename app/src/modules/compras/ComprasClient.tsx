@@ -3,10 +3,11 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Pencil, Trash2, X, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, ChevronDown, ChevronRight,
   ShoppingCart, Package,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
 import type { Compra, CompraItem, Proveedor, Evento, Producto } from '@/lib/types'
 import {
   crearCompra, editarCompra, eliminarCompra,
@@ -26,28 +27,6 @@ type CompraCompleta = Compra & {
   eventos: Pick<Evento, 'id' | 'nombre' | 'fecha'> | null
   proveedores: Pick<Proveedor, 'id' | 'nombre'> | null
   compra_items: CompraItem[]
-}
-
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children, wide }: {
-  titulo: string; onClose: () => void; children: React.ReactNode; wide?: boolean
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={cn(
-        'relative bg-white rounded-xl shadow-xl max-h-[92vh] overflow-y-auto',
-        wide ? 'w-full max-w-2xl' : 'w-full max-w-lg'
-      )}>
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white rounded-t-xl z-10">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
-        </div>
-        <div className="px-5 py-5">{children}</div>
-      </div>
-    </div>
-  )
 }
 
 // ─── Formulario de Compra ─────────────────────────────────────────────────────
@@ -133,29 +112,22 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
 
 // ─── Formulario de Item ───────────────────────────────────────────────────────
 
-function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeridas, mlNecesario, onClose }: {
+function ItemForm({ compraId, inicial, productos, onClose }: {
   compraId: string
   inicial?: CompraItem
   productos: ProductoConProv[]
-  insumoSugerido?: string
-  botellosSugeridas?: number
-  mlNecesario?: number
   onClose: () => void
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const productosSugeridos = insumoSugerido
-    ? productos.filter(p => p.insumo_base.toLowerCase() === insumoSugerido.toLowerCase())
-    : productos
-
   const [productoId, setProductoId] = useState<string>(inicial?.producto_id ?? '')
-  const [marca, setMarca] = useState(inicial?.marca ?? insumoSugerido ?? '')
+  const [marca, setMarca] = useState(inicial?.marca ?? '')
   const [proveedor, setProveedor] = useState(inicial?.proveedor ?? '')
   const [presentacion, setPresentacion] = useState(inicial?.presentacion ?? '750ml')
   const [mlEnvase, setMlEnvase] = useState(inicial?.ml_por_envase ?? 750)
-  const [cantidad, setCantidad] = useState(inicial?.cantidad ?? botellosSugeridas ?? 1)
+  const [cantidad, setCantidad] = useState(inicial?.cantidad ?? 1)
   const [precio, setPrecio] = useState(inicial?.precio_unitario_real ?? 0)
 
   function seleccionarProducto(id: string) {
@@ -168,10 +140,6 @@ function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeri
     setPresentacion(p.presentacion)
     setMlEnvase(p.ml_por_envase)
     setPrecio(p.precio_lista)
-    // Auto-calcular cantidad basada en ml necesarios
-    if (mlNecesario && mlNecesario > 0 && p.ml_por_envase > 0) {
-      setCantidad(Math.ceil(mlNecesario / p.ml_por_envase))
-    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -192,27 +160,15 @@ function ItemForm({ compraId, inicial, productos, insumoSugerido, botellosSugeri
 
   return (
     <form onSubmit={handleSubmit} className="bg-blue-50 rounded-xl p-4 space-y-3">
-      {insumoSugerido && (
-        <div className="flex items-center gap-2 text-xs text-blue-700 font-medium mb-1">
-          <span className="bg-blue-100 px-2 py-0.5 rounded">{insumoSugerido}</span>
-          {mlNecesario && mlNecesario > 0 && (
-            <span className="text-blue-500">— necesitás {(mlNecesario / 1000).toFixed(1)}L</span>
-          )}
-          {productosSugeridos.length > 0 && (
-            <span className="text-blue-400 ml-auto">{productosSugeridos.length} en catálogo</span>
-          )}
-        </div>
-      )}
-
       {!inicial && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            {insumoSugerido ? 'Seleccionar del catálogo' : 'Cargar desde catálogo (opcional)'}
+            Cargar desde catálogo (opcional)
           </label>
           <select value={productoId} onChange={e => seleccionarProducto(e.target.value)}
             className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">Entrada manual…</option>
-            {(insumoSugerido && productosSugeridos.length > 0 ? productosSugeridos : productos).map(p => (
+            {productos.map(p => (
               <option key={p.id} value={p.id}>
                 {p.insumo_base} — {p.marca} ({p.presentacion}) — {formatARS(p.precio_lista)}
               </option>

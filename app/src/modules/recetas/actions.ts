@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-type IngredienteInput = { insumo_base: string; ml_por_trago: number; es_alcoholico: boolean }
+type IngredienteInput = { insumo_base: string; ml_por_trago: number }
 
 export async function crearReceta(data: {
   nombre_trago: string
@@ -31,7 +31,7 @@ export async function crearReceta(data: {
   if (ings.length > 0) {
     const { error: ingError } = await supabase
       .from('receta_ingredientes')
-      .insert(ings.map(i => ({ receta_id: receta.id, insumo_base: i.insumo_base.trim(), ml_por_trago: i.ml_por_trago, es_alcoholico: i.es_alcoholico })))
+      .insert(ings.map(i => ({ receta_id: receta.id, insumo_base: i.insumo_base.trim(), ml_por_trago: i.ml_por_trago })))
     if (ingError) return { error: ingError.message }
   }
 
@@ -70,7 +70,7 @@ export async function editarReceta(
   if (ings.length > 0) {
     const { error: ingError } = await supabase
       .from('receta_ingredientes')
-      .insert(ings.map(i => ({ receta_id: id, insumo_base: i.insumo_base.trim(), ml_por_trago: i.ml_por_trago, es_alcoholico: i.es_alcoholico })))
+      .insert(ings.map(i => ({ receta_id: id, insumo_base: i.insumo_base.trim(), ml_por_trago: i.ml_por_trago })))
     if (ingError) return { error: ingError.message }
   }
 

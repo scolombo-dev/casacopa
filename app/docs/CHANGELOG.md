@@ -2,6 +2,20 @@
 
 ---
 
+## [0.2.0] — 2026-07-25
+
+### Limpieza de código muerto y eliminación de distribución/estimación de tragos
+
+- Eliminado el módulo de distribución de alcohol por trago (`/distribucion`, tabla `distribucion_insumo_trago_evento`, columna `es_alcoholico`)
+- Eliminada la estimación de consumo por trago: tabla `evento_consumo_estimado`, vista `consumo_estimado_calculado`, campos `estimacion_tragos_pp` y `margen_seguridad` en eventos, `porcentaje_consumo` y `cantidad_fija` en `evento_tragos` — el cierre de evento ahora se hace directo contra lo comprado/consumido
+- Eliminada la tabla `distribucion_tragos_evento` y `checklist_items` (creadas en migraciones viejas, sin pantalla ni código que las use)
+- Eliminada la función muerta `consumirStock` y props sin usar en el formulario de compras
+- Unificado el componente `Modal`, duplicado en 6 módulos, en `src/components/Modal.tsx`
+- Unificados los mapas `ESTADO_STYLE`, `ESTADO_LABEL` y `TIPO_PAGO_LABEL`, duplicados en 2-3 archivos cada uno, en `src/lib/constants.ts`
+- Migración `020_eliminar_distribucion_y_estimacion.sql` con los `DROP` correspondientes
+
+---
+
 ## [0.1.0] — 2026-04-10
 
 ### Setup inicial

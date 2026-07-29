@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, CalendarDays, Package, BookOpen,
   ShoppingCart, Archive, DollarSign, Menu, X,
-  LogOut, PieChart,
+  LogOut,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -18,7 +18,6 @@ const navItems = [
   { href: '/recetas',       label: 'Recetas',        icon: BookOpen },
   { href: '/compras',       label: 'Compras',        icon: ShoppingCart },
   { href: '/stock',         label: 'Stock',          icon: Archive },
-  { href: '/distribucion',  label: 'Distribución',   icon: PieChart },
   { href: '/finanzas',      label: 'Finanzas',       icon: DollarSign },
 ]
 

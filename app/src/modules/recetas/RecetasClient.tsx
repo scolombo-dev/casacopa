@@ -4,13 +4,14 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
 import type { Receta, RecetaIngrediente } from '@/lib/types'
 import { crearReceta, editarReceta, eliminarReceta } from './actions'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type RecetaConIng = Receta & { receta_ingredientes: RecetaIngrediente[] }
-type IngredienteLocal = { insumo_base: string; ml_por_trago: number; es_alcoholico: boolean }
+type IngredienteLocal = { insumo_base: string; ml_por_trago: number }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -43,29 +44,6 @@ function resumenIngredientes(ings: RecetaIngrediente[]) {
   return ings.map(i => `${i.insumo_base} ${i.ml_por_trago}ml`).join(' + ')
 }
 
-// ─── Modal ───────────────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children }: {
-  titulo: string
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white rounded-t-xl">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Formulario de Receta ─────────────────────────────────────────────────────
 
 function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () => void }) {
@@ -81,12 +59,11 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
     inicial?.receta_ingredientes?.map(i => ({
       insumo_base: i.insumo_base,
       ml_por_trago: i.ml_por_trago,
-      es_alcoholico: i.es_alcoholico ?? true,
     })) ?? []
   )
 
   function addIng() {
-    setIngredientes(prev => [...prev, { insumo_base: '', ml_por_trago: 0, es_alcoholico: true }])
+    setIngredientes(prev => [...prev, { insumo_base: '', ml_por_trago: 0 }])
   }
 
   function removeIng(idx: number) {
@@ -188,19 +165,6 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
                 placeholder="ml"
                 className="w-20 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button
-                type="button"
-                onClick={() => updateIng(idx, 'es_alcoholico', !ing.es_alcoholico)}
-                title={ing.es_alcoholico ? 'Es alcohol — clic para marcar como mixer' : 'Es mixer — clic para marcar como alcohol'}
-                className={cn(
-                  'px-2 py-1 rounded-md text-xs font-medium border transition-colors shrink-0',
-                  ing.es_alcoholico
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                    : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
-                )}
-              >
-                {ing.es_alcoholico ? 'Alcohol' : 'Mixer'}
-              </button>
               <button type="button" onClick={() => removeIng(idx)} className="text-gray-400 hover:text-red-500">
                 <X size={15} />
               </button>

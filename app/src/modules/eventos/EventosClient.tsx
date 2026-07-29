@@ -4,10 +4,12 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Plus, Pencil, Trash2, X, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, ChevronDown, ChevronRight,
   Users, DollarSign, Calendar, FileText, BarChart3,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
+import { ESTADO_LABEL, ESTADO_STYLE } from '@/lib/constants'
 import type {
   Evento, EstadoEvento, Propuesta, Receta,
   EventoTrago, EventoStaff, EventoExtra, RolStaff, CategoriaExtra,
@@ -24,7 +26,7 @@ import {
 
 type RecetaMin = Pick<Receta, 'id' | 'nombre_trago' | 'categoria'>
 
-type EventoTragoConReceta = EventoTrago & { recetas: RecetaMin; cantidad_fija: number | null }
+type EventoTragoConReceta = EventoTrago & { recetas: RecetaMin }
 
 type CompraItem = {
   id: string
@@ -59,26 +61,6 @@ const ESTADOS: EstadoEvento[] = [
   'compras_realizadas', 'en_curso', 'finalizado', 'cerrado',
 ]
 
-const ESTADO_LABEL: Record<EstadoEvento, string> = {
-  presupuesto:        'Presupuesto',
-  confirmado:         'Confirmado',
-  en_preparacion:     'En preparación',
-  compras_realizadas: 'Compras realizadas',
-  en_curso:           'En curso',
-  finalizado:         'Finalizado',
-  cerrado:            'Cerrado',
-}
-
-const ESTADO_STYLE: Record<EstadoEvento, string> = {
-  presupuesto:        'bg-gray-100 text-gray-600',
-  confirmado:         'bg-blue-100 text-blue-700',
-  en_preparacion:     'bg-amber-100 text-amber-700',
-  compras_realizadas: 'bg-orange-100 text-orange-700',
-  en_curso:           'bg-green-100 text-green-700',
-  finalizado:         'bg-teal-100 text-teal-700',
-  cerrado:            'bg-slate-100 text-slate-600',
-}
-
 const PROPUESTA_PRECIO: Record<string, number> = {
   estandar: 18000,
   plus:     26000,
@@ -112,31 +94,6 @@ const CATEGORIAS_EXTRA_LABEL: Record<CategoriaExtra, string> = {
   otros:         'Otros',
 }
 
-// ─── Modal genérico ───────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children, wide }: {
-  titulo: string
-  onClose: () => void
-  children: React.ReactNode
-  wide?: boolean
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={cn(
-        'relative bg-white rounded-xl shadow-xl max-h-[92vh] overflow-y-auto',
-        wide ? 'w-full max-w-2xl' : 'w-full max-w-lg'
-      )}>
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white rounded-t-xl z-10">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
-        </div>
-        <div className="px-5 py-5">{children}</div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Formulario de Evento ─────────────────────────────────────────────────────
 
 function EventoForm({
@@ -159,35 +116,11 @@ function EventoForm({
   const [personas, setPersonas] = useState(inicial?.cantidad_personas ?? 100)
   const [propuestaId, setPropuestaId] = useState<string | null>(inicial?.propuesta_id ?? null)
   const [precio, setPrecio] = useState(inicial?.precio_por_persona ?? 0)
-  const [tragos_pp, setTragosPp] = useState(inicial?.estimacion_tragos_pp ?? 8)
-  const [margen, setMargen] = useState(inicial?.margen_seguridad ?? 0.1)
   const [notas, setNotas] = useState(inicial?.notas ?? '')
 
   // Tragos seleccionados (IDs)
   const initialTragos = inicial?.evento_tragos?.map(t => t.receta_id) ?? []
   const [selectedTragos, setSelectedTragos] = useState<string[]>(initialTragos)
-
-  // IDs de recetas de categoría Cerveza
-  const idsCerveza = new Set(recetas.filter(r => r.categoria === 'Cerveza').map(r => r.id))
-
-  // Porcentajes por trago (receta_id -> %) — solo para tragos que NO son cerveza
-  function pctIguales(ids: string[]): Record<string, number> {
-    const sinCerveza = ids.filter(id => !idsCerveza.has(id))
-    if (sinCerveza.length === 0) return {}
-    const base = parseFloat((100 / sinCerveza.length).toFixed(2))
-    const acc: Record<string, number> = {}
-    sinCerveza.forEach((id, i) => {
-      acc[id] = i === sinCerveza.length - 1
-        ? parseFloat((100 - base * (sinCerveza.length - 1)).toFixed(2))
-        : base
-    })
-    return acc
-  }
-  // Cantidad fija para tragos de Cerveza (receta_id -> unidades)
-  const initialCantFija = inicial?.evento_tragos
-    ? Object.fromEntries(inicial.evento_tragos.filter(t => idsCerveza.has(t.receta_id)).map(t => [t.receta_id, t.cantidad_fija ?? 0]))
-    : {}
-  const [cantFijaPorTrago, setCantFijaPorTrago] = useState<Record<string, number>>(initialCantFija)
 
   function seleccionarPropuesta(p: Propuesta) {
     setPropuestaId(p.id)
@@ -201,7 +134,6 @@ function EventoForm({
     const cats = tiers[p.tipo] ?? []
     const ids = recetas.filter(r => cats.includes(r.categoria)).map(r => r.id)
     setSelectedTragos(ids)
-    setCantFijaPorTrago({})
   }
 
   function toggleTrago(id: string) {
@@ -216,26 +148,18 @@ function EventoForm({
 
     setError(null)
 
-    const pctAuto = pctIguales(selectedTragos)
-    const tragosConPct = selectedTragos.map(id => ({
-      receta_id: id,
-      porcentaje_consumo: idsCerveza.has(id) ? 0 : (pctAuto[id] ?? 0),
-      cantidad_fija: idsCerveza.has(id) ? (cantFijaPorTrago[id] ?? 0) : null,
-    }))
-
     startTransition(async () => {
       const payload = {
         nombre, fecha, tipo_evento: tipo, estado,
         cantidad_personas: personas, propuesta_id: propuestaId,
-        precio_por_persona: precio, estimacion_tragos_pp: tragos_pp,
-        margen_seguridad: margen, notas,
+        precio_por_persona: precio, notas,
       }
       let res: { error: string | null }
       if (inicial) {
         res = await editarEvento(inicial.id, payload)
-        if (!res.error) await setTragosEvento(inicial.id, tragosConPct)
+        if (!res.error) await setTragosEvento(inicial.id, selectedTragos)
       } else {
-        res = await crearEvento({ ...payload, receta_ids: tragosConPct })
+        res = await crearEvento({ ...payload, receta_ids: selectedTragos })
       }
       if (res.error) { setError(res.error); return }
       router.refresh()
@@ -352,33 +276,6 @@ function EventoForm({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tragos estimados / persona</label>
-              <input
-                type="number"
-                min={1}
-                step={0.5}
-                value={tragos_pp}
-                onChange={e => setTragosPp(parseFloat(e.target.value) || 8)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Margen de seguridad</label>
-              <select
-                value={margen}
-                onChange={e => setMargen(parseFloat(e.target.value))}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value={0.05}>5%</option>
-                <option value={0.10}>10%</option>
-                <option value={0.15}>15%</option>
-                <option value={0.20}>20%</option>
-              </select>
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
             <textarea
@@ -467,45 +364,6 @@ function EventoForm({
               )
             })}
           </div>
-
-          {/* Cantidad fija de cerveza */}
-          {selectedTragos.length > 0 && (
-            <div className="mt-4 space-y-3">
-              {/* Cervezas — cantidad fija */}
-              {selectedTragos.filter(id => idsCerveza.has(id)).length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Cervezas — cantidad total estimada para la noche
-                  </p>
-                  <div className="space-y-2">
-                    {selectedTragos.filter(id => idsCerveza.has(id)).map(id => {
-                      const receta = recetas.find(r => r.id === id)
-                      if (!receta) return null
-                      return (
-                        <div key={id} className="flex items-center gap-3 bg-emerald-50 rounded-lg px-3 py-2">
-                          <span className="text-sm text-gray-700 flex-1">{receta.nombre_trago}</span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={cantFijaPorTrago[id] ?? 0}
-                              onChange={e => setCantFijaPorTrago(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
-                              className="w-20 text-right border border-emerald-300 rounded px-2 py-1 text-sm"
-                            />
-                            <span className="text-sm text-gray-500">unidades</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Ingresá cuántas cervezas estimás que se consumen en total (independiente de los tragos por persona).
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 

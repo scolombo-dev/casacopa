@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, AlertTriangle, X, Sparkles, Upload, CheckSquare, Square } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, AlertTriangle, Sparkles, Upload, CheckSquare, Square } from 'lucide-react'
 import { formatARS, cn } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
 import type { Proveedor, Producto } from '@/lib/types'
 import {
   crearProveedor,
@@ -40,29 +41,6 @@ const INSUMOS_COMUNES = [
   'Jugo de Limón', 'Jugo de Naranja', 'Energizante',
   'Licor', 'Aperitivo',
 ]
-
-// ─── Modal genérico ───────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children }: {
-  titulo: string
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Formulario Proveedor ─────────────────────────────────────────────────────
 

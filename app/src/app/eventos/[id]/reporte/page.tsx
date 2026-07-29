@@ -1,14 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatARS, formatFecha } from '@/lib/utils'
-import type { EstadoEvento, TipoPago } from '@/lib/types'
+import { TIPO_PAGO_LABEL } from '@/lib/constants'
+import type { TipoPago } from '@/lib/types'
 import ReporteActions from './ReporteActions'
-
-const TIPO_PAGO_LABEL: Record<TipoPago, string> = {
-  'seña':       'Seña',
-  'cuota':      'Cuota',
-  'pago_final': 'Pago final',
-}
 
 export default async function ReportePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

@@ -27,8 +27,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       .order('creado_en'),
     supabase
       .from('receta_ingredientes')
-      .select('insumo_base, es_alcoholico, recetas!inner(activo)')
-      .eq('es_alcoholico', true)
+      .select('insumo_base, recetas!inner(activo)')
       .eq('recetas.activo', true),
     supabase
       .from('cierre_consumo')

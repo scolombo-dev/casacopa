@@ -36,9 +36,11 @@
 
 ## 2026-04-10 — Principio ESTIMADO vs REAL en la DB
 
-**Decisión:** Las tablas de estimado (`evento_consumo_estimado`) y las de real (`compra_items`, `evento_extras`, `evento_staff`) son entidades separadas. Nunca se mezclan en los cálculos financieros.
+**Decisión:** Las tablas de real (`compra_items`, `evento_extras`, `evento_staff`, `cierre_consumo`) son la única fuente de los cálculos financieros. Nunca se mezclan con estimaciones.
 
 **Por qué:** Es el principio central de la spec. Mezclar estimados con reales haría los números financieros poco confiables. El P&L siempre se calcula sobre datos reales.
+
+**Actualización 2026-07-25:** La tabla de estimado (`evento_consumo_estimado`) y toda la estimación de consumo por trago se eliminaron (ver CHANGELOG). En la práctica el cierre se hace directo contra lo comprado y consumido, sin pasar por una estimación previa.
 
 ---
 

@@ -59,7 +59,6 @@ export type RecetaIngrediente = {
   receta_id: string
   insumo_base: string
   ml_por_trago: number
-  es_alcoholico: boolean
 }
 
 export type Propuesta = {
@@ -112,8 +111,6 @@ export type Evento = {
   propuesta_id: string | null
   precio_por_persona: number
   precio_total: number              // columna generada
-  estimacion_tragos_pp: number
-  margen_seguridad: number
   notas: string | null
   creado_en: string
   actualizado_en: string
@@ -123,8 +120,6 @@ export type EventoTrago = {
   id: string
   evento_id: string
   receta_id: string
-  porcentaje_consumo: number
-  cantidad_fija: number | null    // para cerveza: total de unidades, ignora el %
   // Join
   recetas?: Receta
 }

@@ -57,7 +57,7 @@ export default function ConsumoClient(props: Props) {
 // ─── Vista de consumo registrado ──────────────────────────────────────────────
 
 function VistaConsumo({
-  eventoId, eventoNombre, eventoFecha, eventoCantidadPersonas,
+  eventoNombre, eventoFecha, eventoCantidadPersonas,
   cierreExistente, onEditar,
 }: Props & { onEditar: () => void }) {
   const totalMl = cierreExistente.reduce(
@@ -164,12 +164,6 @@ function VistaConsumo({
           </table>
         </div>
       </section>
-
-      <div className="text-center">
-        <Link href={`/distribucion/${eventoId}`} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-          Cargar distribución de alcohol por trago →
-        </Link>
-      </div>
     </div>
   )
 }

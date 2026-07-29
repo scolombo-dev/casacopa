@@ -3,63 +3,18 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronDown, ChevronRight, Plus, Trash2, X,
+  ChevronDown, ChevronRight, Plus, Trash2,
   TrendingUp, TrendingDown, DollarSign, AlertCircle,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
-import type { ResultadoNetoEvento, PagoCliente, EstadoEvento, TipoPago } from '@/lib/types'
+import { Modal } from '@/components/Modal'
+import { ESTADO_STYLE, ESTADO_LABEL, TIPO_PAGO_LABEL } from '@/lib/constants'
+import type { ResultadoNetoEvento, PagoCliente, TipoPago } from '@/lib/types'
 import { crearPago, eliminarPago } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type EventoFinanciero = ResultadoNetoEvento
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
-const TIPO_PAGO_LABEL: Record<TipoPago, string> = {
-  'seña':       'Seña',
-  'cuota':      'Cuota',
-  'pago_final': 'Pago final',
-}
-
-const ESTADO_STYLE: Record<EstadoEvento, string> = {
-  presupuesto:        'bg-gray-100 text-gray-600',
-  confirmado:         'bg-blue-100 text-blue-700',
-  en_preparacion:     'bg-amber-100 text-amber-700',
-  compras_realizadas: 'bg-orange-100 text-orange-700',
-  en_curso:           'bg-green-100 text-green-700',
-  finalizado:         'bg-teal-100 text-teal-700',
-  cerrado:            'bg-slate-100 text-slate-600',
-}
-
-const ESTADO_LABEL: Record<EstadoEvento, string> = {
-  presupuesto:        'Presupuesto',
-  confirmado:         'Confirmado',
-  en_preparacion:     'En preparación',
-  compras_realizadas: 'Compras realizadas',
-  en_curso:           'En curso',
-  finalizado:         'Finalizado',
-  cerrado:            'Cerrado',
-}
-
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function Modal({ titulo, onClose, children }: {
-  titulo: string; onClose: () => void; children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-semibold text-lg">{titulo}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
-        </div>
-        <div className="px-5 py-5">{children}</div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Formulario de pago ───────────────────────────────────────────────────────
 
