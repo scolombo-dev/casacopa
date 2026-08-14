@@ -10,6 +10,7 @@ import {
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { agregarStock, editarLote, eliminarLote, obtenerMovimientos, registrarVenta, retirarUsoPropio } from './actions'
+import type { CuentaFinanciera } from '@/lib/types'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
   const [eventoId, setEventoId] = useState('')
   const [notas, setNotas] = useState('')
+  const [cuentaFinanciera, setCuentaFinanciera] = useState<CuentaFinanciera | ''>('')
+  const [eventoAnticipoId, setEventoAnticipoId] = useState('')
 
   function seleccionarProducto(id: string) {
     setProductoId(id)
@@ -109,6 +112,9 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
     e.preventDefault()
     if (!marca.trim()) { setError('La marca es obligatoria.'); return }
     if (cantidad <= 0) { setError('La cantidad debe ser mayor a 0.'); return }
+    if (cuentaFinanciera === 'anticipos_comprometidos' && !eventoAnticipoId) {
+      setError('Elegí de qué evento sale el anticipo.'); return
+    }
     setError(null)
     startTransition(async () => {
       const res = await agregarStock({
@@ -120,6 +126,8 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
         origen_evento_id: eventoId || null,
         tipo: esSobrante ? 'ingreso_sobrante' : 'ajuste',
         notas,
+        financiado_por: cuentaFinanciera || null,
+        evento_anticipo_id: cuentaFinanciera === 'anticipos_comprometidos' ? eventoAnticipoId : null,
       })
       if (res.error) { setError(res.error); return }
       router.refresh()
@@ -196,6 +204,41 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
           </div>
         )}
       </div>
+
+      {!esSobrante && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">¿De dónde sale la plata? (opcional)</label>
+          <div className="flex gap-2 mb-2">
+            <button type="button" onClick={() => setCuentaFinanciera('')}
+              className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                cuentaFinanciera === '' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+              No registrar
+            </button>
+            <button type="button" onClick={() => setCuentaFinanciera('caja_operativa')}
+              className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                cuentaFinanciera === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+              Caja operativa
+            </button>
+            <button type="button" onClick={() => setCuentaFinanciera('anticipos_comprometidos')}
+              className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                cuentaFinanciera === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+              Anticipo de un evento
+            </button>
+          </div>
+          {cuentaFinanciera === 'anticipos_comprometidos' && (
+            <select value={eventoAnticipoId} onChange={e => setEventoAnticipoId(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">¿De qué evento?</option>
+              {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+            </select>
+          )}
+          {cuentaFinanciera && (
+            <p className="text-xs text-gray-400 mt-1">
+              Cuando uses este stock en un evento, esa plata vuelve automáticamente a esta cuenta.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>

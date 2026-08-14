@@ -13,6 +13,7 @@ type Props = {
     costoInsumos: number
     costoPersonal: number
     costoExtras: number
+    costoAutoalquiler: number
     resultadoNeto: number
     margenPorcentaje: number
   }
@@ -21,9 +22,10 @@ type Props = {
   extras: { concepto: string; categoria: string; monto: number }[]
   pagos: { tipo: string; fecha: string; metodo: string; monto: number }[]
   reparto: { destinatario: string; fecha: string; monto: number; notas: string | null }[]
+  autoalquileres: { inversion: string; fecha: string; monto: number }[]
 }
 
-export default function ResultadoActions({ evento, resumen, insumos, personal, extras, pagos, reparto }: Props) {
+export default function ResultadoActions({ evento, resumen, insumos, personal, extras, pagos, reparto, autoalquileres }: Props) {
   function descargarExcel() {
     const wb = XLSX.utils.book_new()
 
@@ -43,6 +45,7 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
       ['Costo de insumos', -resumen.costoInsumos],
       ['Costo de personal', -resumen.costoPersonal],
       ['Gastos extra', -resumen.costoExtras],
+      ['Autoalquiler de inversiones', -resumen.costoAutoalquiler],
       [],
       ['Resultado neto', resumen.resultadoNeto],
       ['Margen %', resumen.margenPorcentaje],
@@ -75,6 +78,13 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
         Tipo: p.tipo, Fecha: p.fecha, Método: p.metodo, Monto: p.monto,
       })))
       XLSX.utils.book_append_sheet(wb, sheet, 'Pagos')
+    }
+
+    if (autoalquileres.length > 0) {
+      const sheet = XLSX.utils.json_to_sheet(autoalquileres.map(a => ({
+        Inversión: a.inversion, Fecha: a.fecha, Monto: a.monto,
+      })))
+      XLSX.utils.book_append_sheet(wb, sheet, 'Autoalquiler')
     }
 
     if (reparto.length > 0) {

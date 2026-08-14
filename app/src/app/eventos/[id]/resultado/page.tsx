@@ -19,6 +19,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     { data: comprasItems },
     { data: ajustesIpc },
     { data: reparto },
+    { data: amortizaciones },
   ] = await Promise.all([
     supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_total').eq('id', id).single(),
     supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
@@ -29,6 +30,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     supabase.from('compras').select('compra_items(marca, proveedor, cantidad, precio_unitario_real, precio_total_real)').eq('evento_id', id),
     supabase.from('ajustes_ipc').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('evento_reparto_resultado').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('inversion_amortizaciones').select('*, inversiones(nombre)').eq('evento_id', id).order('fecha'),
   ])
 
   if (!evento) notFound()
@@ -58,6 +60,8 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
   const extrasData = extras ?? []
   const ajustesData = ajustesIpc ?? []
   const repartoData = reparto ?? []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const amortizacionesData = (amortizaciones ?? []) as any[]
 
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -76,6 +80,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
             costoInsumos: fin?.costo_insumos_real ?? 0,
             costoPersonal: fin?.costo_personal ?? 0,
             costoExtras: fin?.costo_extras ?? 0,
+            costoAutoalquiler: fin?.costo_autoalquiler ?? 0,
             resultadoNeto: fin?.resultado_neto ?? 0,
             margenPorcentaje: fin?.margen_porcentaje ?? 0,
           }}
@@ -84,6 +89,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
           extras={extrasData.map(e => ({ concepto: e.concepto, categoria: e.categoria, monto: e.monto }))}
           pagos={pagosData.map(p => ({ tipo: p.tipo, fecha: formatFecha(p.fecha), metodo: p.metodo, monto: p.monto }))}
           reparto={repartoData.map(r => ({ destinatario: r.destinatario, fecha: formatFecha(r.fecha), monto: r.monto, notas: r.notas }))}
+          autoalquileres={amortizacionesData.map(a => ({ inversion: a.inversiones?.nombre ?? '—', fecha: formatFecha(a.fecha), monto: a.monto }))}
         />
       </div>
 
@@ -204,6 +210,27 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
                 <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-gray-50">
                   <span className="font-semibold text-gray-800">Subtotal extras</span>
                   <span className="font-bold text-red-500">− {formatARS(fin?.costo_extras ?? 0)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Costo de autoalquiler (inversiones usadas en este evento) */}
+        {amortizacionesData.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Autoalquiler de inversiones</h2>
+            <div className="border rounded-xl overflow-hidden">
+              <div className="divide-y">
+                {amortizacionesData.map((a) => (
+                  <div key={a.id} className="flex justify-between items-center px-4 py-2 text-sm">
+                    <span className="text-gray-700">{a.inversiones?.nombre ?? '—'}</span>
+                    <span className="text-gray-600 tabular-nums">{formatARS(a.monto)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-gray-50">
+                  <span className="font-semibold text-gray-800">Subtotal autoalquiler</span>
+                  <span className="font-bold text-red-500">− {formatARS(fin?.costo_autoalquiler ?? 0)}</span>
                 </div>
               </div>
             </div>

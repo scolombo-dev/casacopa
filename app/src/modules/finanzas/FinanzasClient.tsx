@@ -160,7 +160,7 @@ function EventoFinancieroCard({
   const [modalPago, setModalPago] = useState(false)
   const [pending, startTransition] = useTransition()
 
-  const costoTotal = ev.costo_insumos_real + ev.costo_personal + ev.costo_extras
+  const costoTotal = ev.costo_insumos_real + ev.costo_personal + ev.costo_extras + ev.costo_autoalquiler
   const porCobrar = Math.max(0, ev.ingreso_bruto - ev.total_cobrado)
   const tieneResultado = costoTotal > 0 || ev.total_cobrado > 0
   const positivo = ev.resultado_neto >= 0
@@ -264,6 +264,12 @@ function EventoFinancieroCard({
                 <span>Extras</span>
                 <span className={ev.costo_extras > 0 ? 'text-red-500' : 'text-gray-300'}>
                   {ev.costo_extras > 0 ? `− ${formatARS(ev.costo_extras)}` : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Autoalquiler de inversiones</span>
+                <span className={ev.costo_autoalquiler > 0 ? 'text-red-500' : 'text-gray-300'}>
+                  {ev.costo_autoalquiler > 0 ? `− ${formatARS(ev.costo_autoalquiler)}` : '—'}
                 </span>
               </div>
               <div className="border-t my-2" />
