@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { formatARS, formatFecha } from '@/lib/utils'
 import ResultadoActions from './ResultadoActions'
 import RepartoResultado from './RepartoResultado'
+import CerrarEventoButton from './CerrarEventoButton'
 
 export default async function ResultadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -211,7 +212,10 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
 
         {/* Resultado neto */}
         <div className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Resultado neto</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Resultado neto</h2>
+            <CerrarEventoButton eventoId={evento.id} estado={evento.estado} />
+          </div>
           <div className={`flex justify-between items-center px-4 py-4 rounded-xl text-base font-bold ${(fin?.resultado_neto ?? 0) >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
             <span>Resultado neto del evento</span>
             <span>{(fin?.resultado_neto ?? 0) >= 0 ? '+' : ''}{formatARS(fin?.resultado_neto ?? 0)} ({fin?.margen_porcentaje ?? 0}%)</span>

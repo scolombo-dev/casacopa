@@ -78,6 +78,11 @@ export async function guardarCierre(
 
   for (const item of conSobrante) {
     const sobrante = item.cantidad_comprada - item.cantidad_consumida
+    // La compra que generó este sobrante ya debitó caja por el total (vía el
+    // trigger de compras) al momento de comprarse — no se vuelve a mover
+    // plata acá. financiado_por queda sin definir a propósito: ese campo es
+    // solo para stock cargado directamente con agregarStock(), donde sí hay
+    // una transferencia real que registrar (ver usarStockEnEvento).
     const { data: lote, error: stockError } = await supabase
       .from('stock')
       .insert({

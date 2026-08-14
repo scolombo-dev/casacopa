@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Plus, X, ArrowLeft, CheckCircle2, Pencil } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { guardarCierre } from './actions'
+import UsarStockSection from './UsarStockSection'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,11 @@ type ConsignItem = {
   ml_por_envase: number; cantidad_consumida: number; precio_unitario: number
 }
 
+type LoteDisponible = {
+  id: string; marca: string; proveedor: string
+  cantidad_envases: number; ml_por_envase: number; precio_unitario_compra: number
+}
+
 type Props = {
   eventoId: string
   eventoNombre: string
@@ -34,6 +40,7 @@ type Props = {
   cierreExistente: CierreRow[]
   insumosSugeridos: string[]
   marcasSugeridas: string[]
+  stockDisponible: LoteDisponible[]
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -41,16 +48,25 @@ type Props = {
 export default function ConsumoClient(props: Props) {
   const [editando, setEditando] = useState(false)
   const tieneCierre = props.cierreExistente.length > 0
+  const usosStock = props.cierreExistente
+    .filter(c => c.tipo_origen === 'stock')
+    .map(c => ({ id: c.id, marca: c.marca, cantidad_consumida: c.cantidad_consumida, costo_total: c.costo_total }))
 
-  if (tieneCierre && !editando) {
-    return <VistaConsumo {...props} onEditar={() => setEditando(true)} />
-  }
   return (
-    <FormConsumo
-      {...props}
-      modoEdicion={tieneCierre}
-      onCancelarEdicion={tieneCierre ? () => setEditando(false) : undefined}
-    />
+    <>
+      <div className="max-w-3xl mx-auto px-4 pt-8">
+        <UsarStockSection eventoId={props.eventoId} stockDisponible={props.stockDisponible} usosExistentes={usosStock} />
+      </div>
+      {tieneCierre && !editando ? (
+        <VistaConsumo {...props} onEditar={() => setEditando(true)} />
+      ) : (
+        <FormConsumo
+          {...props}
+          modoEdicion={tieneCierre}
+          onCancelarEdicion={tieneCierre ? () => setEditando(false) : undefined}
+        />
+      )}
+    </>
   )
 }
 

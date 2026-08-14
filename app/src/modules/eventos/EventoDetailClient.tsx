@@ -38,7 +38,7 @@ export default function EventoDetailClient({
   const [pending, startTransition] = useTransition()
   const [editando, setEditando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
-  const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number } | null>(null)
+  const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number; movimientos: number } | null>(null)
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -207,8 +207,13 @@ export default function EventoDetailClient({
                   {infoEliminar.ajustes} ajuste{infoEliminar.ajustes !== 1 ? 's' : ''} IPC
                 </li>
               )}
+              {infoEliminar && infoEliminar.movimientos > 0 && (
+                <li className="text-orange-600 font-medium">
+                  {infoEliminar.movimientos} movimiento{infoEliminar.movimientos !== 1 ? 's' : ''} en el libro de cuentas
+                </li>
+              )}
             </ul>
-            {infoEliminar && (infoEliminar.compras > 0 || infoEliminar.pagos > 0 || infoEliminar.ajustes > 0) && (
+            {infoEliminar && (infoEliminar.compras > 0 || infoEliminar.pagos > 0 || infoEliminar.ajustes > 0 || infoEliminar.movimientos > 0) && (
               <p className="text-orange-600 text-xs font-semibold mt-2">Esta acción no se puede deshacer.</p>
             )}
           </div>

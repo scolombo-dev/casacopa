@@ -2,6 +2,21 @@
 
 ---
 
+## [0.3.0] — 2026-08-14
+
+### Libro de cuentas financieras (5 cuentas) — Fase 1 backend
+
+- Migraciones `022_cuentas_financieras.sql` y `023_inversiones_amortizacion.sql`: tabla `cuentas_movimientos` (libro de movimientos entre caja operativa, anticipos comprometidos, inversiones, stock valorizado y ganancia acumulada), tablas `inversiones` e `inversion_amortizaciones`, vistas `saldo_cuentas`, `saldo_anticipos_evento`, `inversiones_resumen`
+- `pagos_cliente` ahora registra a qué cuenta entra cada cobro (caja o anticipo); `stock` registra qué cuenta financió cada lote cargado a mano
+- Nueva forma de usar un lote de stock guardado en un evento distinto al que lo generó, desde Cierre de Consumo (`usarStockEnEvento`), con reverso de plata a la cuenta que lo financió
+- Nuevo módulo `src/modules/inversiones/` (crear inversión, cobrar autoalquiler a un evento, cancelar)
+- Cerrar un evento ahora mueve su ganancia a "ganancia acumulada" y libera el anticipo restante a caja
+- `/finanzas` pasa a ser el home del sistema (antes `/`); el Dashboard operativo se mueve a `/dashboard`, sin perder ninguna funcionalidad
+- El P&L por evento que ya existía en Finanzas se mantiene igual, ahora como una pestaña dentro del panel nuevo
+- Pendiente (fase aparte, ya avisado al dueño): las 5 cuentas arrancan en $0 hasta cargar los saldos reales actuales a mano; rediseño visual del resto de la app
+
+---
+
 ## [0.2.0] — 2026-07-25
 
 ### Limpieza de código muerto y eliminación de distribución/estimación de tragos

@@ -6,7 +6,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const supabase = await createClient()
 
-  const [eventoResult, cierreResult, ingredientesResult, historialConsignResult] = await Promise.all([
+  const [eventoResult, cierreResult, ingredientesResult, historialConsignResult, stockResult] = await Promise.all([
     supabase
       .from('eventos')
       .select(`
@@ -33,6 +33,11 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       .from('cierre_consumo')
       .select('insumo_base, marca')
       .eq('tipo_origen', 'consignacion'),
+    supabase
+      .from('stock')
+      .select('id, marca, proveedor, cantidad_envases, ml_por_envase, precio_unitario_compra')
+      .gt('cantidad_envases', 0)
+      .order('marca'),
   ])
 
   if (!eventoResult.data) notFound()
@@ -75,6 +80,7 @@ export default async function ConsumoPage({ params }: { params: Promise<{ id: st
       cierreExistente={cierreResult.data ?? []}
       insumosSugeridos={insumosSugeridos}
       marcasSugeridas={marcasSugeridas}
+      stockDisponible={stockResult.data ?? []}
     />
   )
 }

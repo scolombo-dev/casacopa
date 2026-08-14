@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   // Ya autenticado → salir del login
   if (user && isLoginPage) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/finanzas'
     return NextResponse.redirect(url)
   }
 

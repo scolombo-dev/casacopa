@@ -811,7 +811,7 @@ export default function EventosClient({
   const [modalCrear, setModalCrear] = useState(false)
   const [editando, setEditando] = useState<EventoCompleto | null>(null)
   const [eliminando, setEliminando] = useState<EventoCompleto | null>(null)
-  const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number } | null>(null)
+  const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number; movimientos: number } | null>(null)
 
   const filtrados = filtroEstado
     ? eventos.filter(e => e.estado === filtroEstado)
@@ -971,8 +971,13 @@ export default function EventosClient({
                   {infoEliminar.ajustes} ajuste{infoEliminar.ajustes !== 1 ? 's' : ''} IPC
                 </li>
               )}
+              {infoEliminar && infoEliminar.movimientos > 0 && (
+                <li className="text-orange-600 font-medium">
+                  {infoEliminar.movimientos} movimiento{infoEliminar.movimientos !== 1 ? 's' : ''} en el libro de cuentas
+                </li>
+              )}
             </ul>
-            {infoEliminar && (infoEliminar.compras > 0 || infoEliminar.pagos > 0 || infoEliminar.ajustes > 0) && (
+            {infoEliminar && (infoEliminar.compras > 0 || infoEliminar.pagos > 0 || infoEliminar.ajustes > 0 || infoEliminar.movimientos > 0) && (
               <p className="text-orange-600 text-xs font-semibold mt-2">Esta acción no se puede deshacer.</p>
             )}
           </div>

@@ -196,6 +196,8 @@ export type StockItem = {
   precio_unitario_compra: number
   fecha_ingreso: string
   origen_evento_id: string | null
+  financiado_por: CuentaFinanciera | null
+  evento_anticipo_id: string | null
 }
 
 // --- Finanzas ---
@@ -211,6 +213,107 @@ export type PagoCliente = {
   metodo: string
   notas: string | null
   creado_en: string
+  cuenta_destino: CuentaFinanciera
+}
+
+// --- Cuentas financieras (5 cuentas) ---
+
+export type CuentaFinanciera =
+  | 'caja_operativa'
+  | 'anticipos_comprometidos'
+  | 'inversiones'
+  | 'stock_valorizado'
+  | 'ganancia_acumulada'
+
+export type TipoMovimientoCuenta = 'ingreso' | 'egreso' | 'transferencia'
+
+export type CuentaMovimiento = {
+  id: string
+  fecha: string
+  tipo: TipoMovimientoCuenta
+  cuenta_origen: CuentaFinanciera | null
+  cuenta_destino: CuentaFinanciera | null
+  monto: number
+  concepto: string
+  evento_id: string | null
+  compra_id: string | null
+  staff_id: string | null
+  extra_id: string | null
+  inversion_id: string | null
+  notas: string | null
+  creado_en: string
+  // Join
+  eventos?: Pick<Evento, 'id' | 'nombre'>
+}
+
+export type SaldoCuenta = {
+  cuenta: CuentaFinanciera
+  saldo: number
+}
+
+export type SaldoAnticipoEvento = {
+  evento_id: string
+  nombre: string
+  fecha: string
+  total_anticipado: number
+  total_usado: number
+  total_repuesto: number
+  saldo_disponible: number
+}
+
+// --- Inversiones / bienes de uso ---
+
+export type EstadoInversion = 'activa' | 'amortizada' | 'cancelada'
+
+export type Inversion = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  monto_total: number
+  fecha_compra: string
+  cuenta_origen: CuentaFinanciera
+  evento_origen_id: string | null
+  eventos_amortizacion: number
+  monto_por_evento: number
+  estado: EstadoInversion
+  notas: string | null
+  creado_en: string
+  actualizado_en: string
+}
+
+export type InversionResumen = Inversion & {
+  eventos_amortizados: number
+  monto_amortizado: number
+  monto_pendiente: number
+  porcentaje_amortizado: number
+}
+
+export type InversionAmortizacion = {
+  id: string
+  inversion_id: string
+  evento_id: string
+  monto: number
+  fecha: string
+  notas: string | null
+  creado_en: string
+}
+
+// --- Cierre de consumo ---
+
+export type TipoOrigenConsumo = 'compra' | 'consignacion' | 'stock'
+
+export type CierreConsumo = {
+  id: string
+  evento_id: string
+  compra_item_id: string | null
+  stock_id: string | null
+  tipo_origen: TipoOrigenConsumo
+  insumo_base: string
+  marca: string
+  ml_por_envase: number
+  cantidad_consumida: number
+  precio_unitario: number
+  costo_total: number
 }
 
 // --- Vistas calculadas ---
@@ -229,6 +332,7 @@ export type ResumenFinancieroEvento = {
   costo_extras: number
   valor_sobrante: number
   ajuste_ipc: number
+  costo_autoalquiler: number
 }
 
 export type ResultadoNetoEvento = ResumenFinancieroEvento & {

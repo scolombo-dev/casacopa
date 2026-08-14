@@ -1,21 +1,35 @@
 import { createClient } from '@/lib/supabase/server'
-import FinanzasClient from '@/modules/finanzas/FinanzasClient'
+import FinanzasHomeClient from '@/modules/finanzas/FinanzasHomeClient'
 
 export default async function FinanzasPage() {
   const supabase = await createClient()
 
-  // La vista ya incluye estado y tipo_evento — una sola query en lugar de dos
-  const [{ data: financiero }, { data: pagos }] = await Promise.all([
-    supabase
-      .from('resultado_neto_evento')
-      .select('*')
-      .order('fecha', { ascending: false }),
+  const [
+    { data: financiero },
+    { data: pagos },
+    { data: saldos },
+    { data: movimientos },
+    { data: inversiones },
+    { data: anticipos },
+  ] = await Promise.all([
+    supabase.from('resultado_neto_evento').select('*').order('fecha', { ascending: false }),
     supabase.from('pagos_cliente').select('*').order('fecha'),
+    supabase.from('saldo_cuentas').select('*'),
+    supabase.from('cuentas_movimientos').select('*, eventos(id, nombre)').order('fecha', { ascending: false }).order('creado_en', { ascending: false }).limit(50),
+    supabase.from('inversiones_resumen').select('*').order('fecha_compra', { ascending: false }),
+    supabase.from('saldo_anticipos_evento').select('*').order('fecha'),
   ])
 
+  const eventosOpciones = (financiero ?? []).map(e => ({ id: e.evento_id, nombre: e.nombre }))
+
   return (
-    <FinanzasClient
-      eventos={financiero ?? []}
+    <FinanzasHomeClient
+      saldos={saldos ?? []}
+      movimientos={movimientos ?? []}
+      inversiones={inversiones ?? []}
+      anticipos={anticipos ?? []}
+      eventosOpciones={eventosOpciones}
+      eventosFinancieros={financiero ?? []}
       pagos={pagos ?? []}
     />
   )

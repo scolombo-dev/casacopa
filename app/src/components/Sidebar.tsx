@@ -12,13 +12,13 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
-  { href: '/',              label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/finanzas',      label: 'Inicio',         icon: DollarSign },
   { href: '/eventos',       label: 'Eventos',        icon: CalendarDays },
   { href: '/proveedores',   label: 'Proveedores',    icon: Package },
   { href: '/recetas',       label: 'Recetas',        icon: BookOpen },
   { href: '/compras',       label: 'Compras',        icon: ShoppingCart },
   { href: '/stock',         label: 'Stock',          icon: Archive },
-  { href: '/finanzas',      label: 'Finanzas',       icon: DollarSign },
+  { href: '/dashboard',     label: 'Dashboard',      icon: LayoutDashboard },
 ]
 
 export function Sidebar() {

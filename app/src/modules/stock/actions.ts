@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import type { CuentaFinanciera } from '@/lib/types'
 
 // ─── Agregar stock (ingreso manual o sobrante) ────────────────────────────────
 
@@ -16,6 +17,8 @@ export async function agregarStock(data: {
   origen_evento_id: string | null
   tipo: 'ingreso_sobrante' | 'ajuste'
   notas: string
+  financiado_por?: CuentaFinanciera | null
+  evento_anticipo_id?: string | null
 }) {
   const supabase = createAdminClient()
 
@@ -30,6 +33,8 @@ export async function agregarStock(data: {
       precio_unitario_compra: data.precio_unitario_compra,
       fecha_ingreso: data.fecha_ingreso,
       origen_evento_id: data.origen_evento_id || null,
+      financiado_por: data.financiado_por || null,
+      evento_anticipo_id: data.evento_anticipo_id || null,
     })
     .select()
     .single()
@@ -45,7 +50,159 @@ export async function agregarStock(data: {
     notas: data.notas.trim() || null,
   })
 
+  if (data.financiado_por) {
+    const montoTotal = data.cantidad_envases * data.precio_unitario_compra
+    if (montoTotal > 0) {
+      await supabase.from('cuentas_movimientos').insert({
+        fecha: data.fecha_ingreso,
+        tipo: 'transferencia',
+        cuenta_origen: data.financiado_por,
+        cuenta_destino: 'stock_valorizado',
+        monto: montoTotal,
+        concepto: `Compra de stock: ${data.marca}`,
+        evento_id: data.evento_anticipo_id || null,
+      })
+    }
+  }
+
   revalidatePath('/stock')
+  revalidatePath('/finanzas')
+  revalidatePath('/')
+  return { error: null }
+}
+
+// ─── Usar un lote de stock existente en un evento nuevo ──────────────────────
+// Distinto del sobrante que genera guardarCierre (que pertenece al evento que
+// lo generó): acá se consume un lote ya guardado en un evento *distinto*, y
+// la plata vuelve a la cuenta que financió ese lote.
+
+export async function usarStockEnEvento(data: {
+  stock_id: string
+  evento_id: string
+  cantidad: number
+  fecha: string
+  notas: string
+}) {
+  const supabase = createAdminClient()
+
+  const { data: lote } = await supabase
+    .from('stock')
+    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por')
+    .eq('id', data.stock_id)
+    .single()
+
+  if (!lote) return { error: 'Lote no encontrado.' }
+  if (data.cantidad <= 0) return { error: 'La cantidad debe ser mayor a 0.' }
+  if (data.cantidad > lote.cantidad_envases) return { error: 'No hay suficiente stock disponible.' }
+
+  const { error: updateError } = await supabase
+    .from('stock')
+    .update({ cantidad_envases: lote.cantidad_envases - data.cantidad })
+    .eq('id', data.stock_id)
+  if (updateError) return { error: updateError.message }
+
+  await supabase.from('movimientos_stock').insert({
+    stock_id: data.stock_id,
+    tipo: 'uso_evento',
+    cantidad: -data.cantidad,
+    evento_id: data.evento_id,
+    fecha: data.fecha,
+    notas: data.notas.trim() || null,
+  })
+
+  const costoTotal = data.cantidad * lote.precio_unitario_compra
+
+  const { error: cierreError } = await supabase.from('cierre_consumo').insert({
+    evento_id: data.evento_id,
+    tipo_origen: 'stock',
+    stock_id: data.stock_id,
+    insumo_base: lote.marca,
+    marca: lote.marca,
+    ml_por_envase: lote.ml_por_envase,
+    cantidad_consumida: data.cantidad,
+    precio_unitario: lote.precio_unitario_compra,
+  })
+  if (cierreError) return { error: cierreError.message }
+
+  // Solo se mueve plata en el libro si este lote tiene una cuenta
+  // financiadora registrada (se cargó con agregarStock indicando de dónde
+  // salió la plata). El sobrante que genera guardarCierre no la tiene,
+  // porque esa plata ya se debitó de caja al pagar la compra original —
+  // moverla acá otra vez la contaría dos veces.
+  if (costoTotal > 0 && lote.financiado_por) {
+    await supabase.from('cuentas_movimientos').insert({
+      fecha: data.fecha,
+      tipo: 'transferencia',
+      cuenta_origen: 'stock_valorizado',
+      cuenta_destino: lote.financiado_por,
+      monto: costoTotal,
+      concepto: `Uso de stock (${lote.marca}) en evento`,
+      evento_id: data.evento_id,
+    })
+  }
+
+  revalidatePath(`/eventos/${data.evento_id}/consumo`)
+  revalidatePath('/stock')
+  revalidatePath('/finanzas')
+  revalidatePath('/')
+  return { error: null }
+}
+
+// ─── Deshacer un uso de stock en un evento ───────────────────────────────────
+
+export async function deshacerUsoStock(cierreId: string) {
+  const supabase = createAdminClient()
+
+  const { data: cierre } = await supabase
+    .from('cierre_consumo')
+    .select('evento_id, stock_id, cantidad_consumida, costo_total, marca')
+    .eq('id', cierreId)
+    .eq('tipo_origen', 'stock')
+    .single()
+
+  if (!cierre || !cierre.stock_id) return { error: 'Uso de stock no encontrado.' }
+
+  const { data: lote } = await supabase
+    .from('stock')
+    .select('cantidad_envases, financiado_por')
+    .eq('id', cierre.stock_id)
+    .single()
+  if (!lote) return { error: 'Lote no encontrado.' }
+
+  await supabase
+    .from('stock')
+    .update({ cantidad_envases: lote.cantidad_envases + cierre.cantidad_consumida })
+    .eq('id', cierre.stock_id)
+
+  const hoy = new Date().toISOString().slice(0, 10)
+
+  await supabase.from('movimientos_stock').insert({
+    stock_id: cierre.stock_id,
+    tipo: 'ajuste',
+    cantidad: cierre.cantidad_consumida,
+    evento_id: cierre.evento_id,
+    fecha: hoy,
+    notas: 'Deshacer uso de stock en evento',
+  })
+
+  if (cierre.costo_total > 0 && lote.financiado_por) {
+    await supabase.from('cuentas_movimientos').insert({
+      fecha: hoy,
+      tipo: 'transferencia',
+      cuenta_origen: lote.financiado_por,
+      cuenta_destino: 'stock_valorizado',
+      monto: cierre.costo_total,
+      concepto: `Reverso de uso de stock (${cierre.marca})`,
+      evento_id: cierre.evento_id,
+    })
+  }
+
+  const { error } = await supabase.from('cierre_consumo').delete().eq('id', cierreId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/eventos/${cierre.evento_id}/consumo`)
+  revalidatePath('/stock')
+  revalidatePath('/finanzas')
   revalidatePath('/')
   return { error: null }
 }

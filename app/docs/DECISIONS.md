@@ -59,3 +59,17 @@
 **Por qué:** Garantiza que nunca se pierda un precio histórico, aunque el usuario olvide guardarlo manualmente.
 
 ---
+
+## 2026-08-14 — Libro de cuentas financieras (5 cuentas)
+
+**Decisión:** Se agrega `cuentas_movimientos` (migración 022) como libro de movimientos append-only entre 5 cuentas (caja operativa, anticipos comprometidos, inversiones, stock valorizado, ganancia acumulada). Los saldos de cada cuenta, el saldo de anticipo por evento y el % de amortización de cada inversión se calculan siempre con vistas (`saldo_cuentas`, `saldo_anticipos_evento`, `inversiones_resumen`, migraciones 022/023) — nunca se guardan como número fijo.
+
+**Por qué:** Mismo criterio que las vistas financieras por evento (ver más arriba): un número guardado se puede desincronizar del detalle real; una vista siempre está actualizada.
+
+**Compras/personal/extras vs. caja:** en vez de tocar `compras/actions.ts` o las funciones de staff/extras, se agregaron 3 triggers de Postgres (mismo patrón que `fn_recalcular_total_compra` de la migración 013) que debitan `caja_operativa` automáticamente. El código de la app no sabe que el libro existe para estos tres casos — se mantiene solo.
+
+**Sobrante de compra vs. stock cargado a mano:** el sobrante que genera `guardarCierre` (cierre de consumo) NO genera un movimiento nuevo en el libro — esa plata ya se debitó de caja cuando se pagó la compra original. Solo el stock cargado directamente con `agregarStock` indicando una cuenta financiadora (`financiado_por`) tiene una transferencia real que revertir cuando se usa en otro evento (`usarStockEnEvento`). Confundir estos dos casos duplicaría el débito de caja — se detectó y corrigió durante la implementación, antes de aplicar la migración.
+
+**Saldos iniciales:** la migración no inventa números de arranque. Las 5 cuentas empiezan en $0 (o incompletas, para `pagos_cliente` histórico que solo se clasificó por `cuenta_destino` sin generar movimiento). El dueño tiene que cargar los saldos reales actuales una vez, a mano, con "Nuevo movimiento" en `/finanzas`.
+
+---

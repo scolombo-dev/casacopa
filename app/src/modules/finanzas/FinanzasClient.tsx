@@ -9,7 +9,7 @@ import {
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { ESTADO_STYLE, ESTADO_LABEL, TIPO_PAGO_LABEL } from '@/lib/constants'
-import type { ResultadoNetoEvento, PagoCliente, TipoPago } from '@/lib/types'
+import type { ResultadoNetoEvento, PagoCliente, TipoPago, CuentaFinanciera, EstadoEvento } from '@/lib/types'
 import { crearPago, eliminarPago } from './actions'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ type EventoFinanciero = ResultadoNetoEvento
 
 // ─── Formulario de pago ───────────────────────────────────────────────────────
 
-function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void }) {
+function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estadoEvento: EstadoEvento; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [tipo, setTipo] = useState<TipoPago>('seña')
@@ -27,13 +27,17 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
   const [metodo, setMetodo] = useState('transferencia')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const eventoYaPaso = estadoEvento === 'finalizado' || estadoEvento === 'cerrado'
+  const [cuentaDestino, setCuentaDestino] = useState<CuentaFinanciera>(
+    eventoYaPaso ? 'caja_operativa' : 'anticipos_comprometidos'
+  )
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (monto <= 0) { setError('El monto debe ser mayor a 0.'); return }
     setError(null)
     startTransition(async () => {
-      const res = await crearPago({ evento_id: eventoId, tipo, monto, fecha, metodo, notas })
+      const res = await crearPago({ evento_id: eventoId, tipo, monto, fecha, metodo, notas, cuenta_destino: cuentaDestino })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -78,6 +82,32 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
             onChange={e => setFecha(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">¿A qué cuenta entra?</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCuentaDestino('caja_operativa')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              cuentaDestino === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            )}
+          >
+            Caja operativa
+          </button>
+          <button
+            type="button"
+            onClick={() => setCuentaDestino('anticipos_comprometidos')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              cuentaDestino === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            )}
+          >
+            Anticipo (evento futuro)
+          </button>
         </div>
       </div>
 
@@ -326,7 +356,7 @@ function EventoFinancieroCard({
 
       {modalPago && (
         <Modal titulo="Registrar pago" onClose={() => setModalPago(false)}>
-          <PagoForm eventoId={ev.evento_id} onClose={() => setModalPago(false)} />
+          <PagoForm eventoId={ev.evento_id} estadoEvento={ev.estado} onClose={() => setModalPago(false)} />
         </Modal>
       )}
     </div>

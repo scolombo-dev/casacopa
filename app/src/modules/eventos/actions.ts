@@ -89,20 +89,28 @@ export async function actualizarEstado(id: string, estado: EstadoEvento) {
 
 export async function chequearEliminarEvento(id: string) {
   const supabase = createAdminClient()
-  const [{ count: compras }, { count: pagos }, { count: ajustes }] = await Promise.all([
+  const [{ count: compras }, { count: pagos }, { count: ajustes }, { count: movimientos }, { count: amortizaciones }] = await Promise.all([
     supabase.from('compras').select('*', { count: 'exact', head: true }).eq('evento_id', id),
     supabase.from('pagos_cliente').select('*', { count: 'exact', head: true }).eq('evento_id', id),
     supabase.from('ajustes_ipc').select('*', { count: 'exact', head: true }).eq('evento_id', id),
+    supabase.from('cuentas_movimientos').select('*', { count: 'exact', head: true }).eq('evento_id', id),
+    supabase.from('inversion_amortizaciones').select('*', { count: 'exact', head: true }).eq('evento_id', id),
   ])
   return {
     compras: compras ?? 0,
     pagos: pagos ?? 0,
     ajustes: ajustes ?? 0,
+    movimientos: (movimientos ?? 0) + (amortizaciones ?? 0),
   }
 }
 
 export async function eliminarEvento(id: string) {
   const supabase = createAdminClient()
+  // Los movimientos y amortizaciones del libro tienen RESTRICT sobre
+  // evento_id — hay que borrarlos primero para no bloquear el delete del
+  // evento (a diferencia de compra_id/staff_id/extra_id, que cascadean solos).
+  await supabase.from('inversion_amortizaciones').delete().eq('evento_id', id)
+  await supabase.from('cuentas_movimientos').delete().eq('evento_id', id)
   await supabase.from('pagos_cliente').delete().eq('evento_id', id)
   await supabase.from('ajustes_ipc').delete().eq('evento_id', id)
   await supabase.from('compras').delete().eq('evento_id', id)
