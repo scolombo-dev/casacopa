@@ -107,9 +107,12 @@ export type Evento = {
   fecha: string
   tipo_evento: string
   estado: EstadoEvento
-  cantidad_personas: number
+  cantidad_personas: number         // columna generada = barra + barra_kids
   propuesta_id: string | null
-  precio_por_persona: number
+  precio_barra: number
+  cantidad_personas_barra: number
+  precio_barra_kids: number
+  cantidad_personas_barra_kids: number
   precio_total: number              // columna generada
   notas: string | null
   creado_en: string

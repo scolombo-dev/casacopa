@@ -18,7 +18,7 @@ type IngredienteLocal = { insumo_base: string; ml_por_trago: number }
 const CATEGORIAS = ['Estándar', 'Plus', 'Auto', 'Cerveza'] as const
 
 const CATEGORIA_STYLE: Record<string, string> = {
-  'Estándar': 'bg-blue-50 text-blue-700 border-blue-200',
+  'Estándar': 'bg-indigo-50 text-indigo-700 border-indigo-200',
   'Plus':     'bg-amber-50 text-amber-700 border-amber-200',
   'Auto':     'bg-purple-50 text-purple-700 border-purple-200',
   'Cerveza':  'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -99,7 +99,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
           value={nombre}
           onChange={e => setNombre(e.target.value)}
           placeholder="Ej: Gin Tonic"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -137,7 +137,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
           <button
             type="button"
             onClick={addIng}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
           >
             <Plus size={13} /> Agregar
           </button>
@@ -155,7 +155,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
                 value={ing.insumo_base}
                 onChange={e => updateIng(idx, 'insumo_base', e.target.value)}
                 placeholder="Insumo (Gin, Tonica…)"
-                className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <input
                 type="number"
@@ -163,7 +163,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
                 value={ing.ml_por_trago || ''}
                 onChange={e => updateIng(idx, 'ml_por_trago', parseInt(e.target.value) || 0)}
                 placeholder="ml"
-                className="w-20 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-20 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button type="button" onClick={() => removeIng(idx)} className="text-gray-400 hover:text-red-500">
                 <X size={15} />
@@ -185,7 +185,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
             value={extras}
             onChange={e => setExtras(e.target.value)}
             placeholder="Ej: Rodaja de naranja"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div>
@@ -194,7 +194,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
             value={observaciones}
             onChange={e => setObservaciones(e.target.value)}
             placeholder="Ej: Propuesta C1"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
@@ -205,7 +205,7 @@ function RecetaForm({ inicial, onClose }: { inicial?: RecetaConIng; onClose: () 
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
         >
           {pending ? 'Guardando…' : inicial ? 'Guardar cambios' : 'Crear receta'}
         </button>
@@ -246,7 +246,7 @@ function RecetaRow({ receta, onEdit, onDelete }: {
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
           <button
             onClick={onEdit}
-            className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+            className="p-1.5 rounded hover:bg-indigo-50 text-gray-400 hover:text-indigo-600"
           >
             <Pencil size={14} />
           </button>
@@ -288,7 +288,7 @@ function CategoriaSection({ categoria, recetas, onEdit, onDelete }: {
       </button>
 
       {abierto && (
-        <div className="bg-white rounded-xl border overflow-hidden">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -381,12 +381,12 @@ export default function RecetasClient({ recetas }: { recetas: RecetaConIng[] }) 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Recetas</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Recetas</h1>
           <p className="text-gray-500 text-sm mt-0.5">Carta de tragos — {recetas.length} recetas activas</p>
         </div>
         <button
           onClick={() => setModalCrear(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1.5"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-1.5"
         >
           <Plus size={16} /> Nueva receta
         </button>
@@ -426,7 +426,7 @@ export default function RecetasClient({ recetas }: { recetas: RecetaConIng[] }) 
       {recetasFiltradas.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <p className="text-sm">No hay recetas en esta categoría.</p>
-          <button onClick={() => setModalCrear(true)} className="mt-3 text-sm text-blue-600 hover:underline">
+          <button onClick={() => setModalCrear(true)} className="mt-3 text-sm text-indigo-600 hover:underline">
             + Crear la primera receta
           </button>
         </div>

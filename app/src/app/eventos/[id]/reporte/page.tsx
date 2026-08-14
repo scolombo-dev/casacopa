@@ -18,7 +18,8 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
       .from('eventos')
       .select(`
         id, nombre, fecha, tipo_evento, estado, cantidad_personas,
-        precio_por_persona, precio_total, notas,
+        precio_barra, cantidad_personas_barra, precio_barra_kids, cantidad_personas_barra_kids,
+        precio_total, notas,
         propuestas(nombre, tipo),
         evento_tragos(recetas(nombre_trago, categoria)),
         evento_staff(rol, nombre_persona, cantidad, costo_total),
@@ -143,13 +144,15 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
           <div className="border rounded-xl overflow-hidden">
             <div className="divide-y">
               <div className="flex justify-between items-center px-4 py-3 text-sm">
-                <span className="text-gray-600">Precio por persona</span>
-                <span className="font-medium">{formatARS(evento.precio_por_persona)}</span>
+                <span className="text-gray-600">Barra adultos — {formatARS(evento.precio_barra)} × {evento.cantidad_personas_barra}</span>
+                <span className="font-medium">{formatARS(evento.precio_barra * evento.cantidad_personas_barra)}</span>
               </div>
-              <div className="flex justify-between items-center px-4 py-3 text-sm">
-                <span className="text-gray-600">Cantidad de personas</span>
-                <span className="font-medium">{evento.cantidad_personas}</span>
-              </div>
+              {evento.cantidad_personas_barra_kids > 0 && (
+                <div className="flex justify-between items-center px-4 py-3 text-sm">
+                  <span className="text-gray-600">Barra kids — {formatARS(evento.precio_barra_kids)} × {evento.cantidad_personas_barra_kids}</span>
+                  <span className="font-medium">{formatARS(evento.precio_barra_kids * evento.cantidad_personas_barra_kids)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center px-4 py-3 text-sm bg-gray-50">
                 <span className="font-semibold text-gray-800">Total del evento</span>
                 <span className="font-bold text-gray-900 text-base">{formatARS(evento.precio_total)}</span>

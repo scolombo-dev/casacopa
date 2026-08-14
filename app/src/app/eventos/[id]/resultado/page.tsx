@@ -19,7 +19,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     { data: ajustesIpc },
     { data: reparto },
   ] = await Promise.all([
-    supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_por_persona, precio_total').eq('id', id).single(),
+    supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_total').eq('id', id).single(),
     supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
     supabase.from('pagos_cliente').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('evento_staff').select('*').eq('evento_id', id),

@@ -63,13 +63,13 @@ export function Sidebar() {
         )}
       >
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-100">
-          <p className="font-bold text-lg tracking-tight">🍹 Casa Copa</p>
-          <p className="text-xs text-gray-400 mt-0.5">Gestión de Barra</p>
+        <div className="px-5 py-5 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600">
+          <p className="font-extrabold text-lg tracking-tight text-white">🍹 Casa Copa</p>
+          <p className="text-xs text-indigo-100 mt-0.5">Gestión de Barra</p>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
@@ -78,10 +78,10 @@ export function Sidebar() {
                 href={href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                    : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
                 )}
               >
                 <Icon size={18} />

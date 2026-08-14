@@ -85,7 +85,7 @@ function VistaConsumo({
           <div className="flex items-center gap-2">
             <button
               onClick={onEditar}
-              className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-200 rounded-lg px-2.5 py-1 hover:bg-blue-50"
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium border border-indigo-200 rounded-lg px-2.5 py-1 hover:bg-indigo-50"
             >
               <Pencil size={12} /> Editar cierre
             </button>
@@ -139,7 +139,7 @@ function VistaConsumo({
                     <span className={cn(
                       'text-xs px-2 py-0.5 rounded-full font-medium',
                       item.tipo_origen === 'compra'
-                        ? 'bg-blue-50 text-blue-700'
+                        ? 'bg-indigo-50 text-indigo-700'
                         : 'bg-amber-50 text-amber-700'
                     )}>
                       {item.tipo_origen === 'compra' ? 'Compra' : 'Consig.'}
@@ -354,7 +354,7 @@ function FormConsumo({
                               ...prev,
                               [item.id]: Math.min(Math.max(0, parseInt(e.target.value) || 0), item.cantidad),
                             }))}
-                            className="w-16 text-center border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-200"
+                            className="w-16 text-center border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 border-gray-200"
                           />
                         </td>
                         <td className="px-3 py-3 text-center">

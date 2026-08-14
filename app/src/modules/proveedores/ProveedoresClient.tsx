@@ -77,7 +77,7 @@ function ProveedorForm({
       <div>
         <label className="block text-sm font-medium mb-1">Nombre *</label>
         <input
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={nombre}
           onChange={e => setNombre(e.target.value)}
           placeholder="Ej: Distribuidora Del Valle"
@@ -87,7 +87,7 @@ function ProveedorForm({
       <div>
         <label className="block text-sm font-medium mb-1">Contacto</label>
         <input
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={contacto}
           onChange={e => setContacto(e.target.value)}
           placeholder="Ej: Marcos - 11 5555-1234"
@@ -96,7 +96,7 @@ function ProveedorForm({
       <div>
         <label className="block text-sm font-medium mb-1">Notas</label>
         <textarea
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           rows={2}
           value={notas}
           onChange={e => setNotas(e.target.value)}
@@ -108,7 +108,7 @@ function ProveedorForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
         >
           {pending ? 'Guardando...' : inicial ? 'Guardar cambios' : 'Crear proveedor'}
         </button>
@@ -188,7 +188,7 @@ function ProductoForm({
         <label className="block text-sm font-medium mb-1">Insumo *</label>
         <input
           list="insumos-lista"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={insumoBase}
           onChange={e => setInsumoBase(e.target.value)}
           placeholder="Ej: Ron, Vodka, Gin..."
@@ -201,7 +201,7 @@ function ProductoForm({
       <div>
         <label className="block text-sm font-medium mb-1">Marca *</label>
         <input
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={marca}
           onChange={e => setMarca(e.target.value)}
           placeholder="Ej: Havana Club 3 años"
@@ -211,7 +211,7 @@ function ProductoForm({
         <div>
           <label className="block text-sm font-medium mb-1">Presentación</label>
           <input
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={presentacion}
             onChange={e => setPresentacion(e.target.value)}
             placeholder="Ej: 750ml"
@@ -221,7 +221,7 @@ function ProductoForm({
           <label className="block text-sm font-medium mb-1">ML por envase *</label>
           <input
             type="number"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={ml}
             onChange={e => setMl(e.target.value)}
             placeholder="750"
@@ -283,7 +283,7 @@ function ProductoForm({
           <label className="block text-sm font-medium mb-1">Precio de lista (ARS) *</label>
           <input
             type="number"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={precio}
             onChange={e => setPrecio(e.target.value)}
             placeholder="8500"
@@ -297,7 +297,7 @@ function ProductoForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
         >
           {pending ? 'Guardando...' : inicial ? 'Guardar cambios' : 'Agregar producto'}
         </button>
@@ -392,7 +392,7 @@ function CargarListaModal({
     <Modal titulo={`Cargar lista — ${proveedorNombre}`} onClose={onClose}>
       {paso === 'upload' && (
         <div className="space-y-4">
-          <div className="flex items-start gap-2 bg-blue-50 text-blue-800 rounded-lg p-3 text-sm">
+          <div className="flex items-start gap-2 bg-indigo-50 text-indigo-800 rounded-lg p-3 text-sm">
             <Sparkles size={16} className="mt-0.5 shrink-0" />
             <p>Subí una foto o PDF de la lista de precios del proveedor. Claude va a leer los precios y extraer los productos automáticamente.</p>
           </div>
@@ -401,14 +401,14 @@ function CargarListaModal({
           <div
             className={cn(
               'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors',
-              archivo ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+              archivo ? 'border-indigo-400 bg-indigo-50' : 'border-gray-300 hover:border-gray-400'
             )}
             onClick={() => inputRef.current?.click()}
           >
             <Upload size={24} className="mx-auto text-gray-400 mb-2" />
             {archivo ? (
               <div>
-                <p className="text-sm font-medium text-blue-700">{archivo.name}</p>
+                <p className="text-sm font-medium text-indigo-700">{archivo.name}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{(archivo.size / 1024).toFixed(0)} KB</p>
               </div>
             ) : (
@@ -436,7 +436,7 @@ function CargarListaModal({
             </label>
             <textarea
               rows={3}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               value={especificaciones}
               onChange={e => setEspecificaciones(e.target.value)}
               placeholder={'Ej: "Los precios están en la columna derecha, sin IVA. Ignorar productos de la sección Vinos Premium."'}
@@ -452,7 +452,7 @@ function CargarListaModal({
               ¿Qué productos buscar? <span className="text-gray-400 font-normal">(opcional)</span>
             </label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={insumos}
               onChange={e => setInsumos(e.target.value)}
               placeholder="Ej: Ron, Vodka, Gin, Gaseosa"
@@ -466,7 +466,7 @@ function CargarListaModal({
             <button
               onClick={handleProcesar}
               disabled={procesando || !archivo}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
               {procesando ? (
                 <>
@@ -491,7 +491,7 @@ function CargarListaModal({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">
-              Se encontraron <span className="text-blue-600">{productos.length} productos</span>
+              Se encontraron <span className="text-indigo-600">{productos.length} productos</span>
             </p>
             <button
               onClick={toggleTodos}
@@ -544,7 +544,7 @@ function CargarListaModal({
             <button
               onClick={handleGuardar}
               disabled={pending || seleccionados.length === 0}
-              className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
               {pending ? 'Guardando...' : `Guardar ${seleccionados.length} producto${seleccionados.length !== 1 ? 's' : ''}`}
             </button>
@@ -564,7 +564,7 @@ function CargarListaModal({
           </p>
           <button
             onClick={onClose}
-            className="mt-5 bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="mt-5 bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
           >
             Cerrar
           </button>
@@ -631,7 +631,7 @@ function ProductoRow({
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={onEditar}
-          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
           title="Editar"
         >
           <Pencil size={14} />
@@ -676,7 +676,7 @@ function ProveedorCard({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow border-gray-200 overflow-hidden">
       {/* Cabecera del proveedor */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button
@@ -699,7 +699,7 @@ function ProveedorCard({
         <div className="flex gap-1">
           <button
             onClick={onEditarProveedor}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
             title="Editar proveedor"
           >
             <Pencil size={15} />
@@ -737,7 +737,7 @@ function ProveedorCard({
           <div className="flex items-center gap-4 mt-2 mx-3">
             <button
               onClick={() => setModalProducto('nuevo')}
-              className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <Plus size={15} />
               Agregar uno
@@ -801,7 +801,7 @@ function ComparadorPrecios({ productos }: { productos: ProductoConProveedor[] })
         <select
           value={insumoSeleccionado}
           onChange={e => setInsumoSeleccionado(e.target.value)}
-          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {insumos.map(i => <option key={i} value={i}>{i}</option>)}
         </select>
@@ -908,7 +908,7 @@ export default function ProveedoresClient({
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Proveedores</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Proveedores</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {proveedores.length} {proveedores.length === 1 ? 'proveedor' : 'proveedores'} ·{' '}
             {productos.length} {productos.length === 1 ? 'producto' : 'productos'}
@@ -916,7 +916,7 @@ export default function ProveedoresClient({
         </div>
         <button
           onClick={() => setModalProveedor('nuevo')}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
         >
           <Plus size={16} />
           Nuevo proveedor
@@ -932,7 +932,7 @@ export default function ProveedoresClient({
             className={cn(
               'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               tab === t
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             )}
           >
@@ -945,11 +945,11 @@ export default function ProveedoresClient({
       {tab === 'proveedores' ? (
         <div className="space-y-3">
           {proveedoresConProductos.length === 0 ? (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+            <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow border-dashed border-gray-300 p-8 text-center">
               <p className="text-gray-500 text-sm">No hay proveedores aún.</p>
               <button
                 onClick={() => setModalProveedor('nuevo')}
-                className="mt-3 text-blue-600 text-sm font-medium hover:underline"
+                className="mt-3 text-indigo-600 text-sm font-medium hover:underline"
               >
                 + Agregar el primero
               </button>
@@ -967,7 +967,7 @@ export default function ProveedoresClient({
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow border-gray-200 p-5">
           <ComparadorPrecios productos={productos} />
         </div>
       )}

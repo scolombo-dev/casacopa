@@ -138,7 +138,7 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cargar desde catálogo (opcional)</label>
         <select value={productoId} onChange={e => seleccionarProducto(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Entrada manual…</option>
           {productos.map(p => (
             <option key={p.id} value={p.id}>{p.insumo_base} — {p.marca} ({p.presentacion})</option>
@@ -150,27 +150,27 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
           <input value={marca} onChange={e => setMarca(e.target.value)} placeholder="Ej: Fernet Branca"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
           <input value={proveedor} onChange={e => setProveedor(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
           <input value={presentacion} onChange={e => setPresentacion(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ml por envase</label>
           <input type="number" min={1} value={mlEnvase} onChange={e => setMlEnvase(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad (envases)</label>
           <input type="number" min={1} value={cantidad} onChange={e => setCantidad(parseInt(e.target.value) || 1)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -178,18 +178,18 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
             {!esSobrante && <span className="ml-1 text-xs text-gray-400 font-normal">(lo que pagaste)</span>}
           </label>
           <input type="number" min={0} value={precio} onChange={e => setPrecio(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de ingreso</label>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         {esSobrante && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Evento (sobrante de)</label>
             <select value={eventoId} onChange={e => setEventoId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="">Sin evento específico</option>
               {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
             </select>
@@ -200,14 +200,14 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Observaciones opcionales"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
           {pending ? 'Guardando…' : esSobrante ? 'Registrar sobrante' : 'Agregar al stock'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
@@ -261,34 +261,34 @@ function EditarLoteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
           <input value={marca} onChange={e => setMarca(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
           <input value={proveedor} onChange={e => setProveedor(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ml por envase (alcohol)</label>
           <input type="number" min={1} value={mlEnvase} onChange={e => setMlEnvase(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Precio / envase $</label>
           <input type="number" min={0} value={precio} onChange={e => setPrecio(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de ingreso</label>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad (envases)</label>
         <input type="number" min={0} value={nueva} onChange={e => setNueva(parseInt(e.target.value) ?? 0)}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         {diff !== 0 && (
           <p className={cn('text-xs mt-1', diff > 0 ? 'text-emerald-600' : 'text-red-600')}>
             {diff > 0 ? `+${diff}` : diff} envases respecto al actual
@@ -300,7 +300,7 @@ function EditarLoteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del cambio de cantidad</label>
           <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: Conteo físico, rotura…"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
       )}
 
@@ -308,7 +308,7 @@ function EditarLoteForm({ lote, onClose }: { lote: Lote; onClose: () => void }) 
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
           {pending ? 'Guardando…' : 'Guardar cambios'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
@@ -332,7 +332,7 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onRetirar }: {
   const sinStock = grupo.totalEnvases === 0
 
   return (
-    <div className={cn('bg-white rounded-xl border overflow-hidden', sinStock && 'opacity-60')}>
+    <div className={cn('bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden', sinStock && 'opacity-60')}>
       {/* Header del grupo */}
       <div
         className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50"
@@ -438,7 +438,7 @@ function GrupoRow({ grupo, onAjustar, onEliminar, onHistorial, onRetirar }: {
                       <button
                         onClick={() => onAjustar(lote)}
                         title="Editar lote"
-                        className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-indigo-50"
                       >
                         <Pencil size={13} />
                       </button>
@@ -484,7 +484,7 @@ const LABELS_TIPO: Record<Movimiento['tipo'], string> = {
 
 const COLORES_TIPO: Record<Movimiento['tipo'], string> = {
   ingreso_sobrante: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  uso_evento: 'text-blue-700 bg-blue-50 border-blue-200',
+  uso_evento: 'text-indigo-700 bg-indigo-50 border-indigo-200',
   venta: 'text-purple-700 bg-purple-50 border-purple-200',
   ajuste: 'text-gray-600 bg-gray-50 border-gray-200',
   retiro_personal: 'text-amber-700 bg-amber-50 border-amber-200',
@@ -754,7 +754,7 @@ export default function StockClient({ stock, productos, eventos }: {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Stock</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Stock</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {totalEnvases} envases disponibles
             {totalValor > 0 && <span className="ml-2 font-medium text-gray-700">— {formatARS(totalValor)} en inventario</span>}
@@ -774,7 +774,7 @@ export default function StockClient({ stock, productos, eventos }: {
           </button>
           <button
             onClick={() => setModalIngreso(true)}
-            className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
           >
             <Plus size={16} /> Agregar stock
           </button>
@@ -828,7 +828,7 @@ export default function StockClient({ stock, productos, eventos }: {
               {filtro === 'agotado' ? 'No hay insumos agotados.' : 'No hay stock registrado aún.'}
             </p>
             {filtro !== 'agotado' && (
-              <button onClick={() => setModalIngreso(true)} className="mt-3 text-sm text-blue-600 hover:underline">
+              <button onClick={() => setModalIngreso(true)} className="mt-3 text-sm text-indigo-600 hover:underline">
                 + Agregar primer stock
               </button>
             )}
@@ -857,7 +857,7 @@ export default function StockClient({ stock, productos, eventos }: {
             <p className="text-sm">No hay stock registrado aún.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b text-xs text-gray-400 uppercase">
@@ -913,7 +913,7 @@ export default function StockClient({ stock, productos, eventos }: {
                             </button>
                           )}
                           <button onClick={() => setAjustando(lote)} title="Editar lote"
-                            className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-indigo-50">
                             <Pencil size={13} />
                           </button>
                           <button onClick={() => setEliminando(lote)} title="Eliminar"

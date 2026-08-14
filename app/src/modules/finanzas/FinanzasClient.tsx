@@ -52,7 +52,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
               onClick={() => setTipo(t)}
               className={cn(
                 'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
-                tipo === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                tipo === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               )}
             >
               {TIPO_PAGO_LABEL[t]}
@@ -68,7 +68,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
             type="number" min={1} value={monto || ''}
             onChange={e => setMonto(parseInt(e.target.value) || 0)}
             placeholder="0"
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div>
@@ -76,7 +76,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
           <input
             type="date" value={fecha}
             onChange={e => setFecha(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
@@ -85,7 +85,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
         <label className="block text-sm font-medium text-gray-700 mb-1">Método</label>
         <select
           value={metodo} onChange={e => setMetodo(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="transferencia">Transferencia</option>
           <option value="efectivo">Efectivo</option>
@@ -98,7 +98,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
         <input
           value={notas} onChange={e => setNotas(e.target.value)}
           placeholder="Referencia, comprobante…"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -106,7 +106,7 @@ function PagoForm({ eventoId, onClose }: { eventoId: string; onClose: () => void
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
           {pending ? 'Guardando…' : 'Registrar pago'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
@@ -139,7 +139,7 @@ function EventoFinancieroCard({
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
 
   return (
-    <div className="bg-white rounded-xl border overflow-hidden">
+    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {/* Header */}
       <div
         className="flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50"
@@ -271,7 +271,7 @@ function EventoFinancieroCard({
               </p>
               <button
                 onClick={() => setModalPago(true)}
-                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
               >
                 <Plus size={12} /> Registrar pago
               </button>
@@ -286,7 +286,7 @@ function EventoFinancieroCard({
                     <div>
                       <span className={cn(
                         'text-xs px-1.5 py-0.5 rounded font-medium mr-2',
-                        p.tipo === 'seña' ? 'bg-blue-100 text-blue-700' :
+                        p.tipo === 'seña' ? 'bg-indigo-100 text-indigo-700' :
                         p.tipo === 'cuota' ? 'bg-amber-100 text-amber-700' :
                         'bg-emerald-100 text-emerald-700'
                       )}>
@@ -369,13 +369,13 @@ export default function FinanzasClient({
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Finanzas</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Finanzas</h1>
         <p className="text-gray-500 text-sm mt-0.5">P&L por evento y seguimiento de pagos</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border p-4">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4">
           <p className="text-xs text-gray-500 mb-1">Facturado (activos)</p>
           <p className="text-xl font-bold text-gray-900">{formatARS(totalIngresoBruto)}</p>
           <p className="text-xs text-emerald-600 mt-1">{formatARS(totalCobrado)} cobrado</p>
@@ -395,7 +395,7 @@ export default function FinanzasClient({
           </p>
           <p className="text-xs text-gray-400 mt-1">{cerrados.length} eventos cerrados</p>
         </div>
-        <div className="bg-white rounded-xl border p-4">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4">
           <p className="text-xs text-gray-500 mb-1">Margen promedio</p>
           <p className="text-xl font-bold text-gray-900">
             {cerrados.length > 0 ? `${margenPromedio}%` : '—'}

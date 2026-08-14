@@ -67,7 +67,7 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Evento</label>
           <select value={eventoId} onChange={e => setEventoId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Seleccionar evento…</option>
             {eventos.map(ev => (
               <option key={ev.id} value={ev.id}>{ev.nombre} — {formatFecha(ev.fecha)}</option>
@@ -79,12 +79,12 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de compra</label>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor (opcional)</label>
           <select value={proveedorId} onChange={e => setProveedorId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Sin proveedor específico</option>
             {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -94,12 +94,12 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
           placeholder="Observaciones…"
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
       </div>
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
           {pending ? 'Guardando…' : inicial ? 'Guardar cambios' : 'Crear compra'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
@@ -159,14 +159,14 @@ function ItemForm({ compraId, inicial, productos, onClose }: {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-blue-50 rounded-xl p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-indigo-50 rounded-xl p-4 space-y-3">
       {!inicial && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Cargar desde catálogo (opcional)
           </label>
           <select value={productoId} onChange={e => seleccionarProducto(e.target.value)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Entrada manual…</option>
             {productos.map(p => (
               <option key={p.id} value={p.id}>
@@ -181,38 +181,38 @@ function ItemForm({ compraId, inicial, productos, onClose }: {
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Marca / Producto *</label>
           <input value={marca} onChange={e => setMarca(e.target.value)} placeholder="Ej: Fernet Branca"
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor</label>
           <input value={proveedor} onChange={e => setProveedor(e.target.value)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Presentación</label>
           <input value={presentacion} onChange={e => setPresentacion(e.target.value)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">ml por envase</label>
           <input type="number" min={1} value={mlEnvase} onChange={e => setMlEnvase(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad (unidades)</label>
           <input type="number" min={1} value={cantidad} onChange={e => setCantidad(parseInt(e.target.value) || 1)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Precio real / unidad $</label>
           <input type="number" min={0} value={precio} onChange={e => setPrecio(parseInt(e.target.value) || 0)}
-            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
         </div>
       </div>
 
       {cantidad > 0 && precio > 0 && (
         <p className="text-xs text-gray-600">
-          Subtotal: <span className="font-semibold text-blue-700">{formatARS(cantidad * precio)}</span>
+          Subtotal: <span className="font-semibold text-indigo-700">{formatARS(cantidad * precio)}</span>
           <span className="text-gray-400 ml-2">({cantidad} × {formatARS(precio)})</span>
         </p>
       )}
@@ -221,7 +221,7 @@ function ItemForm({ compraId, inicial, productos, onClose }: {
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
-          className="flex-1 bg-blue-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="flex-1 bg-indigo-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
           {pending ? '…' : inicial ? 'Guardar' : 'Agregar item'}
         </button>
         <button type="button" onClick={onClose} className="px-3 border rounded-lg text-sm text-gray-600 bg-white hover:bg-gray-50">
@@ -260,14 +260,14 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
   }
 
   return (
-    <div className="bg-white rounded-xl border overflow-hidden">
+    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {/* Header */}
       <div
         className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50"
         onClick={toggleExpand}
       >
-        <div className="shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-          <ShoppingCart size={18} className="text-blue-600" />
+        <div className="shrink-0 w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+          <ShoppingCart size={18} className="text-indigo-600" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -287,7 +287,7 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
           <div className="text-xs text-gray-400">total</div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50"><Pencil size={15} /></button>
+          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-indigo-50"><Pencil size={15} /></button>
           <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50"><Trash2 size={15} /></button>
         </div>
         <div className="text-gray-400 shrink-0">
@@ -306,7 +306,7 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
                 <span className="text-xs text-gray-400 italic">Cargando…</span>
               ) : insumosEvento && insumosEvento.length > 0 ? (
                 insumosEvento.map(insumo => (
-                  <span key={insumo} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                  <span key={insumo} className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-medium">
                     {insumo}
                   </span>
                 ))
@@ -320,7 +320,7 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
             <span className="text-sm font-semibold text-gray-700">Items de la compra</span>
             <button
               onClick={() => setAgregandoItem(true)}
-              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium"
+              className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium"
             >
               <Plus size={13} /> Agregar item
             </button>
@@ -368,7 +368,7 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
                           <td className="py-2.5 text-right tabular-nums font-medium text-gray-800">{formatARS(item.precio_total_real)}</td>
                           <td className="py-2.5 pl-2">
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 justify-end">
-                              <button onClick={() => setEditandoItem(item)} className="p-1 text-gray-400 hover:text-blue-600"><Pencil size={13} /></button>
+                              <button onClick={() => setEditandoItem(item)} className="p-1 text-gray-400 hover:text-indigo-600"><Pencil size={13} /></button>
                               <button
                                 onClick={() => startTransition(async () => { await eliminarItem(item.id, compra.id); router.refresh() })}
                                 className="p-1 text-gray-400 hover:text-red-500"
@@ -427,14 +427,14 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Compras</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Compras</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {compras.length} compras registradas
             {totalGeneral > 0 && <span className="ml-2 font-medium text-gray-700">— {formatARS(totalGeneral)} total</span>}
           </p>
         </div>
         <button onClick={() => setModalCrear(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1.5">
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-1.5">
           <Plus size={16} /> Nueva compra
         </button>
       </div>
@@ -449,7 +449,7 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
           {eventosConCompras.map(ev => (
             <button key={ev.id} onClick={() => setFiltroEvento(filtroEvento === ev.id ? null : ev.id)}
               className={cn('px-3 py-1.5 rounded-lg border text-sm transition-colors',
-                filtroEvento === ev.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+                filtroEvento === ev.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
               {ev.nombre}
             </button>
           ))}
@@ -460,7 +460,7 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
         <div className="text-center py-16 text-gray-400">
           <Package size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">No hay compras registradas aún.</p>
-          <button onClick={() => setModalCrear(true)} className="mt-3 text-sm text-blue-600 hover:underline">
+          <button onClick={() => setModalCrear(true)} className="mt-3 text-sm text-indigo-600 hover:underline">
             + Registrar primera compra
           </button>
         </div>

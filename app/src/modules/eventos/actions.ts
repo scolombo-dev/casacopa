@@ -11,9 +11,11 @@ export async function crearEvento(data: {
   fecha: string
   tipo_evento: string
   estado: EstadoEvento
-  cantidad_personas: number
   propuesta_id: string | null
-  precio_por_persona: number
+  precio_barra: number
+  cantidad_personas_barra: number
+  precio_barra_kids: number
+  cantidad_personas_barra_kids: number
   notas: string
   receta_ids?: string[]
 }) {
@@ -23,9 +25,11 @@ export async function crearEvento(data: {
     fecha: data.fecha,
     tipo_evento: data.tipo_evento,
     estado: data.estado,
-    cantidad_personas: data.cantidad_personas,
     propuesta_id: data.propuesta_id || null,
-    precio_por_persona: data.precio_por_persona,
+    precio_barra: data.precio_barra,
+    cantidad_personas_barra: data.cantidad_personas_barra,
+    precio_barra_kids: data.precio_barra_kids,
+    cantidad_personas_barra_kids: data.cantidad_personas_barra_kids,
     notas: data.notas.trim() || null,
   }).select().single()
   if (error) return { error: error.message }
@@ -46,9 +50,11 @@ export async function editarEvento(id: string, data: {
   fecha: string
   tipo_evento: string
   estado: EstadoEvento
-  cantidad_personas: number
   propuesta_id: string | null
-  precio_por_persona: number
+  precio_barra: number
+  cantidad_personas_barra: number
+  precio_barra_kids: number
+  cantidad_personas_barra_kids: number
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -57,9 +63,11 @@ export async function editarEvento(id: string, data: {
     fecha: data.fecha,
     tipo_evento: data.tipo_evento,
     estado: data.estado,
-    cantidad_personas: data.cantidad_personas,
     propuesta_id: data.propuesta_id || null,
-    precio_por_persona: data.precio_por_persona,
+    precio_barra: data.precio_barra,
+    cantidad_personas_barra: data.cantidad_personas_barra,
+    precio_barra_kids: data.precio_barra_kids,
+    cantidad_personas_barra_kids: data.cantidad_personas_barra_kids,
     notas: data.notas.trim() || null,
   }).eq('id', id)
   if (error) return { error: error.message }

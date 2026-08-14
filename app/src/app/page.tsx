@@ -63,13 +63,13 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-0.5">Casa Copa — resumen operativo</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border p-4">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4">
           <div className="flex items-center gap-2 text-gray-500 text-xs mb-2">
             <Calendar size={13} /> Próximos eventos
           </div>
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
           <p className="text-xs text-gray-400 mt-1">{conDeuda.length} evento{conDeuda.length !== 1 ? 's' : ''}</p>
         </div>
 
-        <div className="bg-white rounded-xl border p-4">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4">
           <div className="flex items-center gap-2 text-gray-500 text-xs mb-2">
             <TrendingUp size={13} /> Resultado neto
           </div>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
           <p className="text-xs text-gray-400 mt-1">{cerrados.length} eventos cerrados</p>
         </div>
 
-        <div className="bg-white rounded-xl border p-4">
+        <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4">
           <div className="flex items-center gap-2 text-gray-500 text-xs mb-2">
             <Package size={13} /> Stock en depósito
           </div>
@@ -124,14 +124,14 @@ export default async function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-800">Próximos eventos</h2>
-          <Link href="/eventos" className="text-sm text-blue-600 hover:text-blue-700">Ver todos →</Link>
+          <Link href="/eventos" className="text-sm text-indigo-600 hover:text-indigo-700">Ver todos →</Link>
         </div>
 
         {proximos.length === 0 ? (
-          <div className="bg-white rounded-xl border px-5 py-8 text-center text-gray-400">
+          <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow px-5 py-8 text-center text-gray-400">
             <Calendar size={32} className="mx-auto mb-2 opacity-30" />
             <p className="text-sm">No hay eventos confirmados próximos.</p>
-            <Link href="/eventos" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            <Link href="/eventos" className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
               + Crear evento
             </Link>
           </div>
@@ -144,7 +144,7 @@ export default async function DashboardPage() {
                 <Link
                   key={ev.id}
                   href="/eventos"
-                  className="flex items-center gap-4 bg-white rounded-xl border px-5 py-3.5 hover:border-gray-300 transition-colors"
+                  className="flex items-center gap-4 bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow px-5 py-3.5 hover:border-gray-300 transition-colors"
                 >
                   {/* Fecha */}
                   <div className="shrink-0 text-center w-10">

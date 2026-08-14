@@ -48,7 +48,7 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
         {!agregando && (
           <button
             onClick={() => setAgregando(true)}
-            className="print:hidden inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+            className="print:hidden inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
           >
             <Plus size={12} /> Agregar
           </button>
@@ -107,13 +107,13 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
               <input
                 value={destinatario} onChange={e => setDestinatario(e.target.value)}
                 placeholder="Ej: Salón, Nosotros, Reinversión"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <div className="flex gap-1.5 mt-1.5">
                 {['Salón', 'Nosotros'].map(op => (
                   <button
                     key={op} type="button" onClick={() => setDestinatario(op)}
-                    className="text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600"
+                    className="text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
                   >
                     {op}
                   </button>
@@ -126,7 +126,7 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
                 type="number" min={1} value={monto || ''}
                 onChange={e => setMonto(parseInt(e.target.value) || 0)}
                 placeholder="0"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -134,7 +134,7 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
               <input
                 type="date" value={fecha}
                 onChange={e => setFecha(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
               <input
                 value={notas} onChange={e => setNotas(e.target.value)}
                 placeholder="Ej: su parte del evento"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export default function RepartoResultado({ eventoId, resultadoNeto, repartos }: 
 
           <div className="flex gap-2">
             <button type="submit" disabled={pending}
-              className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+              className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
               {pending ? 'Guardando…' : 'Guardar'}
             </button>
             <button
