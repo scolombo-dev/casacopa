@@ -214,6 +214,7 @@ export type PagoCliente = {
   notas: string | null
   creado_en: string
   cuenta_destino: CuentaFinanciera
+  subcuenta_destino_id: string | null
 }
 
 // --- Cuentas financieras (5 cuentas) ---
@@ -240,6 +241,8 @@ export type CuentaMovimiento = {
   staff_id: string | null
   extra_id: string | null
   inversion_id: string | null
+  subcuenta_origen_id: string | null
+  subcuenta_destino_id: string | null
   notas: string | null
   creado_en: string
   // Join
@@ -248,6 +251,22 @@ export type CuentaMovimiento = {
 
 export type SaldoCuenta = {
   cuenta: CuentaFinanciera
+  saldo: number
+}
+
+// --- Subcuentas (billeteras/bancos dentro de caja y anticipos) ---
+
+export type Subcuenta = {
+  id: string
+  nombre: string
+  titular: string
+  cuenta_padre: CuentaFinanciera
+  activa: boolean
+  notas: string | null
+  creado_en: string
+}
+
+export type SaldoSubcuenta = Subcuenta & {
   saldo: number
 }
 

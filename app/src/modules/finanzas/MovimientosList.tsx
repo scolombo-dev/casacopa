@@ -6,19 +6,22 @@ import { Plus, ArrowRight } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { CUENTA_LABEL } from '@/lib/constants'
-import type { CuentaMovimiento, CuentaFinanciera, TipoMovimientoCuenta } from '@/lib/types'
+import type { CuentaMovimiento, CuentaFinanciera, TipoMovimientoCuenta, Subcuenta } from '@/lib/types'
 import { crearMovimientoManual } from './actions'
+import SubcuentaSelect from './SubcuentaSelect'
 
 const CUENTAS: CuentaFinanciera[] = [
   'caja_operativa', 'anticipos_comprometidos', 'inversiones', 'stock_valorizado', 'ganancia_acumulada',
 ]
 
-function MovimientoForm({ onClose }: { onClose: () => void }) {
+function MovimientoForm({ subcuentas, onClose }: { subcuentas: Subcuenta[]; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [tipo, setTipo] = useState<TipoMovimientoCuenta>('ingreso')
   const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera>('caja_operativa')
   const [cuentaDestino, setCuentaDestino] = useState<CuentaFinanciera>('caja_operativa')
+  const [subcuentaOrigenId, setSubcuentaOrigenId] = useState('')
+  const [subcuentaDestinoId, setSubcuentaDestinoId] = useState('')
   const [monto, setMonto] = useState(0)
   const [concepto, setConcepto] = useState('')
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
@@ -38,6 +41,8 @@ function MovimientoForm({ onClose }: { onClose: () => void }) {
         tipo,
         cuenta_origen: tipo === 'ingreso' ? null : cuentaOrigen,
         cuenta_destino: tipo === 'egreso' ? null : cuentaDestino,
+        subcuenta_origen_id: tipo !== 'ingreso' ? (subcuentaOrigenId || null) : null,
+        subcuenta_destino_id: tipo !== 'egreso' ? (subcuentaDestinoId || null) : null,
         monto, concepto, fecha, notas,
       })
       if (res.error) { setError(res.error); return }
@@ -69,7 +74,7 @@ function MovimientoForm({ onClose }: { onClose: () => void }) {
         {tipo !== 'ingreso' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta origen</label>
-            <select value={cuentaOrigen} onChange={e => setCuentaOrigen(e.target.value as CuentaFinanciera)}
+            <select value={cuentaOrigen} onChange={e => { setCuentaOrigen(e.target.value as CuentaFinanciera); setSubcuentaOrigenId('') }}
               className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
               {CUENTAS.map(c => <option key={c} value={c}>{CUENTA_LABEL[c]}</option>)}
             </select>
@@ -78,11 +83,17 @@ function MovimientoForm({ onClose }: { onClose: () => void }) {
         {tipo !== 'egreso' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta destino</label>
-            <select value={cuentaDestino} onChange={e => setCuentaDestino(e.target.value as CuentaFinanciera)}
+            <select value={cuentaDestino} onChange={e => { setCuentaDestino(e.target.value as CuentaFinanciera); setSubcuentaDestinoId('') }}
               className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
               {CUENTAS.map(c => <option key={c} value={c}>{CUENTA_LABEL[c]}</option>)}
             </select>
           </div>
+        )}
+        {tipo !== 'ingreso' && (
+          <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentas} value={subcuentaOrigenId} onChange={setSubcuentaOrigenId} label="Billetera/banco de origen" />
+        )}
+        {tipo !== 'egreso' && (
+          <SubcuentaSelect cuenta={cuentaDestino} subcuentas={subcuentas} value={subcuentaDestinoId} onChange={setSubcuentaDestinoId} label="Billetera/banco de destino" />
         )}
       </div>
 
@@ -126,7 +137,7 @@ function MovimientoForm({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function MovimientosList({ movimientos }: { movimientos: CuentaMovimiento[] }) {
+export default function MovimientosList({ movimientos, subcuentas }: { movimientos: CuentaMovimiento[]; subcuentas: Subcuenta[] }) {
   const [modalAbierto, setModalAbierto] = useState(false)
 
   return (
@@ -170,7 +181,7 @@ export default function MovimientosList({ movimientos }: { movimientos: CuentaMo
 
       {modalAbierto && (
         <Modal titulo="Nuevo movimiento" onClose={() => setModalAbierto(false)}>
-          <MovimientoForm onClose={() => setModalAbierto(false)} />
+          <MovimientoForm subcuentas={subcuentas} onClose={() => setModalAbierto(false)} />
         </Modal>
       )}
     </div>

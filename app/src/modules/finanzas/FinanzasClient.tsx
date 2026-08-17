@@ -9,8 +9,9 @@ import {
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { ESTADO_STYLE, ESTADO_LABEL, TIPO_PAGO_LABEL } from '@/lib/constants'
-import type { ResultadoNetoEvento, PagoCliente, TipoPago, CuentaFinanciera, EstadoEvento } from '@/lib/types'
+import type { ResultadoNetoEvento, PagoCliente, TipoPago, CuentaFinanciera, EstadoEvento, Subcuenta } from '@/lib/types'
 import { crearPago, eliminarPago } from './actions'
+import SubcuentaSelect from './SubcuentaSelect'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,9 @@ type EventoFinanciero = ResultadoNetoEvento
 
 // ─── Formulario de pago ───────────────────────────────────────────────────────
 
-function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estadoEvento: EstadoEvento; onClose: () => void }) {
+function PagoForm({ eventoId, estadoEvento, subcuentas, onClose }: {
+  eventoId: string; estadoEvento: EstadoEvento; subcuentas: Subcuenta[]; onClose: () => void
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [tipo, setTipo] = useState<TipoPago>('seña')
@@ -31,13 +34,17 @@ function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estad
   const [cuentaDestino, setCuentaDestino] = useState<CuentaFinanciera>(
     eventoYaPaso ? 'caja_operativa' : 'anticipos_comprometidos'
   )
+  const [subcuentaDestinoId, setSubcuentaDestinoId] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (monto <= 0) { setError('El monto debe ser mayor a 0.'); return }
     setError(null)
     startTransition(async () => {
-      const res = await crearPago({ evento_id: eventoId, tipo, monto, fecha, metodo, notas, cuenta_destino: cuentaDestino })
+      const res = await crearPago({
+        evento_id: eventoId, tipo, monto, fecha, metodo, notas,
+        cuenta_destino: cuentaDestino, subcuenta_destino_id: subcuentaDestinoId || null,
+      })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -90,7 +97,7 @@ function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estad
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setCuentaDestino('caja_operativa')}
+            onClick={() => { setCuentaDestino('caja_operativa'); setSubcuentaDestinoId('') }}
             className={cn(
               'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
               cuentaDestino === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
@@ -100,7 +107,7 @@ function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estad
           </button>
           <button
             type="button"
-            onClick={() => setCuentaDestino('anticipos_comprometidos')}
+            onClick={() => { setCuentaDestino('anticipos_comprometidos'); setSubcuentaDestinoId('') }}
             className={cn(
               'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
               cuentaDestino === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
@@ -110,6 +117,8 @@ function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estad
           </button>
         </div>
       </div>
+
+      <SubcuentaSelect cuenta={cuentaDestino} subcuentas={subcuentas} value={subcuentaDestinoId} onChange={setSubcuentaDestinoId} label="Billetera/banco de destino" />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Método</label>
@@ -150,10 +159,11 @@ function PagoForm({ eventoId, estadoEvento, onClose }: { eventoId: string; estad
 // ─── Card de evento financiero ────────────────────────────────────────────────
 
 function EventoFinancieroCard({
-  ev, pagos,
+  ev, pagos, subcuentas,
 }: {
   ev: EventoFinanciero
   pagos: PagoCliente[]
+  subcuentas: Subcuenta[]
 }) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
@@ -362,7 +372,7 @@ function EventoFinancieroCard({
 
       {modalPago && (
         <Modal titulo="Registrar pago" onClose={() => setModalPago(false)}>
-          <PagoForm eventoId={ev.evento_id} estadoEvento={ev.estado} onClose={() => setModalPago(false)} />
+          <PagoForm eventoId={ev.evento_id} estadoEvento={ev.estado} subcuentas={subcuentas} onClose={() => setModalPago(false)} />
         </Modal>
       )}
     </div>
@@ -374,10 +384,11 @@ function EventoFinancieroCard({
 type Filtro = 'todos' | 'por_cobrar' | 'finalizados'
 
 export default function FinanzasClient({
-  eventos, pagos,
+  eventos, pagos, subcuentas,
 }: {
   eventos: EventoFinanciero[]
   pagos: PagoCliente[]
+  subcuentas: Subcuenta[]
 }) {
   const [filtro, setFiltro] = useState<Filtro>('todos')
 
@@ -469,7 +480,7 @@ export default function FinanzasClient({
       ) : (
         <div className="space-y-3">
           {filtrados.map(ev => (
-            <EventoFinancieroCard key={ev.evento_id} ev={ev} pagos={pagos} />
+            <EventoFinancieroCard key={ev.evento_id} ev={ev} pagos={pagos} subcuentas={subcuentas} />
           ))}
         </div>
       )}

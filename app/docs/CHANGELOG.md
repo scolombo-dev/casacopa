@@ -2,6 +2,17 @@
 
 ---
 
+## [0.4.0] — 2026-08-17
+
+### Subcuentas (billeteras/bancos) y reparto al cerrar evento
+
+- Migración `024_subcuentas.sql`: tabla `subcuentas` (nombre, titular/socio, a qué cuenta pertenece) y vista `saldo_subcuentas`
+- Al cobrar un pago de cliente o cargar un movimiento manual, ahora se puede elegir a qué billetera/banco específico entra o sale la plata
+- Nueva sección "Billeteras y bancos" en `/finanzas`: saldo y movimientos de cada una, alta de cuentas nuevas
+- Cierre de evento rediseñado (`cerrarEventoConReparto`): muestra un resumen de costos cargados, permite poner el monto exacto a pagarle al salón (sugerido 50% del resultado) y elegir qué hacer con el resto — dejarlo en ganancia acumulada, moverlo a una billetera de caja, o retirarlo
+
+---
+
 ## [0.3.0] — 2026-08-14
 
 ### Libro de cuentas financieras (5 cuentas) — Fase 1 backend

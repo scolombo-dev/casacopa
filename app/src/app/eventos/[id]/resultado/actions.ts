@@ -31,12 +31,18 @@ export async function eliminarReparto(id: string, eventoId: string) {
   return { error: null }
 }
 
-// ─── Cerrar evento: mueve el resultado al libro de cuentas ───────────────────
-// Si dio ganancia, va a ganancia_acumulada (no a caja — esa es la plata
-// "limpia" del dueño). El anticipo que quedaba reservado para este evento
-// se libera a caja, haya dado ganancia o pérdida.
+// ─── Cerrar evento: reparte el resultado y mueve todo al libro de cuentas ────
+// Si dio ganancia, primero pasa entera por ganancia_acumulada. De ahí se separa
+// lo que corresponde al salón (egreso, sale del negocio) y lo que queda para
+// los socios (se elige: se deja en ganancia, se pasa a caja, o se retira).
+// El anticipo que quedaba reservado para este evento se libera a caja,
+// haya dado ganancia o pérdida.
 
-export async function cerrarEventoConGanancia(eventoId: string) {
+export async function cerrarEventoConReparto(eventoId: string, data: {
+  montoSalon: number
+  destinoProfit: 'ganancia' | 'caja' | 'retiro'
+  subcuentaCajaId: string | null
+}) {
   const supabase = createAdminClient()
 
   const { data: evento } = await supabase.from('eventos').select('estado, fecha').eq('id', eventoId).single()
@@ -56,17 +62,57 @@ export async function cerrarEventoConGanancia(eventoId: string) {
     .maybeSingle()
 
   const hoy = new Date().toISOString().slice(0, 10)
+  const resultadoNeto = resultado?.resultado_neto ?? 0
 
-  if (resultado && resultado.resultado_neto > 0) {
+  if (resultadoNeto > 0) {
+    if (data.montoSalon < 0 || data.montoSalon > resultadoNeto) {
+      return { error: `El monto para el salón tiene que estar entre $0 y ${resultadoNeto}.` }
+    }
+
     await supabase.from('cuentas_movimientos').insert({
       fecha: hoy,
       tipo: 'transferencia',
       cuenta_origen: 'caja_operativa',
       cuenta_destino: 'ganancia_acumulada',
-      monto: resultado.resultado_neto,
+      monto: resultadoNeto,
       concepto: 'Ganancia del evento al cerrar',
       evento_id: eventoId,
     })
+
+    if (data.montoSalon > 0) {
+      await supabase.from('cuentas_movimientos').insert({
+        fecha: hoy,
+        tipo: 'egreso',
+        cuenta_origen: 'ganancia_acumulada',
+        monto: data.montoSalon,
+        concepto: 'Pago al salón',
+        evento_id: eventoId,
+      })
+    }
+
+    const restante = resultadoNeto - data.montoSalon
+    if (restante > 0 && data.destinoProfit === 'caja') {
+      await supabase.from('cuentas_movimientos').insert({
+        fecha: hoy,
+        tipo: 'transferencia',
+        cuenta_origen: 'ganancia_acumulada',
+        cuenta_destino: 'caja_operativa',
+        subcuenta_destino_id: data.subcuentaCajaId,
+        monto: restante,
+        concepto: 'Profit del evento a caja operativa',
+        evento_id: eventoId,
+      })
+    } else if (restante > 0 && data.destinoProfit === 'retiro') {
+      await supabase.from('cuentas_movimientos').insert({
+        fecha: hoy,
+        tipo: 'egreso',
+        cuenta_origen: 'ganancia_acumulada',
+        monto: restante,
+        concepto: 'Retiro de profit del evento',
+        evento_id: eventoId,
+      })
+    }
+    // destinoProfit === 'ganancia': no hace falta ningún movimiento más, ya quedó ahí.
   }
 
   if (anticipo && anticipo.saldo_disponible > 0) {
@@ -75,6 +121,7 @@ export async function cerrarEventoConGanancia(eventoId: string) {
       tipo: 'transferencia',
       cuenta_origen: 'anticipos_comprometidos',
       cuenta_destino: 'caja_operativa',
+      subcuenta_destino_id: data.destinoProfit === 'caja' ? data.subcuentaCajaId : null,
       monto: anticipo.saldo_disponible,
       concepto: 'Liberación de anticipo al cerrar el evento',
       evento_id: eventoId,

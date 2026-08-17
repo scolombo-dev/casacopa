@@ -11,6 +11,7 @@ export default async function FinanzasPage() {
     { data: movimientos },
     { data: inversiones },
     { data: anticipos },
+    { data: subcuentas },
   ] = await Promise.all([
     supabase.from('resultado_neto_evento').select('*').order('fecha', { ascending: false }),
     supabase.from('pagos_cliente').select('*').order('fecha'),
@@ -18,6 +19,7 @@ export default async function FinanzasPage() {
     supabase.from('cuentas_movimientos').select('*, eventos(id, nombre)').order('fecha', { ascending: false }).order('creado_en', { ascending: false }).limit(50),
     supabase.from('inversiones_resumen').select('*').order('fecha_compra', { ascending: false }),
     supabase.from('saldo_anticipos_evento').select('*').order('fecha'),
+    supabase.from('saldo_subcuentas').select('*').order('cuenta_padre').order('nombre'),
   ])
 
   const eventosOpciones = (financiero ?? []).map(e => ({ id: e.evento_id, nombre: e.nombre }))
@@ -28,6 +30,7 @@ export default async function FinanzasPage() {
       movimientos={movimientos ?? []}
       inversiones={inversiones ?? []}
       anticipos={anticipos ?? []}
+      subcuentas={subcuentas ?? []}
       eventosOpciones={eventosOpciones}
       eventosFinancieros={financiero ?? []}
       pagos={pagos ?? []}

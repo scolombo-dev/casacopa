@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import type {
   SaldoCuenta, CuentaMovimiento, InversionResumen, SaldoAnticipoEvento,
-  ResultadoNetoEvento, PagoCliente,
+  ResultadoNetoEvento, PagoCliente, SaldoSubcuenta,
 } from '@/lib/types'
 import CuentasResumen from './CuentasResumen'
 import MovimientosList from './MovimientosList'
 import InversionesResumen from './InversionesResumen'
 import AnticiposPorEvento from './AnticiposPorEvento'
+import SubcuentasList from './SubcuentasList'
 import FinanzasClient from './FinanzasClient'
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
   movimientos: CuentaMovimiento[]
   inversiones: InversionResumen[]
   anticipos: SaldoAnticipoEvento[]
+  subcuentas: SaldoSubcuenta[]
   eventosOpciones: { id: string; nombre: string }[]
   eventosFinancieros: ResultadoNetoEvento[]
   pagos: PagoCliente[]
@@ -28,7 +30,7 @@ const TABS = [
 ] as const
 
 export default function FinanzasHomeClient({
-  saldos, movimientos, inversiones, anticipos, eventosOpciones, eventosFinancieros, pagos,
+  saldos, movimientos, inversiones, anticipos, subcuentas, eventosOpciones, eventosFinancieros, pagos,
 }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]['id']>('cuentas')
 
@@ -60,13 +62,16 @@ export default function FinanzasHomeClient({
         <div className="space-y-6">
           <CuentasResumen saldos={saldos} inversiones={inversiones} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MovimientosList movimientos={movimientos} />
-            <InversionesResumen inversiones={inversiones} eventos={eventosOpciones} />
+            <MovimientosList movimientos={movimientos} subcuentas={subcuentas} />
+            <SubcuentasList subcuentas={subcuentas} />
           </div>
-          <AnticiposPorEvento anticipos={anticipos} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <InversionesResumen inversiones={inversiones} eventos={eventosOpciones} />
+            <AnticiposPorEvento anticipos={anticipos} />
+          </div>
         </div>
       ) : (
-        <FinanzasClient eventos={eventosFinancieros} pagos={pagos} />
+        <FinanzasClient eventos={eventosFinancieros} pagos={pagos} subcuentas={subcuentas} />
       )}
     </div>
   )

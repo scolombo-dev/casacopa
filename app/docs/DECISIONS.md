@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-08-17 — Subcuentas (billeteras/bancos) y reparto al cerrar evento
+
+**Decisión:** `subcuentas` (migración 024) etiqueta de qué billetera/banco concreto —y de qué socio— entra o sale la plata dentro de caja operativa y anticipos comprometidos. Es metadata adicional sobre `cuentas_movimientos`, no reemplaza el modelo de 5 cuentas: el saldo agregado de caja/anticipos sigue siendo el mismo cálculo de siempre.
+
+**Límite conocido:** los egresos automáticos de los triggers de compras/personal/extras (migración 022) no quedan asociados a ninguna subcuenta, porque esos triggers no saben de qué billetera salió esa plata. El saldo total de "caja operativa" sigue siendo exacto; el saldo por subcuenta solo refleja lo que se cargó explícitamente con una billetera asignada (pagos de cliente, movimientos manuales, y lo que se reparte al cerrar un evento). Si hace falta que las compras/personal/extras también descuenten de una billetera puntual, hay que agregar el selector a esos formularios — no se hizo todavía porque no fue parte de lo pedido.
+
+**Cierre de evento con reparto:** `cerrarEventoConReparto` reemplaza al cierre simple anterior. La ganancia del evento pasa entera por `ganancia_acumulada`, de ahí se paga al salón el monto que el dueño escribe (con 50% del resultado como sugerencia, no como regla fija), y lo que queda se deja en ganancia, se mueve a una billetera de caja, o se retira — elegido en el momento de cerrar.
+
+---
+
 ## 2026-04-10 — Estructura general del proyecto
 
 **Decisión:** Proyecto Next.js en la subcarpeta `app/` dentro del directorio "Casa Copa".
