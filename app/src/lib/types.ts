@@ -292,8 +292,6 @@ export type Inversion = {
   fecha_compra: string
   cuenta_origen: CuentaFinanciera
   evento_origen_id: string | null
-  eventos_amortizacion: number
-  monto_por_evento: number
   estado: EstadoInversion
   notas: string | null
   creado_en: string

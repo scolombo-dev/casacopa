@@ -11,11 +11,9 @@ export async function crearInversion(data: {
   fecha_compra: string
   cuenta_origen: CuentaFinanciera
   evento_origen_id: string | null
-  eventos_amortizacion: number
   notas: string
 }) {
   const supabase = createAdminClient()
-  const monto_por_evento = Math.round(data.monto_total / data.eventos_amortizacion)
 
   const { data: inversion, error } = await supabase.from('inversiones').insert({
     nombre: data.nombre.trim(),
@@ -24,8 +22,6 @@ export async function crearInversion(data: {
     fecha_compra: data.fecha_compra,
     cuenta_origen: data.cuenta_origen,
     evento_origen_id: data.evento_origen_id,
-    eventos_amortizacion: data.eventos_amortizacion,
-    monto_por_evento,
     notas: data.notas.trim() || null,
   }).select().single()
   if (error) return { error: error.message }

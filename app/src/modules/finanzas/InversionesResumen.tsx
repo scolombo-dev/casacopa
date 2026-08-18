@@ -19,7 +19,6 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
   const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().split('T')[0])
   const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera>('caja_operativa')
   const [eventoOrigenId, setEventoOrigenId] = useState('')
-  const [eventosAmortizacion, setEventosAmortizacion] = useState(10)
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +35,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
         nombre, descripcion, monto_total: montoTotal, fecha_compra: fechaCompra,
         cuenta_origen: cuentaOrigen,
         evento_origen_id: cuentaOrigen === 'anticipos_comprometidos' ? eventoOrigenId : null,
-        eventos_amortizacion: eventosAmortizacion, notas,
+        notas,
       })
       if (res.error) { setError(res.error); return }
       router.refresh()
@@ -94,14 +93,6 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
         </div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Amortizar en cuántos eventos</label>
-        <input type="number" min={1} value={eventosAmortizacion} onChange={e => setEventosAmortizacion(parseInt(e.target.value) || 1)}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        {montoTotal > 0 && eventosAmortizacion > 0 && (
-          <p className="text-xs text-gray-500 mt-1">≈ {formatARS(Math.round(montoTotal / eventosAmortizacion))} por evento</p>
-        )}
-      </div>
-      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
         <input value={notas} onChange={e => setNotas(e.target.value)}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -124,7 +115,7 @@ function AmortizarForm({ inversion, eventos, onClose }: { inversion: InversionRe
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [eventoId, setEventoId] = useState('')
-  const [monto, setMonto] = useState(inversion.monto_por_evento)
+  const [monto, setMonto] = useState(0)
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -157,6 +148,7 @@ function AmortizarForm({ inversion, eventos, onClose }: { inversion: InversionRe
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Monto $</label>
           <input type="number" min={1} value={monto || ''} onChange={e => setMonto(parseInt(e.target.value) || 0)}
+            placeholder="Según este evento" autoFocus
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
@@ -211,7 +203,7 @@ export default function InversionesResumen({ inversiones, eventos }: { inversion
                 <div>
                   <p className="font-medium text-gray-800">{inv.nombre}</p>
                   <p className="text-xs text-gray-400">
-                    {formatARS(inv.monto_total)} · {formatFecha(inv.fecha_compra)} · {inv.eventos_amortizados}/{inv.eventos_amortizacion} eventos
+                    {formatARS(inv.monto_total)} · {formatFecha(inv.fecha_compra)} · {inv.eventos_amortizados} evento{inv.eventos_amortizados !== 1 ? 's' : ''} usado{inv.eventos_amortizados !== 1 ? 's' : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
