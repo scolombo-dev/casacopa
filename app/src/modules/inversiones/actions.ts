@@ -60,6 +60,36 @@ export async function editarInversion(id: string, data: {
 
 export async function cancelarInversion(id: string) {
   const supabase = createAdminClient()
+
+  const { data: inversion, error: invError } = await supabase
+    .from('inversiones')
+    .select('nombre, cuenta_origen, monto_total')
+    .eq('id', id)
+    .single()
+  if (invError || !inversion) return { error: invError?.message ?? 'Inversión no encontrada.' }
+
+  const { data: amortizaciones } = await supabase
+    .from('inversion_amortizaciones')
+    .select('monto')
+    .eq('inversion_id', id)
+  const montoAmortizado = (amortizaciones ?? []).reduce((s, a) => s + a.monto, 0)
+  const montoPendiente = inversion.monto_total - montoAmortizado
+
+  // Lo que quedó "apartado" en la cuenta inversiones vuelve a la cuenta de
+  // origen — si no, el monto se queda pegado ahí para siempre aunque la
+  // inversión ya no exista.
+  if (montoPendiente > 0) {
+    const { error: movError } = await supabase.from('cuentas_movimientos').insert({
+      tipo: 'transferencia',
+      cuenta_origen: 'inversiones',
+      cuenta_destino: inversion.cuenta_origen,
+      monto: montoPendiente,
+      concepto: `Cancelación de inversión: ${inversion.nombre}`,
+      inversion_id: id,
+    })
+    if (movError) return { error: movError.message }
+  }
+
   const { error } = await supabase.from('inversiones').update({ estado: 'cancelada' }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/finanzas')
