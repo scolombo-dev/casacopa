@@ -10,6 +10,7 @@
 - Al cobrar un pago de cliente o cargar un movimiento manual, ahora se puede elegir a qué billetera/banco específico entra o sale la plata
 - Nueva sección "Billeteras y bancos" en `/finanzas`: saldo y movimientos de cada una, alta de cuentas nuevas
 - Cierre de evento rediseñado (`cerrarEventoConReparto`): muestra un resumen de costos cargados, permite poner el monto exacto a pagarle al salón (sugerido 50% del resultado) y elegir qué hacer con el resto — dejarlo en ganancia acumulada, moverlo a una billetera de caja, o retirarlo
+- Inversiones: se elimina el plan fijo de amortización (`eventos_amortizacion` / `monto_por_evento`, migración `025_inversiones_sin_plan_fijo.sql`) — el tiempo real de amortización depende de cuántos eventos usen el activo y de cuánta gente tenga cada uno, no se puede fijar de antemano. El autoalquiler libre por evento ya existía; esto solo saca la sugerencia numérica fija que ya no correspondía
 
 ---
 
@@ -24,6 +25,8 @@
 - Cerrar un evento ahora mueve su ganancia a "ganancia acumulada" y libera el anticipo restante a caja
 - `/finanzas` pasa a ser el home del sistema (antes `/`); el Dashboard operativo se mueve a `/dashboard`, sin perder ninguna funcionalidad
 - El P&L por evento que ya existía en Finanzas se mantiene igual, ahora como una pestaña dentro del panel nuevo
+- Resultado del evento: nueva sección "Autoalquiler de inversiones" en pantalla, PDF y Excel (antes restaba del total sin explicar de dónde salía); el P&L por evento en Finanzas también suma esa línea al desglose
+- Agregar stock: nuevo selector para marcar con qué cuenta (caja o anticipo de qué evento) se financió el lote, conectado a la lógica que ya existía en el backend
 - Pendiente (fase aparte, ya avisado al dueño): las 5 cuentas arrancan en $0 hasta cargar los saldos reales actuales a mano; rediseño visual del resto de la app
 
 ---
