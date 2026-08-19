@@ -10,6 +10,7 @@
 - Ahora, al cancelar, se transfiere el monto pendiente de vuelta a la cuenta de origen (caja o el anticipo del evento que la financió)
 - Migración `026_corregir_cancelacion_inversiones.sql`: backfill para las inversiones ya canceladas que quedaron con este problema — **requiere aplicarse a mano en Supabase**, no corre sola con el deploy
 - El botón "Cancelar inversión" ahora pide confirmación y muestra el error en pantalla si la operación falla, en vez de fallar en silencio
+- El reverso del punto anterior no marcaba a qué evento pertenecía el anticipo usado — la cuenta general quedaba bien pero "Anticipos por evento" seguía mostrando la plata como usada. Corregido en el código, y migración `027_evento_id_correccion_cancelacion.sql` para la corrección que ya se había aplicado con la 026 — **también requiere correrse a mano en Supabase**
 
 ---
 

@@ -63,7 +63,7 @@ export async function cancelarInversion(id: string) {
 
   const { data: inversion, error: invError } = await supabase
     .from('inversiones')
-    .select('nombre, cuenta_origen, monto_total')
+    .select('nombre, cuenta_origen, monto_total, evento_origen_id')
     .eq('id', id)
     .single()
   if (invError || !inversion) return { error: invError?.message ?? 'Inversión no encontrada.' }
@@ -77,7 +77,9 @@ export async function cancelarInversion(id: string) {
 
   // Lo que quedó "apartado" en la cuenta inversiones vuelve a la cuenta de
   // origen — si no, el monto se queda pegado ahí para siempre aunque la
-  // inversión ya no exista.
+  // inversión ya no exista. Si salió del anticipo de un evento puntual, hay
+  // que marcar evento_id en el reverso también, o la tabla "Anticipos por
+  // evento" (saldo_anticipos_evento) no lo va a contar como repuesto.
   if (montoPendiente > 0) {
     const { error: movError } = await supabase.from('cuentas_movimientos').insert({
       tipo: 'transferencia',
@@ -86,6 +88,7 @@ export async function cancelarInversion(id: string) {
       monto: montoPendiente,
       concepto: `Cancelación de inversión: ${inversion.nombre}`,
       inversion_id: id,
+      evento_id: inversion.cuenta_origen === 'anticipos_comprometidos' ? inversion.evento_origen_id : null,
     })
     if (movError) return { error: movError.message }
   }
