@@ -2,6 +2,17 @@
 
 ---
 
+## [0.4.1] — 2026-08-19
+
+### Corrección: cancelar una inversión no devolvía la plata a origen
+
+- `cancelarInversion` marcaba la inversión como cancelada pero nunca revertía el monto que había quedado apartado en la cuenta "inversiones" — quedaba pegado ahí para siempre en el saldo del dashboard, aunque la inversión ya no apareciera en la lista
+- Ahora, al cancelar, se transfiere el monto pendiente de vuelta a la cuenta de origen (caja o el anticipo del evento que la financió)
+- Migración `026_corregir_cancelacion_inversiones.sql`: backfill para las inversiones ya canceladas que quedaron con este problema — **requiere aplicarse a mano en Supabase**, no corre sola con el deploy
+- El botón "Cancelar inversión" ahora pide confirmación y muestra el error en pantalla si la operación falla, en vez de fallar en silencio
+
+---
+
 ## [0.4.0] — 2026-08-17
 
 ### Subcuentas (billeteras/bancos) y reparto al cerrar evento
