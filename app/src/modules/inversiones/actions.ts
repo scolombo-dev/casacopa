@@ -72,14 +72,27 @@ export async function cancelarInversion(id: string) {
     .from('inversion_amortizaciones')
     .select('monto')
     .eq('inversion_id', id)
+
+  if ((amortizaciones ?? []).length === 0) {
+    // Nunca se le cobró autoalquiler a ningún evento: se borra por completo,
+    // movimiento de creación incluido, como si nunca se hubiera cargado.
+    const { error: delMovError } = await supabase.from('cuentas_movimientos').delete().eq('inversion_id', id)
+    if (delMovError) return { error: delMovError.message }
+    const { error: delInvError } = await supabase.from('inversiones').delete().eq('id', id)
+    if (delInvError) return { error: delInvError.message }
+    revalidatePath('/finanzas')
+    revalidatePath('/')
+    return { error: null }
+  }
+
+  // Ya se usó en algún evento: ese costo ya quedó reflejado en el resultado
+  // de ese evento y no se puede borrar sin tocar ese cierre. Se cancela y se
+  // revierte a la cuenta de origen lo que quedó pendiente, marcando el
+  // evento del anticipo si corresponde (o saldo_anticipos_evento no lo va a
+  // contar como repuesto).
   const montoAmortizado = (amortizaciones ?? []).reduce((s, a) => s + a.monto, 0)
   const montoPendiente = inversion.monto_total - montoAmortizado
 
-  // Lo que quedó "apartado" en la cuenta inversiones vuelve a la cuenta de
-  // origen — si no, el monto se queda pegado ahí para siempre aunque la
-  // inversión ya no exista. Si salió del anticipo de un evento puntual, hay
-  // que marcar evento_id en el reverso también, o la tabla "Anticipos por
-  // evento" (saldo_anticipos_evento) no lo va a contar como repuesto.
   if (montoPendiente > 0) {
     const { error: movError } = await supabase.from('cuentas_movimientos').insert({
       tipo: 'transferencia',

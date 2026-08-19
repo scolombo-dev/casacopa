@@ -10,7 +10,8 @@
 - Ahora, al cancelar, se transfiere el monto pendiente de vuelta a la cuenta de origen (caja o el anticipo del evento que la financió)
 - Migración `026_corregir_cancelacion_inversiones.sql`: backfill para las inversiones ya canceladas que quedaron con este problema — **requiere aplicarse a mano en Supabase**, no corre sola con el deploy
 - El botón "Cancelar inversión" ahora pide confirmación y muestra el error en pantalla si la operación falla, en vez de fallar en silencio
-- El reverso del punto anterior no marcaba a qué evento pertenecía el anticipo usado — la cuenta general quedaba bien pero "Anticipos por evento" seguía mostrando la plata como usada. Corregido en el código, y migración `027_evento_id_correccion_cancelacion.sql` para la corrección que ya se había aplicado con la 026 — **también requiere correrse a mano en Supabase**
+- El reverso del punto anterior no marcaba a qué evento pertenecía el anticipo usado — la cuenta general quedaba bien pero "Anticipos por evento" seguía mostrando la plata como usada. Corregido en el código con migración `027_evento_id_correccion_cancelacion.sql`, superada enseguida por el siguiente punto
+- Cambio de criterio: cancelar una inversión que nunca tuvo un autoalquiler cobrado ahora la **borra por completo** (ella y su movimiento de creación), en vez de dejarla cancelada con un reverso — así queda exactamente como si nunca se hubiera cargado, sin un par de movimientos "usado/repuesto" dando vueltas. Si ya tuvo autoalquiler cobrado a algún evento, se sigue cancelando con reverso (ese costo ya está reflejado en el resultado de ese evento). Migración `028_borrar_inversiones_canceladas_sin_uso.sql` aplica esto retroactivo — **requiere correrse a mano en Supabase**, y reemplaza la necesidad de correr la 027 a mano
 
 ---
 
