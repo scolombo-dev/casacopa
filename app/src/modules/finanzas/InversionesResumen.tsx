@@ -181,6 +181,7 @@ export default function InversionesResumen({ inversiones, eventos }: { inversion
   const [pending, startTransition] = useTransition()
   const [modalCrear, setModalCrear] = useState(false)
   const [amortizando, setAmortizando] = useState<InversionResumen | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   const visibles = inversiones.filter(i => i.estado !== 'cancelada')
 
@@ -192,6 +193,10 @@ export default function InversionesResumen({ inversiones, eventos }: { inversion
           <Plus size={13} /> Nueva inversión
         </button>
       </div>
+
+      {cancelError && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{cancelError}</p>
+      )}
 
       {visibles.length === 0 ? (
         <p className="text-sm text-gray-400 italic">Sin inversiones cargadas todavía.</p>
@@ -215,7 +220,15 @@ export default function InversionesResumen({ inversiones, eventos }: { inversion
                   )}
                   {inv.estado === 'activa' && (
                     <button
-                      onClick={() => startTransition(async () => { await cancelarInversion(inv.id); router.refresh() })}
+                      onClick={() => {
+                        if (!window.confirm(`¿Cancelar la inversión "${inv.nombre}"? No se puede deshacer.`)) return
+                        setCancelError(null)
+                        startTransition(async () => {
+                          const res = await cancelarInversion(inv.id)
+                          if (res.error) { setCancelError(res.error); return }
+                          router.refresh()
+                        })
+                      }}
                       disabled={pending}
                       title="Cancelar inversión"
                       className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50"
