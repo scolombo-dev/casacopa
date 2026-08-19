@@ -15,7 +15,7 @@ export async function crearPago(data: {
   subcuenta_destino_id: string | null
 }) {
   const supabase = createAdminClient()
-  const { error } = await supabase.from('pagos_cliente').insert({
+  const { data: pago, error } = await supabase.from('pagos_cliente').insert({
     evento_id: data.evento_id,
     tipo: data.tipo,
     monto: data.monto,
@@ -24,7 +24,7 @@ export async function crearPago(data: {
     notas: data.notas.trim() || null,
     cuenta_destino: data.cuenta_destino,
     subcuenta_destino_id: data.subcuenta_destino_id,
-  })
+  }).select().single()
   if (error) return { error: error.message }
 
   await supabase.from('cuentas_movimientos').insert({
@@ -35,6 +35,7 @@ export async function crearPago(data: {
     monto: data.monto,
     concepto: `Pago de cliente (${data.tipo})`,
     evento_id: data.evento_id,
+    pago_id: pago.id,
   })
 
   revalidatePath('/finanzas')
@@ -45,6 +46,26 @@ export async function crearPago(data: {
 export async function eliminarPago(id: string) {
   const supabase = createAdminClient()
 
+  const { data: movimientoLigado } = await supabase
+    .from('cuentas_movimientos')
+    .select('id')
+    .eq('pago_id', id)
+    .maybeSingle()
+
+  if (movimientoLigado) {
+    // El movimiento quedó linkeado a este pago (pago_id) — al borrar el
+    // pago, Postgres borra el movimiento con él (ON DELETE CASCADE). No
+    // queda ningún rastro, como si nunca se hubiera cargado.
+    const { error } = await supabase.from('pagos_cliente').delete().eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/finanzas')
+    revalidatePath('/')
+    return { error: null }
+  }
+
+  // Pago viejo, de antes de que existiera el link directo: no hay forma
+  // segura de saber cuál movimiento es el suyo, así que se revierte con un
+  // egreso en vez de arriesgarse a borrar el que no es.
   const { data: pago } = await supabase
     .from('pagos_cliente')
     .select('evento_id, monto, cuenta_destino, subcuenta_destino_id')
@@ -52,7 +73,6 @@ export async function eliminarPago(id: string) {
     .single()
 
   if (pago) {
-    // El libro nunca se edita/borra — se revierte con un egreso.
     await supabase.from('cuentas_movimientos').insert({
       tipo: 'egreso',
       cuenta_origen: pago.cuenta_destino,
@@ -135,11 +155,67 @@ export async function editarSubcuenta(id: string, data: {
   return { error: null }
 }
 
-export async function desactivarSubcuenta(id: string) {
+export async function eliminarSubcuenta(id: string) {
   const supabase = createAdminClient()
-  const { error } = await supabase.from('subcuentas').update({ activa: false }).eq('id', id)
+
+  const { count: pagosCount } = await supabase
+    .from('pagos_cliente')
+    .select('id', { count: 'exact', head: true })
+    .eq('subcuenta_destino_id', id)
+
+  const { data: movimientos } = await supabase
+    .from('cuentas_movimientos')
+    .select('id, evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id')
+    .or(`subcuenta_origen_id.eq.${id},subcuenta_destino_id.eq.${id}`)
+
+  const tienePlataReal = (pagosCount ?? 0) > 0 || (movimientos ?? []).some(
+    m => m.evento_id || m.compra_id || m.staff_id || m.extra_id || m.inversion_id || m.pago_id
+  )
+
+  if (tienePlataReal) {
+    // Ya tiene plata real de por medio (pago de cliente, cierre de evento…)
+    // — no se puede borrar sin perder esa trazabilidad. Se desactiva: se
+    // oculta de la lista pero el saldo y el historial siguen intactos.
+    const { error } = await supabase.from('subcuentas').update({ activa: false }).eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/finanzas')
+    return { error: null }
+  }
+
+  // Sin plata real asociada (a lo sumo movimientos manuales sueltos, tipo
+  // prueba): se borra todo, como si nunca se hubiera creado.
+  if ((movimientos ?? []).length > 0) {
+    const { error: delMovError } = await supabase
+      .from('cuentas_movimientos')
+      .delete()
+      .or(`subcuenta_origen_id.eq.${id},subcuenta_destino_id.eq.${id}`)
+    if (delMovError) return { error: delMovError.message }
+  }
+
+  const { error } = await supabase.from('subcuentas').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/finanzas')
+  return { error: null }
+}
+
+export async function eliminarMovimientoManual(id: string) {
+  const supabase = createAdminClient()
+
+  const { data: mov, error: fetchError } = await supabase
+    .from('cuentas_movimientos')
+    .select('evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id')
+    .eq('id', id)
+    .single()
+  if (fetchError || !mov) return { error: fetchError?.message ?? 'Movimiento no encontrado.' }
+
+  if (mov.evento_id || mov.compra_id || mov.staff_id || mov.extra_id || mov.inversion_id || mov.pago_id) {
+    return { error: 'Este movimiento se generó automáticamente desde otra pantalla — borralo desde ahí.' }
+  }
+
+  const { error } = await supabase.from('cuentas_movimientos').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/finanzas')
+  revalidatePath('/')
   return { error: null }
 }
 

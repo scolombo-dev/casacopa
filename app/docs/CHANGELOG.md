@@ -12,6 +12,11 @@
 - El botón "Cancelar inversión" ahora pide confirmación y muestra el error en pantalla si la operación falla, en vez de fallar en silencio
 - El reverso del punto anterior no marcaba a qué evento pertenecía el anticipo usado — la cuenta general quedaba bien pero "Anticipos por evento" seguía mostrando la plata como usada. Corregido en el código con migración `027_evento_id_correccion_cancelacion.sql`, superada enseguida por el siguiente punto
 - Cambio de criterio: cancelar una inversión que nunca tuvo un autoalquiler cobrado ahora la **borra por completo** (ella y su movimiento de creación), en vez de dejarla cancelada con un reverso — así queda exactamente como si nunca se hubiera cargado, sin un par de movimientos "usado/repuesto" dando vueltas. Si ya tuvo autoalquiler cobrado a algún evento, se sigue cancelando con reverso (ese costo ya está reflejado en el resultado de ese evento). Migración `028_borrar_inversiones_canceladas_sin_uso.sql` aplica esto retroactivo — **requiere correrse a mano en Supabase**, y reemplaza la necesidad de correr la 027 a mano
+- **Mismo criterio aplicado a todo lo demás que se pueda borrar en Finanzas**, a pedido del dueño ("si borro algo, quiero que se elimine de todos lados"):
+  - Billeteras/bancos (`subcuentas`): "Eliminar cuenta" ahora borra la cuenta del todo si nunca tuvo plata real (pago de cliente o movimiento ligado a un evento) — antes solo la desactivaba y los movimientos de prueba quedaban contando en el saldo general. Si ya tuvo plata real, se sigue desactivando (se oculta, se conserva el historial)
+  - Pagos de cliente: se agregó `pago_id` al libro de movimientos (migración `029_pago_id_y_borrado_real.sql`, mismo patrón que compras/personal/extras) para que borrar un pago borre también su movimiento — antes siempre dejaba un ingreso + un reverso. Los pagos viejos sin este link siguen usando el reverso, por seguridad
+  - Nuevo: los movimientos manuales sueltos ("Nuevo movimiento") ahora se pueden borrar directo desde "Movimientos recientes" — antes no había forma de sacar uno cargado por error salvo borrando toda la billetera
+  - Migración `030_borrar_subcuentas_prueba_sin_uso.sql`: backfill para billeteras ya desactivadas sin plata real — **requiere correrse a mano en Supabase**
 
 ---
 

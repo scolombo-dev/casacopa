@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-19 — Borrado real cuando no hay nada que dependa del dato
+
+**Decisión:** el dueño pidió explícitamente que "si borro algo, se elimine de todos lados" — nada de dejar rastros ocultos que sigan sumando en algún saldo. Esto reemplaza el criterio anterior de `cuentas_movimientos` como libro estrictamente append-only ("nunca se edita/borra, se revierte con un egreso").
+
+**Regla aplicada:** borrar algo es un DELETE real (la fila y su/sus movimiento/s en `cuentas_movimientos`) **si nada más depende de ese dato todavía** — nadie más lo usó, ningún evento cerró con ese número adentro. Si YA generó una consecuencia real en otro lado (un evento ya cobró autoalquiler de una inversión, una billetera ya recibió un pago de cliente), no se puede borrar sin perder esa trazabilidad — ahí se mantiene el patrón anterior (cancelar/desactivar + revertir con un movimiento en sentido contrario).
+
+**Dónde ya está aplicado:**
+- Inversiones (`cancelarInversion`): borra del todo si nunca tuvo autoalquiler cobrado; cancela con reverso si ya tuvo
+- Subcuentas (`eliminarSubcuenta`): borra del todo si nunca tuvo un pago de cliente ni un movimiento ligado a un evento; desactiva si ya tuvo
+- Pagos de cliente (`eliminarPago`): borra del todo vía `pago_id` en `cuentas_movimientos` (mismo patrón `ON DELETE CASCADE` que compras/personal/extras desde la migración 022); los pagos de antes de este cambio, sin ese link, se siguen revirtiendo por seguridad
+- Movimientos manuales sueltos: ahora se pueden borrar directo (antes no había forma de sacar uno cargado por error sin borrar toda la billetera)
+- Compras, personal (`evento_staff`) y gastos extra (`evento_extras`) ya funcionaban así desde la migración 022 (`ON DELETE CASCADE` en `compra_id`/`staff_id`/`extra_id`) — no necesitaron cambios
+
+**Por qué esto no contradice el principio ESTIMADO vs REAL:** los movimientos financieros de cosas que YA afectaron un evento cerrado o un cliente real se siguen preservando con reverso — el borrado real es solo para lo que nunca salió de ser una carga sin consecuencias todavía (el caso típico: "lo cargué mal, lo cancelé al toque").
+
+---
+
 ## 2026-08-17 — Subcuentas (billeteras/bancos) y reparto al cerrar evento
 
 **Decisión:** `subcuentas` (migración 024) etiqueta de qué billetera/banco concreto —y de qué socio— entra o sale la plata dentro de caja operativa y anticipos comprometidos. Es metadata adicional sobre `cuentas_movimientos`, no reemplaza el modelo de 5 cuentas: el saldo agregado de caja/anticipos sigue siendo el mismo cálculo de siempre.

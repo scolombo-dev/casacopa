@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, ArrowRight } from 'lucide-react'
+import { Plus, ArrowRight, Trash2 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { CUENTA_LABEL } from '@/lib/constants'
 import type { CuentaMovimiento, CuentaFinanciera, TipoMovimientoCuenta, Subcuenta } from '@/lib/types'
-import { crearMovimientoManual } from './actions'
+import { crearMovimientoManual, eliminarMovimientoManual } from './actions'
 import SubcuentaSelect from './SubcuentaSelect'
 
 const CUENTAS: CuentaFinanciera[] = [
@@ -138,7 +138,10 @@ function MovimientoForm({ subcuentas, onClose }: { subcuentas: Subcuenta[]; onCl
 }
 
 export default function MovimientosList({ movimientos, subcuentas }: { movimientos: CuentaMovimiento[]; subcuentas: Subcuenta[] }) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [eliminarError, setEliminarError] = useState<string | null>(null)
 
   return (
     <div className="bg-white rounded-2xl border shadow-sm p-6">
@@ -152,30 +155,54 @@ export default function MovimientosList({ movimientos, subcuentas }: { movimient
         </button>
       </div>
 
+      {eliminarError && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{eliminarError}</p>
+      )}
+
       {movimientos.length === 0 ? (
         <p className="text-sm text-gray-400 italic">Todavía no hay movimientos registrados.</p>
       ) : (
         <div className="space-y-1.5">
-          {movimientos.map(m => (
-            <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5 text-sm">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate">{m.concepto}</p>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                  {m.cuenta_origen && <span>{CUENTA_LABEL[m.cuenta_origen]}</span>}
-                  {m.cuenta_origen && m.cuenta_destino && <ArrowRight size={11} />}
-                  {m.cuenta_destino && <span>{CUENTA_LABEL[m.cuenta_destino]}</span>}
-                  <span>· {formatFecha(m.fecha)}</span>
-                  {m.eventos?.nombre && <span>· {m.eventos.nombre}</span>}
+          {movimientos.map(m => {
+            const esManual = !m.evento_id && !m.compra_id && !m.staff_id && !m.extra_id && !m.inversion_id && !m.pago_id
+            return (
+              <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5 text-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 truncate">{m.concepto}</p>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                    {m.cuenta_origen && <span>{CUENTA_LABEL[m.cuenta_origen]}</span>}
+                    {m.cuenta_origen && m.cuenta_destino && <ArrowRight size={11} />}
+                    {m.cuenta_destino && <span>{CUENTA_LABEL[m.cuenta_destino]}</span>}
+                    <span>· {formatFecha(m.fecha)}</span>
+                    {m.eventos?.nombre && <span>· {m.eventos.nombre}</span>}
+                  </div>
                 </div>
+                <span className={cn(
+                  'font-semibold tabular-nums shrink-0 ml-3',
+                  m.tipo === 'ingreso' ? 'text-emerald-600' : m.tipo === 'egreso' ? 'text-red-500' : 'text-gray-700'
+                )}>
+                  {m.tipo === 'ingreso' ? '+' : m.tipo === 'egreso' ? '−' : ''}{formatARS(m.monto)}
+                </span>
+                {esManual && (
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`¿Eliminar el movimiento "${m.concepto}"? No se puede deshacer.`)) return
+                      setEliminarError(null)
+                      startTransition(async () => {
+                        const res = await eliminarMovimientoManual(m.id)
+                        if (res.error) { setEliminarError(res.error); return }
+                        router.refresh()
+                      })
+                    }}
+                    disabled={pending} title="Eliminar movimiento"
+                    className="p-1 ml-2 text-gray-300 hover:text-red-500 shrink-0"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
-              <span className={cn(
-                'font-semibold tabular-nums shrink-0 ml-3',
-                m.tipo === 'ingreso' ? 'text-emerald-600' : m.tipo === 'egreso' ? 'text-red-500' : 'text-gray-700'
-              )}>
-                {m.tipo === 'ingreso' ? '+' : m.tipo === 'egreso' ? '−' : ''}{formatARS(m.monto)}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

@@ -7,7 +7,7 @@ import { formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { CUENTA_LABEL } from '@/lib/constants'
 import type { SaldoSubcuenta, CuentaFinanciera, CuentaMovimiento } from '@/lib/types'
-import { crearSubcuenta, desactivarSubcuenta, obtenerMovimientosSubcuenta } from './actions'
+import { crearSubcuenta, eliminarSubcuenta, obtenerMovimientosSubcuenta } from './actions'
 
 const CUENTAS_PADRE: CuentaFinanciera[] = ['caja_operativa', 'anticipos_comprometidos']
 
@@ -123,6 +123,7 @@ export default function SubcuentasList({ subcuentas }: { subcuentas: SaldoSubcue
   const [pending, startTransition] = useTransition()
   const [modalCrear, setModalCrear] = useState(false)
   const [viendoHistorial, setViendoHistorial] = useState<SaldoSubcuenta | null>(null)
+  const [eliminarError, setEliminarError] = useState<string | null>(null)
 
   const activas = subcuentas.filter(s => s.activa)
 
@@ -134,6 +135,10 @@ export default function SubcuentasList({ subcuentas }: { subcuentas: SaldoSubcue
           <Plus size={13} /> Nueva cuenta
         </button>
       </div>
+
+      {eliminarError && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{eliminarError}</p>
+      )}
 
       {activas.length === 0 ? (
         <p className="text-sm text-gray-400 italic">Sin billeteras o bancos cargados todavía.</p>
@@ -157,8 +162,16 @@ export default function SubcuentasList({ subcuentas }: { subcuentas: SaldoSubcue
                         <History size={14} />
                       </button>
                       <button
-                        onClick={() => startTransition(async () => { await desactivarSubcuenta(s.id); router.refresh() })}
-                        disabled={pending} title="Desactivar cuenta" className="p-1 text-gray-400 hover:text-red-500"
+                        onClick={() => {
+                          if (!window.confirm(`¿Eliminar "${s.nombre}"? Si nunca tuvo plata real, se borra del todo. Si ya tuvo movimientos reales, se oculta pero se conserva el historial.`)) return
+                          setEliminarError(null)
+                          startTransition(async () => {
+                            const res = await eliminarSubcuenta(s.id)
+                            if (res.error) { setEliminarError(res.error); return }
+                            router.refresh()
+                          })
+                        }}
+                        disabled={pending} title="Eliminar cuenta" className="p-1 text-gray-400 hover:text-red-500"
                       >
                         <Ban size={14} />
                       </button>
