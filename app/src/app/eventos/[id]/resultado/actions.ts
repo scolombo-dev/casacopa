@@ -3,31 +3,125 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+// Solo se puede distribuir la ganancia de un evento ya cerrado: recién ahí
+// "cerrarEventoConReparto" depositó esa plata en ganancia_acumulada. Y el
+// total distribuido (sin contar el que se está editando, si corresponde)
+// nunca puede superar la ganancia real del evento.
+async function validarTopeReparto(
+  supabase: ReturnType<typeof createAdminClient>,
+  eventoId: string,
+  montoNuevo: number,
+  excluirRepartoId?: string
+) {
+  const { data: evento } = await supabase.from('eventos').select('estado').eq('id', eventoId).single()
+  if (evento?.estado !== 'cerrado') {
+    return 'El evento tiene que estar cerrado para distribuir su ganancia.'
+  }
+
+  const { data: resultado } = await supabase
+    .from('resultado_neto_evento')
+    .select('resultado_neto')
+    .eq('evento_id', eventoId)
+    .single()
+  const resultadoNeto = resultado?.resultado_neto ?? 0
+
+  let query = supabase.from('evento_reparto_resultado').select('monto').eq('evento_id', eventoId)
+  if (excluirRepartoId) query = query.neq('id', excluirRepartoId)
+  const { data: repartos } = await query
+  const yaDistribuido = (repartos ?? []).reduce((s, r) => s + r.monto, 0)
+
+  if (yaDistribuido + montoNuevo > resultadoNeto) {
+    return `No podés distribuir más de la ganancia del evento (${resultadoNeto - yaDistribuido} disponible).`
+  }
+  return null
+}
+
 export async function crearReparto(data: {
   evento_id: string
   destinatario: string
   monto: number
   fecha: string
+  metodo: string
   notas: string
 }) {
   const supabase = createAdminClient()
-  const { error } = await supabase.from('evento_reparto_resultado').insert({
+
+  const errorTope = await validarTopeReparto(supabase, data.evento_id, data.monto)
+  if (errorTope) return { error: errorTope }
+
+  const { data: reparto, error } = await supabase.from('evento_reparto_resultado').insert({
     evento_id: data.evento_id,
     destinatario: data.destinatario.trim(),
     monto: data.monto,
     fecha: data.fecha,
+    metodo: data.metodo,
     notas: data.notas.trim() || null,
-  })
+  }).select().single()
   if (error) return { error: error.message }
+
+  await supabase.from('cuentas_movimientos').insert({
+    fecha: data.fecha,
+    tipo: 'egreso',
+    cuenta_origen: 'ganancia_acumulada',
+    monto: data.monto,
+    concepto: `Distribución del resultado: ${data.destinatario.trim()}`,
+    evento_id: data.evento_id,
+    reparto_id: reparto.id,
+  })
+
   revalidatePath(`/eventos/${data.evento_id}/resultado`)
+  revalidatePath('/finanzas')
+  revalidatePath('/')
+  return { error: null }
+}
+
+export async function editarReparto(id: string, data: {
+  evento_id: string
+  destinatario: string
+  monto: number
+  fecha: string
+  metodo: string
+  notas: string
+}) {
+  const supabase = createAdminClient()
+
+  const errorTope = await validarTopeReparto(supabase, data.evento_id, data.monto, id)
+  if (errorTope) return { error: errorTope }
+
+  const { error } = await supabase.from('evento_reparto_resultado').update({
+    destinatario: data.destinatario.trim(),
+    monto: data.monto,
+    fecha: data.fecha,
+    metodo: data.metodo,
+    notas: data.notas.trim() || null,
+  }).eq('id', id)
+  if (error) return { error: error.message }
+
+  const { data: movLigado } = await supabase
+    .from('cuentas_movimientos').select('id').eq('reparto_id', id).maybeSingle()
+  if (movLigado) {
+    await supabase.from('cuentas_movimientos').update({
+      fecha: data.fecha,
+      monto: data.monto,
+      concepto: `Distribución del resultado: ${data.destinatario.trim()}`,
+    }).eq('id', movLigado.id)
+  }
+
+  revalidatePath(`/eventos/${data.evento_id}/resultado`)
+  revalidatePath('/finanzas')
+  revalidatePath('/')
   return { error: null }
 }
 
 export async function eliminarReparto(id: string, eventoId: string) {
   const supabase = createAdminClient()
+  // El movimiento linkeado (reparto_id) se borra solo por ON DELETE CASCADE
+  // — la plata vuelve a ganancia acumulada sin dejar rastro.
   const { error } = await supabase.from('evento_reparto_resultado').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath(`/eventos/${eventoId}/resultado`)
+  revalidatePath('/finanzas')
+  revalidatePath('/')
   return { error: null }
 }
 

@@ -91,7 +91,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
           personal={staffData.map(s => ({ rol: s.rol, persona: s.nombre_persona ?? '', cantidad: s.cantidad, costoUnitario: s.costo_unitario, subtotal: s.costo_total }))}
           extras={extrasData.map(e => ({ concepto: e.concepto, categoria: e.categoria, monto: e.monto }))}
           pagos={pagosData.map(p => ({ tipo: p.tipo, fecha: formatFecha(p.fecha), metodo: p.metodo, monto: p.monto }))}
-          reparto={repartoData.map(r => ({ destinatario: r.destinatario, fecha: formatFecha(r.fecha), monto: r.monto, notas: r.notas }))}
+          reparto={repartoData.map(r => ({ destinatario: r.destinatario, fecha: formatFecha(r.fecha), metodo: r.metodo, monto: r.monto, notas: r.notas }))}
           autoalquileres={amortizacionesData.map(a => ({ inversion: a.inversiones?.nombre ?? '—', fecha: formatFecha(a.fecha), monto: a.monto }))}
         />
       </div>
@@ -253,8 +253,9 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         {/* Distribución del resultado */}
         <RepartoResultado
           eventoId={evento.id}
+          estadoEvento={evento.estado}
           resultadoNeto={fin?.resultado_neto ?? 0}
-          repartos={repartoData.map(r => ({ id: r.id, destinatario: r.destinatario, monto: r.monto, fecha: r.fecha, notas: r.notas }))}
+          repartos={repartoData.map(r => ({ id: r.id, destinatario: r.destinatario, monto: r.monto, fecha: r.fecha, metodo: r.metodo, notas: r.notas }))}
         />
 
         {/* Pagos */}

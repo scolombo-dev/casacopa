@@ -21,7 +21,7 @@ type Props = {
   personal: { rol: string; persona: string; cantidad: number; costoUnitario: number; subtotal: number }[]
   extras: { concepto: string; categoria: string; monto: number }[]
   pagos: { tipo: string; fecha: string; metodo: string; monto: number }[]
-  reparto: { destinatario: string; fecha: string; monto: number; notas: string | null }[]
+  reparto: { destinatario: string; fecha: string; metodo: string; monto: number; notas: string | null }[]
   autoalquileres: { inversion: string; fecha: string; monto: number }[]
 }
 
@@ -89,7 +89,7 @@ export default function ResultadoActions({ evento, resumen, insumos, personal, e
 
     if (reparto.length > 0) {
       const sheet = XLSX.utils.json_to_sheet(reparto.map(r => ({
-        'A quién': r.destinatario, Fecha: r.fecha, Monto: r.monto, Nota: r.notas ?? '',
+        'A quién': r.destinatario, Fecha: r.fecha, Método: r.metodo, Monto: r.monto, Nota: r.notas ?? '',
       })))
       XLSX.utils.book_append_sheet(wb, sheet, 'Distribución')
     }

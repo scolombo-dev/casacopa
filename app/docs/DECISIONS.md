@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-20 — Distribución de ganancia: corregir lo existente, no duplicar
+
+**Contexto:** se pidió una funcionalidad nueva de "distribuir ganancia" (tabla `distribuciones_ganancia`, destinatario/monto/concepto/fecha/método, restricción de tope, revertible). Al revisar el código, ya existía `evento_reparto_resultado` ("Distribución del resultado", migración 019) con casi los mismos campos — la diferencia real era que ese sistema nunca generó un movimiento en `cuentas_movimientos`, era puramente informativo.
+
+**Decisión (consultada con el dueño):** en vez de construir una tabla nueva en paralelo, se corrigió `evento_reparto_resultado` para que además mueva plata real de `ganancia_acumulada`, con método de pago y la restricción de tope. Un solo sistema para una sola cosa.
+
+**Por qué no se podía dejar como estaba y agregar el nuevo al lado:** tener dos formas distintas de registrar "a quién le pagamos de la ganancia" —una que mueve plata y otra que no— es exactamente el tipo de inconsistencia que motivó el pedido de auditoría del mismo día. Duplicar hubiera sido peor que no arreglar nada.
+
+**Restricción nueva importante:** distribuir ganancia ahora requiere que el evento esté `cerrado`. Antes de cerrar, `ganancia_acumulada` es una cuenta compartida entre TODOS los eventos ya cerrados — el resultado de un evento recién se deposita ahí al cerrarlo (`cerrarEventoConReparto`). Permitir repartir antes de cerrar hubiera dejado sacar plata de la cuenta compartida que en realidad le pertenece a otros eventos.
+
+**Backfill con impacto real:** a diferencia de otros backfills de este proyecto (que corrigen casos de prueba o bugs recién introducidos), la migración 033 puede cambiar el saldo de `ganancia_acumulada` si ya se usó "Distribución del resultado" antes de este cambio — se avisó explícitamente en vez de correrla como una corrección más.
+
+---
+
 ## 2026-08-20 — Auditoría de integridad financiera (cascadas de eliminar/editar)
 
 **Alcance:** se revisó cada entidad que genera un movimiento en `cuentas_movimientos` (compras, personal, extras, pagos, inversiones, autoalquileres, stock financiado) para confirmar que eliminarla o editarla mantiene el libro consistente. El foco fue la cadena financiera — no se auditó a fondo el catálogo (proveedores, productos, recetas), que no genera movimientos de plata y ya tenía CRUD completo.

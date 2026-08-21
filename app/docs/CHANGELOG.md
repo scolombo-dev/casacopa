@@ -2,6 +2,19 @@
 
 ---
 
+## [0.5.1] — 2026-08-20
+
+### Distribución de ganancia mueve plata real
+
+- "Distribución del resultado" (en la vista de Resultado de cada evento) dejó de ser solo informativa: ahora cada distribución genera un egreso real de `ganancia_acumulada`, y eliminarla revierte esa plata automáticamente
+- Se agregó método de pago (transferencia/efectivo) y **edición** — antes solo se podía cargar o borrar
+- Nueva restricción dura: no se puede distribuir más de lo que dio de ganancia el evento, ni distribuir nada hasta que el evento esté cerrado (recién ahí "Cerrar evento" depositó esa ganancia en la cuenta compartida `ganancia_acumulada` — repartir antes usaría plata que en realidad es de otros eventos)
+- Migración `032_reparto_resultado_plata_real.sql`: agrega método de pago y linkea el movimiento (mismo patrón `ON DELETE CASCADE` que el resto)
+- Migración `033_backfill_movimientos_reparto.sql`: genera el movimiento faltante para distribuciones ya cargadas antes de este cambio — **importante, cambia el saldo de ganancia acumulada si ya usaste esta función**, revisar antes de correr (ver comentario en la migración)
+- No se creó una tabla nueva en paralelo: se decidió corregir este sistema en vez de duplicarlo con uno nuevo, porque hacía exactamente lo mismo que se pedía, solo le faltaba mover la plata de verdad
+
+---
+
 ## [0.5.0] — 2026-08-20
 
 ### Auditoría de integridad financiera + exportar evento a Excel

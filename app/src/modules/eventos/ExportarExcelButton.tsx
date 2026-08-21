@@ -76,7 +76,7 @@ export default function ExportarExcelButton({ eventoId }: { eventoId: string }) 
       if (reparto.length > 0) {
         finanzasFilas.push([], ['Distribución del resultado', ''])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        reparto.forEach((r: any) => finanzasFilas.push([`${r.destinatario} (${formatFecha(r.fecha)})`, r.monto]))
+        reparto.forEach((r: any) => finanzasFilas.push([`${r.destinatario} — ${r.metodo} (${formatFecha(r.fecha)})`, r.monto]))
       }
       const finanzasSheet = XLSX.utils.aoa_to_sheet(finanzasFilas)
       XLSX.utils.book_append_sheet(wb, finanzasSheet, 'Finanzas')

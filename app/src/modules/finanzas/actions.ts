@@ -274,12 +274,12 @@ export async function eliminarMovimientoManual(id: string) {
 
   const { data: mov, error: fetchError } = await supabase
     .from('cuentas_movimientos')
-    .select('evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id, stock_id, amortizacion_id')
+    .select('evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id, stock_id, amortizacion_id, reparto_id')
     .eq('id', id)
     .single()
   if (fetchError || !mov) return { error: fetchError?.message ?? 'Movimiento no encontrado.' }
 
-  if (mov.evento_id || mov.compra_id || mov.staff_id || mov.extra_id || mov.inversion_id || mov.pago_id || mov.stock_id || mov.amortizacion_id) {
+  if (mov.evento_id || mov.compra_id || mov.staff_id || mov.extra_id || mov.inversion_id || mov.pago_id || mov.stock_id || mov.amortizacion_id || mov.reparto_id) {
     return { error: 'Este movimiento se generó automáticamente desde otra pantalla — borralo desde ahí.' }
   }
 
