@@ -164,7 +164,7 @@ export default function MovimientosList({ movimientos, subcuentas }: { movimient
       ) : (
         <div className="space-y-1.5">
           {movimientos.map(m => {
-            const esManual = !m.evento_id && !m.compra_id && !m.staff_id && !m.extra_id && !m.inversion_id && !m.pago_id
+            const esManual = !m.evento_id && !m.compra_id && !m.staff_id && !m.extra_id && !m.inversion_id && !m.pago_id && !m.stock_id && !m.amortizacion_id
             return (
               <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5 text-sm">
                 <div className="flex-1 min-w-0">

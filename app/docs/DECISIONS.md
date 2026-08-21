@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-08-20 — Auditoría de integridad financiera (cascadas de eliminar/editar)
+
+**Alcance:** se revisó cada entidad que genera un movimiento en `cuentas_movimientos` (compras, personal, extras, pagos, inversiones, autoalquileres, stock financiado) para confirmar que eliminarla o editarla mantiene el libro consistente. El foco fue la cadena financiera — no se auditó a fondo el catálogo (proveedores, productos, recetas), que no genera movimientos de plata y ya tenía CRUD completo.
+
+**Qué estaba bien ya:** compras, personal (`evento_staff`) y gastos extra (`evento_extras`) ya borraban su movimiento correctamente gracias a los triggers y `ON DELETE CASCADE` de la migración 022. `eliminarEvento` ya hacía la limpieza manual necesaria para las tablas con `RESTRICT` (pagos, ajustes IPC, movimientos, amortizaciones) antes de borrar el evento.
+
+**Qué se corrigió (mismo criterio de "borrado real cuando no hay nada que dependa del dato" documentado más abajo, 2026-08-19):**
+- Stock financiado: `eliminarLote`/`editarLote` no tocaban el movimiento de `financiado_por` — ahora se linkea vía `stock_id` (migración 031) y se revierte/sincroniza
+- Autoalquiler: no existía forma de editar ni eliminar un `inversion_amortizaciones` — se agregó, linkeado vía `amortizacion_id`
+- Pagos de cliente: no existía `editarPago` — se agregó, sincronizando el movimiento linkeado vía `pago_id` (migración 029)
+
+**Límite conocido, aceptado a propósito:** eliminar un evento borra TODOS los movimientos financieros con ese `evento_id`, incluida la plata que financió un stock o una inversión que **todavía existen** después de borrar el evento (el lote/inversión no se borra, solo pierde el link al evento vía `ON DELETE SET NULL`). Esto puede hacer que el saldo de esa cuenta de origen "reaparezca" aunque el activo siga existiendo. No se resolvió automáticamente porque la solución correcta depende de una decisión de negocio (¿esa plata se recupera a caja? ¿se bloquea el borrado del evento?) — se avisa en vez de asumir.
+
+---
+
 ## 2026-08-19 — Borrado real cuando no hay nada que dependa del dato
 
 **Decisión:** el dueño pidió explícitamente que "si borro algo, se elimine de todos lados" — nada de dejar rastros ocultos que sigan sumando en algún saldo. Esto reemplaza el criterio anterior de `cuentas_movimientos` como libro estrictamente append-only ("nunca se edita/borra, se revierte con un egreso").

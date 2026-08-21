@@ -128,13 +128,13 @@ export async function amortizarInversion(data: {
     .single()
   if (invError || !inversion) return { error: invError?.message ?? 'Inversión no encontrada.' }
 
-  const { error } = await supabase.from('inversion_amortizaciones').insert({
+  const { data: amortizacion, error } = await supabase.from('inversion_amortizaciones').insert({
     inversion_id: data.inversion_id,
     evento_id: data.evento_id,
     monto: data.monto,
     fecha: data.fecha,
     notas: data.notas.trim() || null,
-  })
+  }).select().single()
   if (error) return { error: error.message }
 
   await supabase.from('cuentas_movimientos').insert({
@@ -146,6 +146,7 @@ export async function amortizarInversion(data: {
     concepto: 'Autoalquiler (amortización de inversión)',
     evento_id: data.evento_id,
     inversion_id: data.inversion_id,
+    amortizacion_id: amortizacion.id,
   })
 
   const { data: amortizaciones } = await supabase
@@ -159,5 +160,87 @@ export async function amortizarInversion(data: {
 
   revalidatePath('/finanzas')
   revalidatePath(`/eventos/${data.evento_id}/resultado`)
+  return { error: null }
+}
+
+export async function editarAmortizacion(id: string, data: { monto: number; fecha: string; notas: string }) {
+  const supabase = createAdminClient()
+
+  const { data: amortAnterior, error: fetchError } = await supabase
+    .from('inversion_amortizaciones')
+    .select('evento_id')
+    .eq('id', id)
+    .single()
+  if (fetchError || !amortAnterior) return { error: fetchError?.message ?? 'Autoalquiler no encontrado.' }
+
+  const { error } = await supabase.from('inversion_amortizaciones').update({
+    monto: data.monto,
+    fecha: data.fecha,
+    notas: data.notas.trim() || null,
+  }).eq('id', id)
+  if (error) return { error: error.message }
+
+  const { data: movLigado } = await supabase
+    .from('cuentas_movimientos').select('id').eq('amortizacion_id', id).maybeSingle()
+  if (movLigado) {
+    await supabase.from('cuentas_movimientos').update({ monto: data.monto, fecha: data.fecha }).eq('id', movLigado.id)
+  }
+
+  revalidatePath('/finanzas')
+  revalidatePath(`/eventos/${amortAnterior.evento_id}/resultado`)
+  return { error: null }
+}
+
+export async function eliminarAmortizacion(id: string) {
+  const supabase = createAdminClient()
+
+  const { data: amort, error: fetchError } = await supabase
+    .from('inversion_amortizaciones')
+    .select('inversion_id, evento_id, monto')
+    .eq('id', id)
+    .single()
+  if (fetchError || !amort) return { error: fetchError?.message ?? 'Autoalquiler no encontrado.' }
+
+  const { data: inversion } = await supabase
+    .from('inversiones')
+    .select('cuenta_origen, estado, monto_total')
+    .eq('id', amort.inversion_id)
+    .single()
+
+  const { data: movLigado } = await supabase
+    .from('cuentas_movimientos').select('id').eq('amortizacion_id', id).maybeSingle()
+
+  if (!movLigado && inversion) {
+    // Autoalquiler cargado antes de que existiera el link directo: se
+    // revierte con un movimiento en sentido contrario en vez de arriesgarse
+    // a borrar el que no es.
+    await supabase.from('cuentas_movimientos').insert({
+      tipo: 'transferencia',
+      cuenta_origen: inversion.cuenta_origen,
+      cuenta_destino: 'inversiones',
+      monto: amort.monto,
+      concepto: 'Reverso de autoalquiler eliminado',
+      inversion_id: amort.inversion_id,
+      evento_id: amort.evento_id,
+    })
+  }
+  // Si está ligado, el DELETE de abajo cascadea el movimiento solo.
+
+  const { error } = await supabase.from('inversion_amortizaciones').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  // Si la inversión se había marcado como amortizada del todo y este
+  // autoalquiler era parte de eso, vuelve a quedar activa.
+  if (inversion && inversion.estado === 'amortizada') {
+    const { data: restantes } = await supabase
+      .from('inversion_amortizaciones').select('monto').eq('inversion_id', amort.inversion_id)
+    const totalRestante = (restantes ?? []).reduce((s, a) => s + a.monto, 0)
+    if (totalRestante < inversion.monto_total) {
+      await supabase.from('inversiones').update({ estado: 'activa' }).eq('id', amort.inversion_id)
+    }
+  }
+
+  revalidatePath('/finanzas')
+  revalidatePath(`/eventos/${amort.evento_id}/resultado`)
   return { error: null }
 }

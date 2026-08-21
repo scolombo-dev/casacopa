@@ -248,3 +248,61 @@ export async function eliminarExtra(id: string) {
   return { error: null }
 }
 
+// ─── Datos para exportar a Excel ───────────────────────────────────────────────
+
+export async function obtenerDatosExcelEvento(id: string) {
+  const supabase = createAdminClient()
+
+  const [
+    { data: evento },
+    { data: financiero },
+    { data: pagos },
+    { data: staff },
+    { data: extras },
+    { data: cierre },
+    { data: comprasItems },
+    { data: ajustesIpc },
+    { data: reparto },
+    { data: amortizaciones },
+    { data: tragos },
+    { data: movimientos },
+  ] = await Promise.all([
+    supabase.from('eventos').select(`
+      id, nombre, fecha, tipo_evento, estado,
+      cantidad_personas_barra, cantidad_personas_barra_kids,
+      precio_barra, precio_barra_kids, precio_total, notas
+    `).eq('id', id).single(),
+    supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
+    supabase.from('pagos_cliente').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('evento_staff').select('*').eq('evento_id', id),
+    supabase.from('evento_extras').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('cierre_consumo').select('*').eq('evento_id', id).order('insumo_base'),
+    supabase.from('compras').select('fecha_compra, compra_items(marca, proveedor, cantidad, precio_unitario_real, precio_total_real)').eq('evento_id', id),
+    supabase.from('ajustes_ipc').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('evento_reparto_resultado').select('*').eq('evento_id', id).order('fecha'),
+    supabase.from('inversion_amortizaciones').select('*, inversiones(nombre)').eq('evento_id', id).order('fecha'),
+    supabase.from('evento_tragos').select('recetas(nombre_trago, categoria)').eq('evento_id', id),
+    supabase.from('cuentas_movimientos').select('*').eq('evento_id', id).order('fecha'),
+  ])
+
+  if (!evento) return { data: null, error: 'Evento no encontrado.' }
+
+  return {
+    error: null,
+    data: {
+      evento,
+      financiero,
+      pagos: pagos ?? [],
+      staff: staff ?? [],
+      extras: extras ?? [],
+      cierre: cierre ?? [],
+      comprasItems: comprasItems ?? [],
+      ajustesIpc: ajustesIpc ?? [],
+      reparto: reparto ?? [],
+      amortizaciones: amortizaciones ?? [],
+      tragos: tragos ?? [],
+      movimientos: movimientos ?? [],
+    },
+  }
+}
+

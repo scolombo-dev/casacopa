@@ -4,6 +4,7 @@ import { formatARS, formatFecha } from '@/lib/utils'
 import ResultadoActions from './ResultadoActions'
 import RepartoResultado from './RepartoResultado'
 import CerrarEventoModal from './CerrarEventoModal'
+import AutoalquilerList from './AutoalquilerList'
 
 export default async function ResultadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -219,25 +220,12 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         )}
 
         {/* Costo de autoalquiler (inversiones usadas en este evento) */}
-        {amortizacionesData.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Autoalquiler de inversiones</h2>
-            <div className="border rounded-xl overflow-hidden">
-              <div className="divide-y">
-                {amortizacionesData.map((a) => (
-                  <div key={a.id} className="flex justify-between items-center px-4 py-2 text-sm">
-                    <span className="text-gray-700">{a.inversiones?.nombre ?? '—'}</span>
-                    <span className="text-gray-600 tabular-nums">{formatARS(a.monto)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-gray-50">
-                  <span className="font-semibold text-gray-800">Subtotal autoalquiler</span>
-                  <span className="font-bold text-red-500">− {formatARS(fin?.costo_autoalquiler ?? 0)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <AutoalquilerList
+          autoalquileres={amortizacionesData.map(a => ({
+            id: a.id, inversion: a.inversiones?.nombre ?? '—', fecha: formatFecha(a.fecha), monto: a.monto,
+          }))}
+          subtotal={fin?.costo_autoalquiler ?? 0}
+        />
 
         {/* Resultado neto */}
         <div className="mb-6">

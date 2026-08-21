@@ -242,6 +242,8 @@ export type CuentaMovimiento = {
   extra_id: string | null
   inversion_id: string | null
   pago_id: string | null
+  stock_id: string | null
+  amortizacion_id: string | null
   subcuenta_origen_id: string | null
   subcuenta_destino_id: string | null
   notas: string | null

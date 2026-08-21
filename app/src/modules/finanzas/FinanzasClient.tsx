@@ -3,14 +3,14 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronDown, ChevronRight, Plus, Trash2,
+  ChevronDown, ChevronRight, Plus, Trash2, Pencil,
   TrendingUp, TrendingDown, DollarSign, AlertCircle,
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { ESTADO_STYLE, ESTADO_LABEL, TIPO_PAGO_LABEL } from '@/lib/constants'
 import type { ResultadoNetoEvento, PagoCliente, TipoPago, CuentaFinanciera, EstadoEvento, Subcuenta } from '@/lib/types'
-import { crearPago, eliminarPago } from './actions'
+import { crearPago, editarPago, eliminarPago } from './actions'
 import SubcuentaSelect from './SubcuentaSelect'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -19,32 +19,35 @@ type EventoFinanciero = ResultadoNetoEvento
 
 // ─── Formulario de pago ───────────────────────────────────────────────────────
 
-function PagoForm({ eventoId, estadoEvento, subcuentas, onClose }: {
-  eventoId: string; estadoEvento: EstadoEvento; subcuentas: Subcuenta[]; onClose: () => void
+function PagoForm({ eventoId, estadoEvento, subcuentas, pago, onClose }: {
+  eventoId: string; estadoEvento: EstadoEvento; subcuentas: Subcuenta[]; pago?: PagoCliente; onClose: () => void
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const [tipo, setTipo] = useState<TipoPago>('seña')
-  const [monto, setMonto] = useState(0)
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
-  const [metodo, setMetodo] = useState('transferencia')
-  const [notas, setNotas] = useState('')
+  const [tipo, setTipo] = useState<TipoPago>(pago?.tipo ?? 'seña')
+  const [monto, setMonto] = useState(pago?.monto ?? 0)
+  const [fecha, setFecha] = useState(pago?.fecha ?? new Date().toISOString().split('T')[0])
+  const [metodo, setMetodo] = useState(pago?.metodo ?? 'transferencia')
+  const [notas, setNotas] = useState(pago?.notas ?? '')
   const [error, setError] = useState<string | null>(null)
   const eventoYaPaso = estadoEvento === 'finalizado' || estadoEvento === 'cerrado'
   const [cuentaDestino, setCuentaDestino] = useState<CuentaFinanciera>(
-    eventoYaPaso ? 'caja_operativa' : 'anticipos_comprometidos'
+    pago?.cuenta_destino ?? (eventoYaPaso ? 'caja_operativa' : 'anticipos_comprometidos')
   )
-  const [subcuentaDestinoId, setSubcuentaDestinoId] = useState('')
+  const [subcuentaDestinoId, setSubcuentaDestinoId] = useState(pago?.subcuenta_destino_id ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (monto <= 0) { setError('El monto debe ser mayor a 0.'); return }
     setError(null)
     startTransition(async () => {
-      const res = await crearPago({
-        evento_id: eventoId, tipo, monto, fecha, metodo, notas,
+      const datos = {
+        tipo, monto, fecha, metodo, notas,
         cuenta_destino: cuentaDestino, subcuenta_destino_id: subcuentaDestinoId || null,
-      })
+      }
+      const res = pago
+        ? await editarPago(pago.id, datos)
+        : await crearPago({ evento_id: eventoId, ...datos })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -146,7 +149,7 @@ function PagoForm({ eventoId, estadoEvento, subcuentas, onClose }: {
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
           className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
-          {pending ? 'Guardando…' : 'Registrar pago'}
+          {pending ? 'Guardando…' : pago ? 'Guardar cambios' : 'Registrar pago'}
         </button>
         <button type="button" onClick={onClose} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           Cancelar
@@ -168,6 +171,8 @@ function EventoFinancieroCard({
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [modalPago, setModalPago] = useState(false)
+  const [editandoPago, setEditandoPago] = useState<PagoCliente | null>(null)
+  const [pagoError, setPagoError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   const costoTotal = ev.costo_insumos_real + ev.costo_personal + ev.costo_extras + ev.costo_autoalquiler
@@ -323,6 +328,8 @@ function EventoFinancieroCard({
               </button>
             </div>
 
+            {pagoError && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-2">{pagoError}</p>}
+
             {pagosEvento.length === 0 ? (
               <p className="text-xs text-gray-400 italic">Sin pagos registrados.</p>
             ) : (
@@ -344,7 +351,21 @@ function EventoFinancieroCard({
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800 tabular-nums">{formatARS(p.monto)}</span>
                       <button
-                        onClick={() => startTransition(async () => { await eliminarPago(p.id); router.refresh() })}
+                        onClick={() => setEditandoPago(p)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-indigo-600"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!window.confirm('¿Eliminar este pago?')) return
+                          setPagoError(null)
+                          startTransition(async () => {
+                            const res = await eliminarPago(p.id)
+                            if (res.error) { setPagoError(res.error); return }
+                            router.refresh()
+                          })
+                        }}
                         disabled={pending}
                         className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500"
                       >
@@ -373,6 +394,12 @@ function EventoFinancieroCard({
       {modalPago && (
         <Modal titulo="Registrar pago" onClose={() => setModalPago(false)}>
           <PagoForm eventoId={ev.evento_id} estadoEvento={ev.estado} subcuentas={subcuentas} onClose={() => setModalPago(false)} />
+        </Modal>
+      )}
+
+      {editandoPago && (
+        <Modal titulo="Editar pago" onClose={() => setEditandoPago(null)}>
+          <PagoForm eventoId={ev.evento_id} estadoEvento={ev.estado} subcuentas={subcuentas} pago={editandoPago} onClose={() => setEditandoPago(null)} />
         </Modal>
       )}
     </div>

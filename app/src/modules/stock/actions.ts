@@ -61,6 +61,7 @@ export async function agregarStock(data: {
         monto: montoTotal,
         concepto: `Compra de stock: ${data.marca}`,
         evento_id: data.evento_anticipo_id || null,
+        stock_id: lote.id,
       })
     }
   }
@@ -223,7 +224,7 @@ export async function editarLote(data: {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases')
+    .select('cantidad_envases, financiado_por')
     .eq('id', data.stock_id)
     .single()
 
@@ -257,7 +258,26 @@ export async function editarLote(data: {
     })
   }
 
+  // Si el lote está financiado y cambió el precio o la cantidad, hay que
+  // mantener sincronizado el monto que quedó "apartado" en stock_valorizado.
+  if (lote.financiado_por) {
+    const nuevoMonto = data.nueva_cantidad * data.precio_unitario_compra
+    const { data: movLigado } = await supabase
+      .from('cuentas_movimientos').select('id').eq('stock_id', data.stock_id).maybeSingle()
+    if (movLigado) {
+      if (nuevoMonto > 0) {
+        await supabase.from('cuentas_movimientos').update({ monto: nuevoMonto }).eq('id', movLigado.id)
+      } else {
+        await supabase.from('cuentas_movimientos').delete().eq('id', movLigado.id)
+      }
+    }
+    // Lote financiado de antes de que existiera el link directo (stock_id):
+    // no hay forma segura de saber cuál movimiento es el suyo para
+    // sincronizarlo — queda como está, es una limitación conocida.
+  }
+
   revalidatePath('/stock')
+  revalidatePath('/finanzas')
   revalidatePath('/')
   return { error: null }
 }
@@ -269,7 +289,7 @@ export async function eliminarLote(id: string, justificacion: string) {
 
   const { data: lote, error: fetchError } = await supabase
     .from('stock')
-    .select('cantidad_envases')
+    .select('cantidad_envases, marca, precio_unitario_compra, financiado_por')
     .eq('id', id)
     .single()
 
@@ -285,9 +305,33 @@ export async function eliminarLote(id: string, justificacion: string) {
     })
   }
 
+  if (lote.financiado_por) {
+    const { data: movLigado } = await supabase
+      .from('cuentas_movimientos').select('id').eq('stock_id', id).maybeSingle()
+
+    if (!movLigado) {
+      // Lote financiado de antes de que existiera el link directo: se
+      // revierte con una transferencia en vez de dejar la plata pegada en
+      // stock_valorizado para siempre.
+      const montoPendiente = lote.cantidad_envases * lote.precio_unitario_compra
+      if (montoPendiente > 0) {
+        await supabase.from('cuentas_movimientos').insert({
+          fecha: new Date().toISOString().slice(0, 10),
+          tipo: 'transferencia',
+          cuenta_origen: 'stock_valorizado',
+          cuenta_destino: lote.financiado_por,
+          monto: montoPendiente,
+          concepto: `Eliminación de stock financiado: ${lote.marca}`,
+        })
+      }
+    }
+    // Si está ligado, el DELETE de abajo cascadea el movimiento solo.
+  }
+
   const { error } = await supabase.from('stock').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/stock')
+  revalidatePath('/finanzas')
   revalidatePath('/')
   return { error: null }
 }

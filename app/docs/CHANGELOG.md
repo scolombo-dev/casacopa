@@ -2,6 +2,19 @@
 
 ---
 
+## [0.5.0] — 2026-08-20
+
+### Auditoría de integridad financiera + exportar evento a Excel
+
+- **Stock financiado**: eliminar un lote que se cargó indicando una cuenta financiadora ahora revierte esa plata (antes se quedaba pegada en "stock valorizado" para siempre). Editar el precio o la cantidad de un lote financiado ahora también actualiza el monto reservado
+- **Autoalquiler de inversiones**: ahora se puede eliminar (revierte la plata a la inversión, y si la inversión estaba marcada "amortizada" vuelve a "activa") y editar (monto/fecha/notas) — antes no existía forma de corregir uno cargado mal. Botón nuevo en la vista de Resultado del evento
+- **Pagos de cliente**: ahora se pueden editar (monto, fecha, método, tipo, cuenta, billetera, notas), no solo eliminar — el movimiento del libro se actualiza junto con el pago
+- Migración `031_stock_y_amortizacion_borrado_real.sql`: linkea el movimiento de stock financiado y de autoalquiler a su origen (mismo patrón que compras/personal/extras/pagos), para que borrar el registro borre su movimiento sin dejar rastro
+- Revisadas las cascadas de `eliminarEvento`: ya cubría correctamente pagos, compras, ajustes IPC, movimientos y amortizaciones (confirmado, sin cambios necesarios)
+- Nuevo botón "Descargar Excel" en el detalle de cada evento: exporta el evento completo (resumen, finanzas con pagos y de dónde salió la plata, carta de tragos, compras, staff, gastos extra, autoalquiler) a un .xlsx con varias hojas
+
+---
+
 ## [0.4.1] — 2026-08-19
 
 ### Corrección: cancelar una inversión no devolvía la plata a origen

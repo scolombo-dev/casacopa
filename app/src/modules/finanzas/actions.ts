@@ -43,6 +43,77 @@ export async function crearPago(data: {
   return { error: null }
 }
 
+export async function editarPago(id: string, data: {
+  tipo: TipoPago
+  monto: number
+  fecha: string
+  metodo: string
+  notas: string
+  cuenta_destino: CuentaFinanciera
+  subcuenta_destino_id: string | null
+}) {
+  const supabase = createAdminClient()
+
+  const { data: pagoAnterior, error: fetchError } = await supabase
+    .from('pagos_cliente')
+    .select('evento_id, monto, cuenta_destino, subcuenta_destino_id')
+    .eq('id', id)
+    .single()
+  if (fetchError || !pagoAnterior) return { error: fetchError?.message ?? 'Pago no encontrado.' }
+
+  const { error } = await supabase.from('pagos_cliente').update({
+    tipo: data.tipo,
+    monto: data.monto,
+    fecha: data.fecha,
+    metodo: data.metodo,
+    notas: data.notas.trim() || null,
+    cuenta_destino: data.cuenta_destino,
+    subcuenta_destino_id: data.subcuenta_destino_id,
+  }).eq('id', id)
+  if (error) return { error: error.message }
+
+  const { data: movLigado } = await supabase
+    .from('cuentas_movimientos').select('id').eq('pago_id', id).maybeSingle()
+
+  if (movLigado) {
+    // Movimiento linkeado directamente (pago_id): se actualiza en el lugar,
+    // sin dejar rastro de la corrección.
+    await supabase.from('cuentas_movimientos').update({
+      fecha: data.fecha,
+      cuenta_destino: data.cuenta_destino,
+      subcuenta_destino_id: data.subcuenta_destino_id,
+      monto: data.monto,
+      concepto: `Pago de cliente (${data.tipo})`,
+    }).eq('id', movLigado.id)
+  } else {
+    // Pago viejo sin ese link: se revierte el original entero y se vuelve a
+    // cargar con los datos nuevos, en vez de arriesgarse a tocar el
+    // movimiento que no es.
+    await supabase.from('cuentas_movimientos').insert({
+      fecha: data.fecha,
+      tipo: 'egreso',
+      cuenta_origen: pagoAnterior.cuenta_destino,
+      subcuenta_origen_id: pagoAnterior.subcuenta_destino_id,
+      monto: pagoAnterior.monto,
+      concepto: 'Reverso de pago editado',
+      evento_id: pagoAnterior.evento_id,
+    })
+    await supabase.from('cuentas_movimientos').insert({
+      fecha: data.fecha,
+      tipo: 'ingreso',
+      cuenta_destino: data.cuenta_destino,
+      subcuenta_destino_id: data.subcuenta_destino_id,
+      monto: data.monto,
+      concepto: `Pago de cliente (${data.tipo})`,
+      evento_id: pagoAnterior.evento_id,
+    })
+  }
+
+  revalidatePath('/finanzas')
+  revalidatePath('/')
+  return { error: null }
+}
+
 export async function eliminarPago(id: string) {
   const supabase = createAdminClient()
 
@@ -165,11 +236,11 @@ export async function eliminarSubcuenta(id: string) {
 
   const { data: movimientos } = await supabase
     .from('cuentas_movimientos')
-    .select('id, evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id')
+    .select('id, evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id, stock_id, amortizacion_id')
     .or(`subcuenta_origen_id.eq.${id},subcuenta_destino_id.eq.${id}`)
 
   const tienePlataReal = (pagosCount ?? 0) > 0 || (movimientos ?? []).some(
-    m => m.evento_id || m.compra_id || m.staff_id || m.extra_id || m.inversion_id || m.pago_id
+    m => m.evento_id || m.compra_id || m.staff_id || m.extra_id || m.inversion_id || m.pago_id || m.stock_id || m.amortizacion_id
   )
 
   if (tienePlataReal) {
@@ -203,12 +274,12 @@ export async function eliminarMovimientoManual(id: string) {
 
   const { data: mov, error: fetchError } = await supabase
     .from('cuentas_movimientos')
-    .select('evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id')
+    .select('evento_id, compra_id, staff_id, extra_id, inversion_id, pago_id, stock_id, amortizacion_id')
     .eq('id', id)
     .single()
   if (fetchError || !mov) return { error: fetchError?.message ?? 'Movimiento no encontrado.' }
 
-  if (mov.evento_id || mov.compra_id || mov.staff_id || mov.extra_id || mov.inversion_id || mov.pago_id) {
+  if (mov.evento_id || mov.compra_id || mov.staff_id || mov.extra_id || mov.inversion_id || mov.pago_id || mov.stock_id || mov.amortizacion_id) {
     return { error: 'Este movimiento se generó automáticamente desde otra pantalla — borralo desde ahí.' }
   }
 

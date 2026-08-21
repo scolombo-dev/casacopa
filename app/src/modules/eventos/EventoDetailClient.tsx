@@ -11,6 +11,7 @@ import { Modal } from '@/components/Modal'
 import { ESTADO_LABEL, ESTADO_STYLE } from '@/lib/constants'
 import type { EstadoEvento, Propuesta } from '@/lib/types'
 import { actualizarEstado, eliminarEvento, chequearEliminarEvento } from './actions'
+import ExportarExcelButton from './ExportarExcelButton'
 import {
   EventoForm, StaffSection, ExtrasSection, ComprasSection,
   type EventoCompleto, type RecetaMin,
@@ -107,6 +108,7 @@ export default function EventoDetailClient({
           <Link href={`/eventos/${evento.id}/resultado`} className="inline-flex items-center gap-1.5 text-sm text-emerald-700 font-medium border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">
             <BarChart3 size={15} /> Resultado
           </Link>
+          <ExportarExcelButton eventoId={evento.id} />
         </div>
       </div>
 
