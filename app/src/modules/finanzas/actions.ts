@@ -4,6 +4,30 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { TipoPago, CuentaFinanciera, TipoMovimientoCuenta } from '@/lib/types'
 
+// Un pago sin pago_id puede ser de dos mundos distintos: de antes de que
+// existiera ese link (tiene un ingreso suelto en el libro) o de antes de
+// que existiera el libro de cuentas en sí (nunca generó movimiento — la
+// migración 022 clasificó el histórico por cuenta_destino pero no inventó
+// movimientos para él). Revertir sin distinguir deja un egreso sin ningún
+// ingreso detrás para el segundo caso.
+async function buscarIngresoSueltoDePago(
+  supabase: ReturnType<typeof createAdminClient>,
+  pago: { evento_id: string; monto: number; cuenta_destino: CuentaFinanciera }
+) {
+  const { data } = await supabase
+    .from('cuentas_movimientos')
+    .select('id')
+    .eq('evento_id', pago.evento_id)
+    .eq('tipo', 'ingreso')
+    .eq('cuenta_destino', pago.cuenta_destino)
+    .eq('monto', pago.monto)
+    .is('pago_id', null)
+    .like('concepto', 'Pago de cliente%')
+    .limit(1)
+    .maybeSingle()
+  return data
+}
+
 export async function crearPago(data: {
   evento_id: string
   tipo: TipoPago
@@ -86,18 +110,27 @@ export async function editarPago(id: string, data: {
       concepto: `Pago de cliente (${data.tipo})`,
     }).eq('id', movLigado.id)
   } else {
-    // Pago viejo sin ese link: se revierte el original entero y se vuelve a
-    // cargar con los datos nuevos, en vez de arriesgarse a tocar el
-    // movimiento que no es.
-    await supabase.from('cuentas_movimientos').insert({
-      fecha: data.fecha,
-      tipo: 'egreso',
-      cuenta_origen: pagoAnterior.cuenta_destino,
-      subcuenta_origen_id: pagoAnterior.subcuenta_destino_id,
-      monto: pagoAnterior.monto,
-      concepto: 'Reverso de pago editado',
-      evento_id: pagoAnterior.evento_id,
-    })
+    // Pago viejo sin ese link directo: puede ser de antes de que existiera
+    // pago_id (tiene un ingreso suelto en el libro que hay que revertir), o
+    // de antes de que existiera el libro de cuentas en sí (nunca generó
+    // ningún movimiento — la migración 022 no inventó movimientos para el
+    // histórico). Si se revierte sin chequear esto, un pago que nunca generó
+    // movimiento termina generando un egreso sin ningún ingreso detrás.
+    const ingresoSuelto = await buscarIngresoSueltoDePago(supabase, pagoAnterior)
+    if (ingresoSuelto) {
+      await supabase.from('cuentas_movimientos').insert({
+        fecha: data.fecha,
+        tipo: 'egreso',
+        cuenta_origen: pagoAnterior.cuenta_destino,
+        subcuenta_origen_id: pagoAnterior.subcuenta_destino_id,
+        monto: pagoAnterior.monto,
+        concepto: 'Reverso de pago editado',
+        evento_id: pagoAnterior.evento_id,
+      })
+    }
+    // El ingreso nuevo se carga siempre — si el pago era de antes del libro
+    // de cuentas, esta es la primera vez que entra, y queda linkeado para
+    // que de acá en más se pueda editar/borrar sin este problema.
     await supabase.from('cuentas_movimientos').insert({
       fecha: data.fecha,
       tipo: 'ingreso',
@@ -106,6 +139,7 @@ export async function editarPago(id: string, data: {
       monto: data.monto,
       concepto: `Pago de cliente (${data.tipo})`,
       evento_id: pagoAnterior.evento_id,
+      pago_id: id,
     })
   }
 
@@ -134,24 +168,28 @@ export async function eliminarPago(id: string) {
     return { error: null }
   }
 
-  // Pago viejo, de antes de que existiera el link directo: no hay forma
-  // segura de saber cuál movimiento es el suyo, así que se revierte con un
-  // egreso en vez de arriesgarse a borrar el que no es.
+  // Pago viejo sin ese link directo: puede tener un ingreso suelto en el
+  // libro (de antes de pago_id) que hay que revertir, o puede ser de antes
+  // de que existiera el libro de cuentas — en ese caso nunca generó ningún
+  // movimiento, y no hay nada que revertir.
   const { data: pago } = await supabase
     .from('pagos_cliente')
-    .select('evento_id, monto, cuenta_destino, subcuenta_destino_id')
+    .select('evento_id, monto, fecha, cuenta_destino, subcuenta_destino_id')
     .eq('id', id)
     .single()
 
   if (pago) {
-    await supabase.from('cuentas_movimientos').insert({
-      tipo: 'egreso',
-      cuenta_origen: pago.cuenta_destino,
-      subcuenta_origen_id: pago.subcuenta_destino_id,
-      monto: pago.monto,
-      concepto: 'Reverso de pago de cliente eliminado',
-      evento_id: pago.evento_id,
-    })
+    const ingresoSuelto = await buscarIngresoSueltoDePago(supabase, pago)
+    if (ingresoSuelto) {
+      await supabase.from('cuentas_movimientos').insert({
+        tipo: 'egreso',
+        cuenta_origen: pago.cuenta_destino,
+        subcuenta_origen_id: pago.subcuenta_destino_id,
+        monto: pago.monto,
+        concepto: 'Reverso de pago de cliente eliminado',
+        evento_id: pago.evento_id,
+      })
+    }
   }
 
   const { error } = await supabase.from('pagos_cliente').delete().eq('id', id)

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-08-25 — El "borrado real" tiene que distinguir pagos anteriores al libro de cuentas
+
+**Bug:** al arreglar `eliminarPago`/`editarPago` (ver 2026-08-19 más abajo) para que los pagos sin `pago_id` reviertan con un egreso, se asumió que ese egreso siempre tiene un ingreso suelto para compensar. Eso vale para pagos cargados entre el 14/08 (nace el libro de cuentas) y el 19/08 (nace `pago_id`) — pero NO para pagos de antes del 14/08, que la migración 022 clasificó por `cuenta_destino` pero deliberadamente nunca generó movimiento para ellos (decisión documentada en esa misma migración: "no genera movimientos nuevos... los saldos iniciales se cargan a mano"). Borrar uno de esos pagos generaba un egreso real sin ningún ingreso detrás, empujando el saldo de la cuenta a negativo.
+
+**Corrección:** antes de revertir, se busca explícitamente un ingreso suelto que matchee (mismo evento, monto, cuenta, `pago_id IS NULL`, concepto de pago de cliente). Si no aparece, no se revierte nada — no había nada que revertir. Al editar un pago viejo, el ingreso nuevo que se carga queda linkeado con `pago_id` para que esta ambigüedad no se repita la próxima vez que se toque ese mismo pago.
+
+**Lección para el patrón general:** cualquier "reverso de lo que no tiene link directo" en este proyecto tiene que confirmar primero que existe algo real para revertir, en vez de asumirlo por la sola ausencia del link. La ausencia de link puede significar "es de antes del link" (hay algo que revertir) o "es de antes del libro entero" (no hay nada).
+
+---
+
 ## 2026-08-20 — Distribución de ganancia: corregir lo existente, no duplicar
 
 **Contexto:** se pidió una funcionalidad nueva de "distribuir ganancia" (tabla `distribuciones_ganancia`, destinatario/monto/concepto/fecha/método, restricción de tope, revertible). Al revisar el código, ya existía `evento_reparto_resultado` ("Distribución del resultado", migración 019) con casi los mismos campos — la diferencia real era que ese sistema nunca generó un movimiento en `cuentas_movimientos`, era puramente informativo.

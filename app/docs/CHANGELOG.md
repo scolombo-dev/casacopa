@@ -2,6 +2,16 @@
 
 ---
 
+## [0.5.2] — 2026-08-25
+
+### Corrección: eliminar/editar un pago viejo generaba un egreso sin respaldo
+
+- Bug: `eliminarPago`/`editarPago` revertían con un egreso cualquier pago sin `pago_id`, asumiendo que siempre había un ingreso suelto en el libro para compensar. Para pagos de antes del libro de cuentas (14/08) eso no es cierto — nunca generaron movimiento — así que el reverso quedaba sin nada detrás, empujando el saldo de la cuenta a negativo
+- Corregido: ahora se busca el ingreso suelto antes de revertir; si no existe (pago pre-libro), no se genera ningún egreso, y el pago recién editado queda linkeado (`pago_id`) para no volver a tener este problema
+- Migración `034_corregir_reversos_huerfanos_y_prueba_inversion.sql`: borra los 2 egresos huérfanos detectados ($144.000 y $252.000) y de paso limpia una inversión de prueba ("200 vasos") que ya neteaba $0 pero quedaba dando vueltas — **requiere correrse a mano en Supabase**
+
+---
+
 ## [0.5.1] — 2026-08-20
 
 ### Distribución de ganancia mueve plata real
