@@ -247,6 +247,7 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
   const [editandoItem, setEditandoItem] = useState<CompraItem | null>(null)
   const [insumosEvento, setInsumosEvento] = useState<string[] | null>(null)
   const [loadingInsumos, setLoadingInsumos] = useState(false)
+  const [itemError, setItemError] = useState<string | null>(null)
 
   async function toggleExpand() {
     const next = !expanded
@@ -316,6 +317,8 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
             </div>
           )}
 
+          {itemError && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1 mb-2">{itemError}</p>}
+
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-700">Items de la compra</span>
             <button
@@ -370,7 +373,15 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 justify-end">
                               <button onClick={() => setEditandoItem(item)} className="p-1 text-gray-400 hover:text-indigo-600"><Pencil size={13} /></button>
                               <button
-                                onClick={() => startTransition(async () => { await eliminarItem(item.id, compra.id); router.refresh() })}
+                                onClick={() => {
+                                  if (!window.confirm(`¿Eliminar el item "${item.marca}"?`)) return
+                                  setItemError(null)
+                                  startTransition(async () => {
+                                    const res = await eliminarItem(item.id, compra.id)
+                                    if (res.error) { setItemError(res.error); return }
+                                    router.refresh()
+                                  })
+                                }}
                                 className="p-1 text-gray-400 hover:text-red-500"
                               ><Trash2 size={13} /></button>
                             </div>
@@ -417,6 +428,7 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
   const [modalCrear, setModalCrear] = useState(false)
   const [editando, setEditando] = useState<CompraCompleta | null>(null)
   const [eliminando, setEliminando] = useState<CompraCompleta | null>(null)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
   const [filtroEvento, setFiltroEvento] = useState<string | null>(null)
 
   const filtradas = filtroEvento ? compras.filter(c => c.evento_id === filtroEvento) : compras
@@ -489,13 +501,22 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
         </Modal>
       )}
       {eliminando && (
-        <Modal titulo="Eliminar compra" onClose={() => setEliminando(null)}>
+        <Modal titulo="Eliminar compra" onClose={() => { setEliminando(null); setErrorEliminar(null) }}>
           <p className="text-sm text-gray-600 mb-4">
             ¿Eliminar la compra del <strong>{formatFecha(eliminando.fecha_compra)}</strong> para <strong>{eliminando.eventos?.nombre}</strong>? Se borrarán todos los items.
           </p>
+          {errorEliminar && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{errorEliminar}</p>}
           <div className="flex gap-2">
             <button
-              onClick={() => startTransition(async () => { await eliminarCompra(eliminando.id); setEliminando(null); router.refresh() })}
+              onClick={() => {
+                setErrorEliminar(null)
+                startTransition(async () => {
+                  const res = await eliminarCompra(eliminando.id)
+                  if (res.error) { setErrorEliminar(res.error); return }
+                  setEliminando(null)
+                  router.refresh()
+                })
+              }}
               disabled={pending}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50">
               {pending ? 'Eliminando…' : 'Sí, eliminar'}

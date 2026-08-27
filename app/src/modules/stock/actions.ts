@@ -295,6 +295,17 @@ export async function eliminarLote(id: string, justificacion: string) {
 
   if (fetchError) return { error: fetchError.message }
 
+  // La DB tiene RESTRICT en cierre_consumo.stock_id: si el lote ya se usó
+  // en un evento, el DELETE de abajo fallaría con un error crudo de
+  // Postgres. Se avisa con un mensaje claro en vez de dejarlo pasar.
+  const { count: usosEnEventos } = await supabase
+    .from('cierre_consumo')
+    .select('id', { count: 'exact', head: true })
+    .eq('stock_id', id)
+  if ((usosEnEventos ?? 0) > 0) {
+    return { error: 'Este lote ya se usó en un evento (cierre de consumo) — no se puede eliminar. Si fue un error, deshacé el uso desde el evento primero.' }
+  }
+
   if (lote.cantidad_envases > 0) {
     await supabase.from('movimientos_stock').insert({
       stock_id: id,

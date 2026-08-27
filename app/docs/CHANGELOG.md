@@ -2,6 +2,18 @@
 
 ---
 
+## [0.5.3] — 2026-08-25
+
+### Auditoría completa: confirmaciones y errores silenciosos
+
+- Faltaba confirmación antes de borrar: item de compra, staff de un evento, gasto extra — se agregó, con el mismo criterio que ya usaban compras/eventos/stock (confirmar antes, mostrar el error si falla)
+- Varios botones de eliminar ignoraban si la operación fallaba (compra, evento ×2 pantallas, lote de stock): la pantalla se quedaba igual sin explicar qué pasó. Ahora todos muestran el error si algo sale mal
+- `eliminarLote`: si el lote ya se usó en un evento, antes mostraba un error crudo de Postgres — ahora explica en criollo que hay que deshacer el uso primero
+- Revisado (sin cambios necesarios): cascadas de proveedores/recetas ante productos/ingredientes en uso ya tenían manejo correcto; alta de usuarios no requiere código (se invita desde el panel de Supabase, RLS está desactivado así que cualquier usuario logueado ve los mismos datos)
+- Pendiente, no resuelto en esta pasada: no existe pantalla para crear/editar las "propuestas" base (solo se leen, se cargaron por migración) — es una funcionalidad nueva, no un bug, así que no se tocó
+
+---
+
 ## [0.5.2] — 2026-08-25
 
 ### Corrección: eliminar/editar un pago viejo generaba un egreso sin respaldo

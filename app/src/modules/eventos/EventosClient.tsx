@@ -432,6 +432,7 @@ export function StaffSection({ eventoId, staff }: { eventoId: string; staff: Eve
   const [pending, startTransition] = useTransition()
   const [agregando, setAgregando] = useState(false)
   const [editando, setEditando] = useState<EventoStaff | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const totalStaff = staff.reduce((s, x) => s + x.costo_total, 0)
 
@@ -447,6 +448,8 @@ export function StaffSection({ eventoId, staff }: { eventoId: string; staff: Eve
           <Plus size={12} /> Agregar
         </button>
       </div>
+
+      {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1 mb-2">{error}</p>}
 
       {staff.length === 0 && !agregando && (
         <p className="text-xs text-gray-400 italic">Sin staff cargado aún.</p>
@@ -465,7 +468,15 @@ export function StaffSection({ eventoId, staff }: { eventoId: string; staff: Eve
               <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                 <button onClick={() => setEditando(s)} className="p-1 text-gray-400 hover:text-indigo-600"><Pencil size={13} /></button>
                 <button
-                  onClick={() => startTransition(async () => { await eliminarStaff(s.id); router.refresh() })}
+                  onClick={() => {
+                    if (!window.confirm(`¿Eliminar a ${s.nombre_persona || s.rol}?`)) return
+                    setError(null)
+                    startTransition(async () => {
+                      const res = await eliminarStaff(s.id)
+                      if (res.error) { setError(res.error); return }
+                      router.refresh()
+                    })
+                  }}
                   className="p-1 text-gray-400 hover:text-red-500"
                 >
                   <Trash2 size={13} />
@@ -553,6 +564,7 @@ export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: 
   const [pending, startTransition] = useTransition()
   const [agregando, setAgregando] = useState(false)
   const [editando, setEditando] = useState<EventoExtra | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const total = extras.reduce((s, x) => s + x.monto, 0)
 
@@ -565,6 +577,8 @@ export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: 
           <Plus size={12} /> Agregar
         </button>
       </div>
+
+      {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1 mb-2">{error}</p>}
 
       {extras.length === 0 && !agregando && (
         <p className="text-xs text-gray-400 italic">Sin extras cargados.</p>
@@ -584,7 +598,15 @@ export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: 
               <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                 <button onClick={() => setEditando(ex)} className="p-1 text-gray-400 hover:text-indigo-600"><Pencil size={13} /></button>
                 <button
-                  onClick={() => startTransition(async () => { await eliminarExtra(ex.id); router.refresh() })}
+                  onClick={() => {
+                    if (!window.confirm(`¿Eliminar el gasto "${ex.concepto}"?`)) return
+                    setError(null)
+                    startTransition(async () => {
+                      const res = await eliminarExtra(ex.id)
+                      if (res.error) { setError(res.error); return }
+                      router.refresh()
+                    })
+                  }}
                   className="p-1 text-gray-400 hover:text-red-500"
                 ><Trash2 size={13} /></button>
               </div>
@@ -812,6 +834,7 @@ export default function EventosClient({
   const [editando, setEditando] = useState<EventoCompleto | null>(null)
   const [eliminando, setEliminando] = useState<EventoCompleto | null>(null)
   const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number; movimientos: number } | null>(null)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
 
   const filtrados = filtroEstado
     ? eventos.filter(e => e.estado === filtroEstado)
@@ -981,14 +1004,19 @@ export default function EventosClient({
               <p className="text-orange-600 text-xs font-semibold mt-2">Esta acción no se puede deshacer.</p>
             )}
           </div>
+          {errorEliminar && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-2">{errorEliminar}</p>}
           <div className="flex gap-2">
             <button
-              onClick={() => startTransition(async () => {
-                await eliminarEvento(eliminando.id)
-                setEliminando(null)
-                setInfoEliminar(null)
-                router.refresh()
-              })}
+              onClick={() => {
+                setErrorEliminar(null)
+                startTransition(async () => {
+                  const res = await eliminarEvento(eliminando.id)
+                  if (res.error) { setErrorEliminar(res.error); return }
+                  setEliminando(null)
+                  setInfoEliminar(null)
+                  router.refresh()
+                })
+              }}
               disabled={pending}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >

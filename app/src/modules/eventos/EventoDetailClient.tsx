@@ -40,6 +40,7 @@ export default function EventoDetailClient({
   const [editando, setEditando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
   const [infoEliminar, setInfoEliminar] = useState<{ compras: number; pagos: number; ajustes: number; movimientos: number } | null>(null)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -219,12 +220,17 @@ export default function EventoDetailClient({
               <p className="text-orange-600 text-xs font-semibold mt-2">Esta acción no se puede deshacer.</p>
             )}
           </div>
+          {errorEliminar && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-2">{errorEliminar}</p>}
           <div className="flex gap-2">
             <button
-              onClick={() => startTransition(async () => {
-                await eliminarEvento(evento.id)
-                router.push('/eventos')
-              })}
+              onClick={() => {
+                setErrorEliminar(null)
+                startTransition(async () => {
+                  const res = await eliminarEvento(evento.id)
+                  if (res.error) { setErrorEliminar(res.error); return }
+                  router.push('/eventos')
+                })
+              }}
               disabled={pending}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >

@@ -765,6 +765,7 @@ export default function StockClient({ stock, productos, eventos }: {
   const [ajustando, setAjustando] = useState<Lote | null>(null)
   const [eliminando, setEliminando] = useState<Lote | null>(null)
   const [justificacionElim, setJustificacionElim] = useState('')
+  const [errorElim, setErrorElim] = useState<string | null>(null)
   const [verHistorial, setVerHistorial] = useState<Lote | null>(null)
   const [retirando, setRetirando] = useState<Lote | null>(null)
   const [filtro, setFiltro] = useState<'todos' | 'disponible' | 'agotado'>('disponible')
@@ -1019,7 +1020,7 @@ export default function StockClient({ stock, productos, eventos }: {
 
       {/* Modal: Eliminar lote */}
       {eliminando && (
-        <Modal titulo="Eliminar lote" onClose={() => { setEliminando(null); setJustificacionElim('') }}>
+        <Modal titulo="Eliminar lote" onClose={() => { setEliminando(null); setJustificacionElim(''); setErrorElim(null) }}>
           <p className="text-sm text-gray-600 mb-4">
             Vas a eliminar el lote de <strong>{eliminando.marca}</strong> ({eliminando.ml_por_envase}ml)
             {eliminando.cantidad_envases > 0 && (
@@ -1040,20 +1041,25 @@ export default function StockClient({ stock, productos, eventos }: {
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
             />
           </div>
+          {errorElim && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">{errorElim}</p>}
           <div className="flex gap-2">
             <button
-              onClick={() => startTransition(async () => {
-                await eliminarLote(eliminando.id, justificacionElim)
-                setEliminando(null)
-                setJustificacionElim('')
-                router.refresh()
-              })}
+              onClick={() => {
+                setErrorElim(null)
+                startTransition(async () => {
+                  const res = await eliminarLote(eliminando.id, justificacionElim)
+                  if (res.error) { setErrorElim(res.error); return }
+                  setEliminando(null)
+                  setJustificacionElim('')
+                  router.refresh()
+                })
+              }}
               disabled={pending || justificacionElim.trim() === ''}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >
               {pending ? 'Eliminando…' : 'Eliminar'}
             </button>
-            <button onClick={() => { setEliminando(null); setJustificacionElim('') }} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            <button onClick={() => { setEliminando(null); setJustificacionElim(''); setErrorElim(null) }} className="px-4 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
               Cancelar
             </button>
           </div>
