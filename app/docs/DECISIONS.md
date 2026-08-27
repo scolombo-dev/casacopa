@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-08-26 — Asistente de chat: reusar server actions, no escribir tablas directo
+
+**Contexto:** el pedido original describía que la IA tuviera "acceso de escritura para insertar en: compras, compra_items, pagos_cliente, evento_extras, evento_staff, stock, movimientos_stock, inversiones, inversion_amortizaciones, distribuciones_ganancia, cuentas_movimientos" — es decir, que Claude arme y ejecute los inserts directamente.
+
+**Decisión:** en cambio, cada acción que el chat puede tomar (`registrar_compra`, `registrar_pago`, `registrar_gasto_extra`, `registrar_staff`, `registrar_stock_sobrante`, `crear_inversion`, `cobrar_autoalquiler`, `registrar_distribucion_ganancia`) es una herramienta de Claude que internamente llama a la MISMA server action que usan los formularios normales (`crearCompra`+`crearItem`, `crearPago`, `crearExtra`, `crearStaff`, `agregarStock`, `crearInversion`, `amortizarInversion`, `crearReparto`).
+
+**Por qué:** esta sesión pasó horas encontrando y corrigiendo bugs de integridad financiera — movimientos sin su contrapartida, plata que no volvía a la cuenta de origen, vistas que contaban un pago dos veces. Toda esa lógica ya corregida vive en las server actions. Si el chat insertara filas sueltas, tendría que reimplementar cada una de esas reglas dentro del prompt de Claude — y un LLM generando transacciones multi-tabla de plata real sin esas garantías es exactamente la receta para reintroducir los mismos bugs. Reusar las server actions significa que un arreglo futuro a `crearPago` (por ejemplo) automáticamente aplica también al chat, sin tocarlo.
+
+**Nombre de tabla corregido:** el pedido mencionaba `distribuciones_ganancia` como tabla de destino — esa tabla no existe. La distribución de ganancia vive en `evento_reparto_resultado` (ver decisión del 20/08, "Distribución de ganancia: corregir lo existente, no duplicar"). El asistente usa esa tabla real.
+
+**Otra corrección de expectativa:** un ejemplo del pedido decía "amortizar en 10 eventos" — ese concepto (plan fijo de amortización) se eliminó a propósito el 17/08 porque no se podía fijar de antemano. El asistente ignora esa parte del pedido y aclara que el autoalquiler se cobra libre, evento por evento.
+
+**Confirmación sin tool use intermedio:** para pedir confirmación antes de guardar sin la complejidad de un loop agéntico completo (que requeriría mandar `tool_result` de vuelta), el asistente usa una convención simple: cuando Claude quiere proponer una acción, su respuesta de texto empieza con el prefijo literal `CONFIRMAR:` (definido en el system prompt). El backend lo detecta, lo saca del texto, y le indica al frontend que muestre los botones "Confirmar"/"Corregir". Recién cuando el usuario confirma en un mensaje posterior, Claude llama a la herramienta de verdad. El historial de la conversación que se reenvía en cada request es texto plano (sin bloques `tool_use` crudos) — más simple de razonar y suficiente para este caso de uso.
+
+---
+
 ## 2026-08-26 — Bug de origen en saldo_anticipos_evento: "repuesto" duplicaba el pago
 
 **Bug:** desde que existe la vista `saldo_anticipos_evento` (migración 022, 14/08), la columna "repuesto" sumaba cualquier movimiento con `cuenta_destino = 'anticipos_comprometidos'` para el evento — sin excluir el ingreso del propio pago del cliente, que también entra a esa cuenta. Resultado: cada pago se contaba dos veces (como "cobrado" y como "repuesto"), y el "Saldo neto" de cada evento con anticipo quedaba inflado por el mismo monto que ya estaba cobrado.

@@ -2,6 +2,20 @@
 
 ---
 
+## [0.6.0] — 2026-08-26
+
+### Asistente de chat con IA para carga de datos
+
+- Nuevo botón flotante "Asistente" (esquina inferior derecha, visible en todas las pantallas salvo login) con un chat donde se puede contar en español lo que pasó — pago cobrado, compra, gasto extra, personal contratado, stock sobrante, inversión, autoalquiler cobrado, distribución de ganancia — y el sistema lo carga
+- El asistente SIEMPRE muestra un resumen y espera confirmación ("Confirmar" / "Corregir") antes de guardar nada; si falta un dato o hay ambigüedad (ej. dos eventos que podrían ser "el de noviembre"), pregunta en vez de asumir
+- Nuevo endpoint `/api/chat` (Claude Opus 5 con tool use): recibe el mensaje, arma contexto real de la base (eventos recientes, inversiones activas, saldos de las 5 cuentas) y decide qué acción corresponde
+- **Decisión de diseño clave:** el asistente nunca escribe una fila suelta a mano. Cada "herramienta" que Claude puede usar llama a la misma server action ya auditada que usan las pantallas normales (`crearCompra`, `crearPago`, `crearStaff`, `agregarStock`, `crearInversion`, `amortizarInversion`, `crearReparto`, etc.) — así el chat hereda toda la lógica financiera que ya se corrigió en las auditorías anteriores, en vez de reimplementarla y arriesgarse a los mismos bugs
+- Limitaciones conocidas, avisadas por el propio asistente cuando corresponde:
+  - Los gastos extra siempre se descuentan de caja operativa — no existe (todavía) forma de financiar un gasto extra puntual desde el anticipo de un evento, a diferencia de stock e inversiones
+  - Las inversiones no tienen plan fijo de amortización (se sacó el 17/08) — si se le pide "amortizar en N eventos", el asistente lo ignora y aclara que el autoalquiler se cobra libre por evento
+
+---
+
 ## [0.5.4] — 2026-08-26
 
 ### Corrección: "Repuesto" en Anticipos por evento duplicaba el pago original
