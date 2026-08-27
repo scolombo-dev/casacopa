@@ -2,6 +2,16 @@
 
 ---
 
+## [0.6.2] — 2026-08-26
+
+### Asistente: distinguir compra para evento vs. compra de stock general
+
+- Nuevo tipo de acción "compra_stock": para cuando el usuario compra insumos que NO son para un evento puntual (van al inventario general vía "Agregar stock", no vía "Compras"). Se puede financiar desde caja o desde el anticipo de un evento — igual que ya existía en la pantalla `/stock`, ahora accesible desde el chat
+- El asistente decide entre "compra" (evento puntual, siempre caja) y "compra_stock" (sin evento puntual, financiación opcional) según si el usuario mencionó a qué evento va la compra
+- Reforzada la regla de nunca pedirle un ID al usuario — siempre resuelve eventos/inversiones por nombre desde el contexto que ya se le pasa
+
+---
+
 ## [0.6.1] — 2026-08-26
 
 ### Corrección: el asistente tiraba "Schema is too complex"

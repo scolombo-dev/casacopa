@@ -26,7 +26,7 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {
         tipo: {
           type: 'string',
-          enum: ['compra', 'pago', 'gasto_extra', 'staff', 'stock_sobrante', 'inversion', 'autoalquiler', 'distribucion_ganancia'],
+          enum: ['compra', 'compra_stock', 'pago', 'gasto_extra', 'staff', 'stock_sobrante', 'inversion', 'autoalquiler', 'distribucion_ganancia'],
         },
         datos: {
           type: 'object',
@@ -83,8 +83,14 @@ ${contexto}
 
 Cuando el usuario ya confirmó, llamás a la única herramienta disponible, "ejecutar_accion", con un "tipo" y un objeto "datos" adentro. Estos son los tipos válidos y qué campos va cada uno en "datos" (los que dicen "opcional" podés omitirlos):
 
-- tipo "compra" — comprar un insumo para un evento (se descuenta de caja operativa):
+- tipo "compra" — comprar un insumo PARA UN EVENTO PUNTUAL (el usuario menciona a qué evento va, ej "para el evento Cohen", "para el sábado"). Se consume directo en ese evento y siempre se descuenta de caja operativa:
   evento_id, marca, proveedor, presentacion (ej "750ml"), ml_por_envase (número), cantidad (número), precio_unitario_real (número, precio por unidad), fecha_compra (YYYY-MM-DD)
+
+- tipo "compra_stock" — comprar insumos que NO son para un evento puntual, van al inventario general para usar más adelante en cualquier evento (el usuario NO menciona un evento específico al que vaya la compra, o dice algo como "para tener en stock", "para el depósito"). Se puede financiar desde caja operativa o desde el anticipo de un evento — si es desde un anticipo, cada vez que ese stock se use en algún evento futuro, el sistema le devuelve automáticamente y de forma proporcional la plata a ese anticipo. Si el usuario no aclaró de dónde sale la plata, preguntale (no asumas caja por default):
+  marca, proveedor (opcional), cantidad_envases (número), ml_por_envase (número), precio_unitario_compra (número), fecha_ingreso (YYYY-MM-DD), financiado_por ("caja_operativa" | "anticipos_comprometidos", opcional — si no se especifica no se registra de dónde salió la plata), evento_anticipo_id (obligatorio si financiado_por es anticipos_comprometidos: de qué evento sale ese anticipo), notas (opcional)
+
+- tipo "stock_sobrante" — botellas/envases que SOBRARON de un evento ya realizado (distinto de "compra_stock": acá no se financia nada nuevo, esa plata ya se gastó cuando se hizo la compra original del evento):
+  marca, proveedor (opcional), cantidad_envases (número), ml_por_envase (número), precio_unitario_compra (número, precio original de compra para valorizarlo), origen_evento_id (de qué evento sobró), fecha_ingreso (YYYY-MM-DD), notas (opcional)
 
 - tipo "pago" — cobro recibido de un cliente:
   evento_id, tipo_pago ("seña" | "cuota" | "pago_final"), monto (número), fecha (YYYY-MM-DD), metodo (texto libre, ej "transferencia"), cuenta_destino ("anticipos_comprometidos" si el evento todavía no pasó, "caja_operativa" si ya pasó/está en curso/finalizó), notas (opcional)
@@ -94,9 +100,6 @@ Cuando el usuario ya confirmó, llamás a la única herramienta disponible, "eje
 
 - tipo "staff" — personal contratado para un evento:
   evento_id, rol ("bartender" | "bachero" | "runner"), nombre_persona (opcional), cantidad (número), costo_unitario (número, costo por persona)
-
-- tipo "stock_sobrante" — botellas/envases que sobraron de un evento:
-  marca, proveedor (opcional), cantidad_envases (número), ml_por_envase (número), precio_unitario_compra (número, precio original de compra para valorizarlo), origen_evento_id (de qué evento sobró), fecha_ingreso (YYYY-MM-DD), notas (opcional)
 
 - tipo "inversion" — compra de un bien de uso del negocio (vasos, equipamiento), financiada desde caja o desde el anticipo de un evento puntual. NO tiene plan fijo de amortización — si el usuario pide "amortizar en N eventos", ignorá esa parte, el autoalquiler se cobra libre por evento con el tipo "autoalquiler":
   nombre, descripcion (opcional), monto_total (número), fecha_compra (YYYY-MM-DD), cuenta_origen ("caja_operativa" | "anticipos_comprometidos"), evento_origen_id (obligatorio si cuenta_origen es anticipos_comprometidos), notas (opcional)
@@ -119,7 +122,11 @@ REGLAS — MUY IMPORTANTES:
 
 5. Nunca inventes un evento_id, inversion_id, o cualquier dato que no esté en el CONTEXTO de arriba o que no te haya dado el usuario. Si no encontrás el evento o la inversión que el usuario describe, decíselo y pedile que aclare.
 
-6. Sé conciso. Los resúmenes de confirmación deben ser una o dos oraciones, con los números y nombres concretos — no expliques cómo funciona el sistema por dentro salvo que sea relevante para una aclaración (como la limitación de gastos extra con anticipos).`
+6. NUNCA le pidas al usuario un ID directamente (ni de evento, ni de inversión, ni de nada) — el usuario no los tiene ni tiene por qué tenerlos. Identificá siempre por nombre, fecha o descripción, buscando la coincidencia en el CONTEXTO de arriba. Si hay ambigüedad, preguntá por nombre/fecha, nunca "pasame el ID".
+
+7. Para distinguir "compra" de "compra_stock": si el usuario dice explícitamente para qué evento es la compra (nombra un evento, dice "para el sábado", etc), es "compra". Si no menciona ningún evento, o dice explícitamente que es para stock/depósito/inventario, es "compra_stock" — y ahí preguntale de dónde sale la plata si no lo dijo (caja operativa, o el anticipo de qué evento).
+
+8. Sé conciso. Los resúmenes de confirmación deben ser una o dos oraciones, con los números y nombres concretos — no expliques cómo funciona el sistema por dentro salvo que sea relevante para una aclaración (como la limitación de gastos extra con anticipos, o cómo se devuelve la plata del stock financiado con anticipo).`
 }
 
 // ─── Extracción defensiva de "datos": ya no hay un JSON Schema estricto
@@ -204,6 +211,27 @@ async function ejecutarHerramienta(tipo: string, datos: Record<string, unknown>)
       if (res.error) return { ok: false, mensaje: res.error }
       const total = cantidad * costo_unitario
       return { ok: true, mensaje: `Listo, registré ${cantidad} ${rol}${cantidad !== 1 ? 's' : ''}${nombrePersona ? ` (${nombrePersona})` : ''} a $${costo_unitario.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}).` }
+    }
+    case 'compra_stock': {
+      const req = faltantes(datos, ['marca', 'fecha_ingreso'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const cantidad_envases = num(datos, 'cantidad_envases')
+      if (!Number.isFinite(cantidad_envases)) return { ok: false, mensaje: 'Falta la cantidad de envases.' }
+      const marca = str(datos, 'marca')
+      const financiadoPor = strOrNull(datos, 'financiado_por') as 'caja_operativa' | 'anticipos_comprometidos' | null
+      const eventoAnticipoId = strOrNull(datos, 'evento_anticipo_id')
+      if (financiadoPor === 'anticipos_comprometidos' && !eventoAnticipoId) {
+        return { ok: false, mensaje: 'Falta de qué evento sale el anticipo que financia esta compra de stock.' }
+      }
+      const res = await agregarStock({
+        producto_id: null, marca, proveedor: str(datos, 'proveedor'), cantidad_envases, ml_por_envase: num(datos, 'ml_por_envase') || 0,
+        precio_unitario_compra: num(datos, 'precio_unitario_compra') || 0, fecha_ingreso: str(datos, 'fecha_ingreso'),
+        origen_evento_id: null, tipo: 'ajuste', notas: strOrNull(datos, 'notas') ?? '',
+        financiado_por: financiadoPor, evento_anticipo_id: financiadoPor === 'anticipos_comprometidos' ? eventoAnticipoId : null,
+      })
+      if (res.error) return { ok: false, mensaje: res.error }
+      const origen = financiadoPor === 'anticipos_comprometidos' ? 'el anticipo de ese evento' : financiadoPor === 'caja_operativa' ? 'caja operativa' : 'sin registrar de dónde salió la plata'
+      return { ok: true, mensaje: `Listo, cargué ${cantidad_envases} ${marca} como stock nuevo, financiado desde ${origen}.` }
     }
     case 'stock_sobrante': {
       const req = faltantes(datos, ['marca', 'origen_evento_id', 'fecha_ingreso'])
