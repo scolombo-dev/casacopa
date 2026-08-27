@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-27 — Asistente de chat: la ejecución nunca puede depender de que Claude "decida" ejecutar
+
+**Bug reportado por el usuario:** al confirmar una carga de stock de prueba (10 Fernet), el asistente respondió dos veces seguidas que ya estaba cargado (con ✅, como si fuera el resultado de la herramienta) sin haber llamado a la herramienta ninguna de las dos veces. Recién la tercera vez la ejecutó de verdad.
+
+**Causa raíz:** el diseño original (ver decisión del 26/08 más abajo) hacía que la ejecución real ocurriera cuando Claude, en el turno posterior a mostrar el resumen "CONFIRMAR:", detectaba por sí mismo que el mensaje del usuario era una confirmación y volvía a llamar a la herramienta — que en ese momento SÍ ejecutaba. No había ninguna garantía de que el modelo hiciera eso: podía, en cambio, generar directamente el texto de éxito sin invocar nada (alucinación).
+
+**Corrección:** se separó completamente "proponer" de "ejecutar". La herramienta de Claude (renombrada `proponer_accion`) ahora nunca ejecuta nada — solo le devuelve al frontend el `tipo`/`datos` de la acción propuesta junto con el resumen. La ejecución real vive en un endpoint nuevo y determinístico, `POST /api/chat/ejecutar`, que corre la server action correspondiente directo en el servidor. Lo dispara el botón "Confirmar" (o una frase corta de confirmación tipeada, detectada por regex del lado del frontend) — nunca Claude. El chat principal (`POST /api/chat`) jamás vuelve a ejecutar una acción financiera; solo propone o pregunta.
+
+**Refuerzo en el prompt:** se agregó una regla explícita prohibiéndole a Claude escribir "listo"/"ya se guardó"/✅ en su propio texto — esos mensajes ahora los genera siempre el backend después de una ejecución real, nunca el modelo.
+
+**Por qué importa:** este es un asistente que mueve plata real. Que la confirmación del usuario dispare la ejecución de forma determinística (código, no criterio del modelo) es la única forma de garantizar que "el asistente dijo que lo hizo" y "lo hizo" sean lo mismo.
+
+---
+
 ## 2026-08-26 — Asistente de chat: reusar server actions, no escribir tablas directo
 
 **Contexto:** el pedido original describía que la IA tuviera "acceso de escritura para insertar en: compras, compra_items, pagos_cliente, evento_extras, evento_staff, stock, movimientos_stock, inversiones, inversion_amortizaciones, distribuciones_ganancia, cuentas_movimientos" — es decir, que Claude arme y ejecute los inserts directamente.

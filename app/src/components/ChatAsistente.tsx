@@ -5,13 +5,19 @@ import { useRouter } from 'next/navigation'
 import { MessageCircle, X, Send, Check, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Mensaje = { role: 'user' | 'assistant'; text: string; pendingConfirm?: boolean }
+type AccionPropuesta = { tipo: string; datos: Record<string, unknown> }
+type Mensaje = { role: 'user' | 'assistant'; text: string; pendingConfirm?: boolean; pendingAction?: AccionPropuesta }
 
 const SUGERENCIAS = [
   'Cobré $200.000 de seña del evento García',
   'Compré 24 botellas de Fernet Branca a $8.900 c/u en Distribuidora Norte para el evento del sábado',
   'Sobraron 5 botellas de Smirnoff del evento de ayer',
 ]
+
+// Si el usuario escribe una de estas frases cortas y hay una acción propuesta
+// esperando confirmación, se ejecuta directo (sin volver a pasar por Claude)
+// en vez de mandarla como mensaje de chat.
+const RE_CONFIRMACION = /^(dale|ok|okay|si|sí|confirmar|confirmo|listo|and[aá]|hazlo|hacelo|proced[eé]|ejecutar|ejecuta|hecho)[.!]?$/i
 
 export default function ChatAsistente() {
   const router = useRouter()
@@ -29,6 +35,17 @@ export default function ChatAsistente() {
 
   async function enviar(texto: string) {
     if (!texto.trim() || cargando) return
+
+    // Si el último mensaje del asistente dejó una acción propuesta y lo que
+    // el usuario tipeó es una confirmación corta, ejecutamos directo — no
+    // le devolvemos la decisión a Claude (así no puede "olvidarse" de
+    // ejecutar y decir que ya está sin haberlo hecho).
+    const ultimo = mensajes[mensajes.length - 1]
+    if (ultimo?.role === 'assistant' && ultimo.pendingConfirm && ultimo.pendingAction && RE_CONFIRMACION.test(texto.trim())) {
+      await confirmarAccion(ultimo.pendingAction, texto.trim())
+      return
+    }
+
     const historialNuevo = [...mensajes, { role: 'user' as const, text: texto.trim() }]
     setMensajes(historialNuevo)
     setInput('')
@@ -42,7 +59,28 @@ export default function ChatAsistente() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error inesperado.'); return }
-      setMensajes(h => [...h, { role: 'assistant', text: data.text, pendingConfirm: data.pendingConfirm }])
+      setMensajes(h => [...h, { role: 'assistant', text: data.text, pendingConfirm: data.pendingConfirm, pendingAction: data.pendingAction }])
+    } catch {
+      setError('Error de red. Verificá tu conexión.')
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  async function confirmarAccion(accion: AccionPropuesta, textoUsuario: string = 'Confirmar') {
+    setMensajes(h => [...h, { role: 'user', text: textoUsuario }])
+    setInput('')
+    setCargando(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/chat/ejecutar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(accion),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Error inesperado.'); return }
+      setMensajes(h => [...h, { role: 'assistant', text: data.text }])
       if (data.executed) router.refresh()
     } catch {
       setError('Error de red. Verificá tu conexión.')
@@ -107,10 +145,10 @@ export default function ChatAsistente() {
                   >
                     {m.text}
                   </div>
-                  {m.role === 'assistant' && m.pendingConfirm && i === mensajes.length - 1 && (
+                  {m.role === 'assistant' && m.pendingConfirm && m.pendingAction && i === mensajes.length - 1 && (
                     <div className="flex gap-2 mt-2">
                       <button
-                        onClick={() => enviar('Confirmar')}
+                        onClick={() => confirmarAccion(m.pendingAction!)}
                         disabled={cargando}
                         className="flex items-center gap-1 text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-50"
                       >

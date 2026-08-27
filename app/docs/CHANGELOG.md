@@ -2,6 +2,18 @@
 
 ---
 
+## [0.6.3] — 2026-08-27
+
+### Corrección crítica: el asistente decía "listo" sin haber ejecutado la acción
+
+- Bug reportado por el usuario: al confirmar una carga de stock, el asistente respondió dos veces que ya estaba hecho (con ✅) sin haber llamado a la herramienta — alucinación de éxito. La tercera vez sí la ejecutó
+- Causa: la ejecución real dependía de que Claude, en un turno posterior a la propuesta, "decidiera" volver a llamar a la herramienta al detectar la confirmación del usuario en texto libre — nada garantizaba que lo hiciera, y el modelo podía generar el mensaje de éxito sin haber llamado a nada
+- Rediseño: la herramienta (renombrada `proponer_accion`) ahora SOLO propone — nunca ejecuta. La ejecución real pasa por un endpoint nuevo y determinístico (`POST /api/chat/ejecutar`) que corre la acción directo en el servidor, sin volver a preguntarle a Claude. Lo dispara el botón "Confirmar" (o texto corto tipo "dale"/"sí"/"ok" detectado del lado del frontend), nunca el modelo
+- El asistente ya no puede escribir "listo"/✅ por su cuenta — esos mensajes ahora los genera siempre el backend, después de la ejecución real. Reforzado explícitamente en el system prompt
+- Archivos: `src/app/api/chat/acciones.ts` (nuevo, lógica de ejecución compartida), `src/app/api/chat/ejecutar/route.ts` (nuevo endpoint), `src/app/api/chat/route.ts` y `src/components/ChatAsistente.tsx` (actualizados)
+
+---
+
 ## [0.6.2] — 2026-08-26
 
 ### Asistente: distinguir compra para evento vs. compra de stock general
