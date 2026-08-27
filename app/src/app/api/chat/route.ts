@@ -9,163 +9,31 @@ import { crearInversion, amortizarInversion } from '@/modules/inversiones/action
 import { crearReparto } from '@/app/eventos/[id]/resultado/actions'
 import type { CategoriaExtra } from '@/lib/types'
 
-// ─── Herramientas: cada una envuelve una server action ya existente y
-// auditada. El chat nunca inserta filas sueltas a mano — así reusa toda la
-// lógica financiera (débitos automáticos, links al libro de cuentas, etc.)
-// en vez de reimplementarla y arriesgarse a los mismos bugs que ya se
-// corrigieron en el resto del sistema.
+// ─── Una sola herramienta genérica y liviana. Nada de un schema JSON
+// estricto por cada tipo de operación (eso fue lo que tiró "schema too
+// complex" con 8 tools en modo strict) — qué campos van dentro de "datos"
+// según el "tipo" se explica en texto plano en el system prompt, y el
+// backend valida/completa lo que falta antes de llamar a la server action.
+// El chat nunca inserta filas sueltas a mano — reusa la misma lógica
+// financiera ya auditada del resto del sistema.
 
 const TOOLS: Anthropic.Tool[] = [
   {
-    name: 'registrar_compra',
-    description: 'Registra una compra real de un insumo para un evento (botellas, bebidas, hielo, etc. comprado a un proveedor). Descuenta el total de caja operativa automáticamente.',
-    strict: true,
+    name: 'ejecutar_accion',
+    description: 'Ejecuta la operación financiera u operativa que el usuario ya confirmó. Los campos que van dentro de "datos" dependen de "tipo" — están explicados en las instrucciones.',
     input_schema: {
       type: 'object',
       properties: {
-        evento_id: { type: 'string', description: 'ID del evento al que corresponde la compra' },
-        marca: { type: 'string', description: 'Marca o nombre del producto comprado' },
-        proveedor: { type: 'string', description: 'Nombre del proveedor o distribuidora' },
-        presentacion: { type: 'string', description: 'Formato del envase individual, ej: "750ml", "1L", "354ml"' },
-        ml_por_envase: { type: 'integer', description: 'Mililitros por envase individual' },
-        cantidad: { type: 'integer', description: 'Cantidad de unidades compradas' },
-        precio_unitario_real: { type: 'integer', description: 'Precio pagado por unidad en pesos argentinos, sin decimales' },
-        fecha_compra: { type: 'string', description: 'Fecha de la compra, formato YYYY-MM-DD' },
-      },
-      required: ['evento_id', 'marca', 'proveedor', 'presentacion', 'ml_por_envase', 'cantidad', 'precio_unitario_real', 'fecha_compra'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'registrar_pago',
-    description: 'Registra un pago o cobro recibido de un cliente para un evento (seña, cuota o pago final).',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        evento_id: { type: 'string' },
-        tipo: { type: 'string', enum: ['seña', 'cuota', 'pago_final'] },
-        monto: { type: 'integer' },
-        fecha: { type: 'string', description: 'YYYY-MM-DD' },
-        metodo: { type: 'string', description: 'Ej: transferencia, efectivo' },
-        cuenta_destino: {
+        tipo: {
           type: 'string',
-          enum: ['caja_operativa', 'anticipos_comprometidos'],
-          description: 'anticipos_comprometidos si el evento todavía no pasó (es un anticipo); caja_operativa si el evento ya pasó, está en curso o finalizado',
+          enum: ['compra', 'pago', 'gasto_extra', 'staff', 'stock_sobrante', 'inversion', 'autoalquiler', 'distribucion_ganancia'],
         },
-        notas: { type: ['string', 'null'] },
+        datos: {
+          type: 'object',
+          description: 'Los campos de la operación, según el tipo (ver instrucciones).',
+        },
       },
-      required: ['evento_id', 'tipo', 'monto', 'fecha', 'metodo', 'cuenta_destino', 'notas'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'registrar_gasto_extra',
-    description: 'Registra un gasto extra de un evento (hielo, vasos alquilados, transporte, imprevistos, etc). Siempre se descuenta de caja operativa — los gastos extra no tienen forma de financiarse desde un anticipo puntual todavía.',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        evento_id: { type: 'string' },
-        concepto: { type: 'string' },
-        monto: { type: 'integer' },
-        categoria: { type: 'string', enum: ['transporte', 'insumos_extra', 'equipamiento', 'decoracion', 'otros'] },
-        fecha: { type: 'string' },
-        notas: { type: ['string', 'null'] },
-      },
-      required: ['evento_id', 'concepto', 'monto', 'categoria', 'fecha', 'notas'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'registrar_staff',
-    description: 'Registra personal contratado para un evento (bartender, bachero o runner).',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        evento_id: { type: 'string' },
-        rol: { type: 'string', enum: ['bartender', 'bachero', 'runner'] },
-        nombre_persona: { type: ['string', 'null'] },
-        cantidad: { type: 'integer' },
-        costo_unitario: { type: 'integer', description: 'Costo por persona' },
-      },
-      required: ['evento_id', 'rol', 'nombre_persona', 'cantidad', 'costo_unitario'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'registrar_stock_sobrante',
-    description: 'Registra botellas o envases que sobraron de un evento y quedan en stock para usar en otro.',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        marca: { type: 'string' },
-        proveedor: { type: ['string', 'null'] },
-        cantidad_envases: { type: 'integer' },
-        ml_por_envase: { type: 'integer' },
-        precio_unitario_compra: { type: 'integer', description: 'Precio unitario al que se había comprado originalmente, para valorizar el stock' },
-        origen_evento_id: { type: 'string', description: 'ID del evento del que sobró' },
-        fecha_ingreso: { type: 'string' },
-        notas: { type: ['string', 'null'] },
-      },
-      required: ['marca', 'proveedor', 'cantidad_envases', 'ml_por_envase', 'precio_unitario_compra', 'origen_evento_id', 'fecha_ingreso', 'notas'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'crear_inversion',
-    description: 'Registra la compra de un bien de uso / inversión del negocio (vasos, equipamiento, etc), financiada desde caja o desde el anticipo de un evento puntual. No tiene plan fijo de amortización — si el usuario pide "amortizar en N eventos", ignorá esa parte: el autoalquiler se cobra libre por evento a medida que se usa, con la herramienta cobrar_autoalquiler.',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        nombre: { type: 'string' },
-        descripcion: { type: ['string', 'null'] },
-        monto_total: { type: 'integer' },
-        fecha_compra: { type: 'string' },
-        cuenta_origen: { type: 'string', enum: ['caja_operativa', 'anticipos_comprometidos'] },
-        evento_origen_id: { type: ['string', 'null'], description: 'Obligatorio si cuenta_origen es anticipos_comprometidos: de qué evento sale la plata' },
-        notas: { type: ['string', 'null'] },
-      },
-      required: ['nombre', 'descripcion', 'monto_total', 'fecha_compra', 'cuenta_origen', 'evento_origen_id', 'notas'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'cobrar_autoalquiler',
-    description: 'Cobra autoalquiler a un evento por usar un bien/inversión que ya existe (ej: los vasos que se compraron para otro evento).',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        inversion_id: { type: 'string', description: 'ID de la inversión, tomado del contexto' },
-        evento_id: { type: 'string', description: 'Evento al que se le cobra — el que usó el bien' },
-        monto: { type: 'integer' },
-        fecha: { type: 'string' },
-        notas: { type: ['string', 'null'] },
-      },
-      required: ['inversion_id', 'evento_id', 'monto', 'fecha', 'notas'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'registrar_distribucion_ganancia',
-    description: 'Registra una distribución de la ganancia de un evento hacia un destinatario (socio, salón, etc). Descuenta de ganancia acumulada. El evento tiene que estar CERRADO y no se puede superar su ganancia — si no está cerrado, la acción va a fallar y hay que avisarle al usuario.',
-    strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        evento_id: { type: 'string' },
-        destinatario: { type: 'string' },
-        monto: { type: 'integer' },
-        fecha: { type: 'string' },
-        metodo: { type: 'string', enum: ['transferencia', 'efectivo'] },
-        notas: { type: ['string', 'null'] },
-      },
-      required: ['evento_id', 'destinatario', 'monto', 'fecha', 'metodo', 'notas'],
-      additionalProperties: false,
+      required: ['tipo', 'datos'],
     },
   },
 ]
@@ -213,9 +81,35 @@ Las 5 cuentas financieras del negocio son: caja operativa, anticipos comprometid
 CONTEXTO ACTUAL DE LA BASE DE DATOS:
 ${contexto}
 
+Cuando el usuario ya confirmó, llamás a la única herramienta disponible, "ejecutar_accion", con un "tipo" y un objeto "datos" adentro. Estos son los tipos válidos y qué campos va cada uno en "datos" (los que dicen "opcional" podés omitirlos):
+
+- tipo "compra" — comprar un insumo para un evento (se descuenta de caja operativa):
+  evento_id, marca, proveedor, presentacion (ej "750ml"), ml_por_envase (número), cantidad (número), precio_unitario_real (número, precio por unidad), fecha_compra (YYYY-MM-DD)
+
+- tipo "pago" — cobro recibido de un cliente:
+  evento_id, tipo_pago ("seña" | "cuota" | "pago_final"), monto (número), fecha (YYYY-MM-DD), metodo (texto libre, ej "transferencia"), cuenta_destino ("anticipos_comprometidos" si el evento todavía no pasó, "caja_operativa" si ya pasó/está en curso/finalizó), notas (opcional)
+
+- tipo "gasto_extra" — gasto extra de un evento (hielo, vasos, transporte, etc — SIEMPRE se descuenta de caja operativa, no existe forma de financiarlo desde un anticipo puntual):
+  evento_id, concepto, monto (número), categoria ("transporte" | "insumos_extra" | "equipamiento" | "decoracion" | "otros"), fecha (YYYY-MM-DD), notas (opcional)
+
+- tipo "staff" — personal contratado para un evento:
+  evento_id, rol ("bartender" | "bachero" | "runner"), nombre_persona (opcional), cantidad (número), costo_unitario (número, costo por persona)
+
+- tipo "stock_sobrante" — botellas/envases que sobraron de un evento:
+  marca, proveedor (opcional), cantidad_envases (número), ml_por_envase (número), precio_unitario_compra (número, precio original de compra para valorizarlo), origen_evento_id (de qué evento sobró), fecha_ingreso (YYYY-MM-DD), notas (opcional)
+
+- tipo "inversion" — compra de un bien de uso del negocio (vasos, equipamiento), financiada desde caja o desde el anticipo de un evento puntual. NO tiene plan fijo de amortización — si el usuario pide "amortizar en N eventos", ignorá esa parte, el autoalquiler se cobra libre por evento con el tipo "autoalquiler":
+  nombre, descripcion (opcional), monto_total (número), fecha_compra (YYYY-MM-DD), cuenta_origen ("caja_operativa" | "anticipos_comprometidos"), evento_origen_id (obligatorio si cuenta_origen es anticipos_comprometidos), notas (opcional)
+
+- tipo "autoalquiler" — cobrarle a un evento por usar un bien/inversión que ya existe:
+  inversion_id (del CONTEXTO), evento_id (el que usó el bien), monto (número), fecha (YYYY-MM-DD), notas (opcional)
+
+- tipo "distribucion_ganancia" — repartir la ganancia de un evento YA CERRADO hacia un destinatario (socio, salón, etc). Descuenta de ganancia acumulada, no puede superar la ganancia del evento. El evento TIENE que estar cerrado (mirá el CONTEXTO) — si no lo está, avisale al usuario en vez de proponer esta acción:
+  evento_id, destinatario, monto (número), fecha (YYYY-MM-DD), metodo ("transferencia" | "efectivo"), notas (opcional)
+
 REGLAS — MUY IMPORTANTES:
 
-1. NUNCA llames a una herramienta en el mismo turno en que presentás una propuesta por primera vez. Primero mostrale al usuario un resumen claro de lo que vas a hacer y preguntale si confirma. Recién cuando el usuario confirme explícitamente en un mensaje posterior (dice algo como "dale", "ok", "sí", "confirmar", "listo", "andá") podés llamar a la herramienta.
+1. NUNCA llames a "ejecutar_accion" en el mismo turno en que presentás una propuesta por primera vez. Primero mostrale al usuario un resumen claro de lo que vas a hacer y preguntale si confirma. Recién cuando el usuario confirme explícitamente en un mensaje posterior (dice algo como "dale", "ok", "sí", "confirmar", "listo", "andá") podés llamar a la herramienta.
 
 2. Cuando muestres un resumen esperando confirmación (paso 1), tu mensaje de texto tiene que empezar EXACTAMENTE con "CONFIRMAR:" (sin comillas) seguido del resumen. Ejemplo: "CONFIRMAR: Voy a registrar la compra de 24 botellas de Fernet Branca en Distribuidora Norte a $8.900 c/u (total $213.600) para el evento Cohen del 6/12, descontado de caja operativa. ¿Confirmás?"
 
@@ -225,82 +119,148 @@ REGLAS — MUY IMPORTANTES:
 
 5. Nunca inventes un evento_id, inversion_id, o cualquier dato que no esté en el CONTEXTO de arriba o que no te haya dado el usuario. Si no encontrás el evento o la inversión que el usuario describe, decíselo y pedile que aclare.
 
-6. Los gastos extra (registrar_gasto_extra) siempre se descuentan de caja operativa — el sistema no tiene forma de financiar un gasto extra puntual desde un anticipo todavía. Si el usuario dice "con plata del anticipo de tal evento" para un gasto extra, registralo igual pero aclarale en tu resumen que se va a descontar de caja operativa, no del anticipo, porque esa distinción no existe para gastos extra hoy.
-
-7. Para registrar_distribucion_ganancia, el evento tiene que estar cerrado (mirá el CONTEXTO). Si no lo está, avisale al usuario en vez de proponer la acción.
-
-8. Sé conciso. Los resúmenes de confirmación deben ser una o dos oraciones, con los números y nombres concretos — no expliques cómo funciona el sistema por dentro salvo que sea relevante para la aclaración (como el punto 6).`
+6. Sé conciso. Los resúmenes de confirmación deben ser una o dos oraciones, con los números y nombres concretos — no expliques cómo funciona el sistema por dentro salvo que sea relevante para una aclaración (como la limitación de gastos extra con anticipos).`
 }
 
-// ─── Ejecuta la herramienta que Claude decidió llamar, después de que el
-// usuario ya confirmó. Cada caso llama a la server action real — nunca se
-// escribe directo a una tabla acá.
+// ─── Extracción defensiva de "datos": ya no hay un JSON Schema estricto
+// forzando tipos/campos, así que se valida acá antes de llamar a la server
+// action real (nunca se escribe directo a una tabla en este archivo).
 
-async function ejecutarHerramienta(nombre: string, input: Record<string, unknown>): Promise<{ ok: boolean; mensaje: string }> {
-  switch (nombre) {
-    case 'registrar_compra': {
-      const i = input as { evento_id: string; marca: string; proveedor: string; presentacion: string; ml_por_envase: number; cantidad: number; precio_unitario_real: number; fecha_compra: string }
-      const compra = await crearCompra({ evento_id: i.evento_id, fecha_compra: i.fecha_compra, proveedor_id: null, notas: '' })
+function str(d: Record<string, unknown>, campo: string): string {
+  const v = d[campo]
+  return typeof v === 'string' ? v.trim() : ''
+}
+function strOrNull(d: Record<string, unknown>, campo: string): string | null {
+  const v = str(d, campo)
+  return v || null
+}
+function num(d: Record<string, unknown>, campo: string): number {
+  const v = d[campo]
+  if (typeof v === 'number') return v
+  const n = Number(v)
+  return Number.isFinite(n) ? n : NaN
+}
+function faltantes(d: Record<string, unknown>, campos: string[]): string[] {
+  return campos.filter(c => str(d, c) === '' && !(typeof d[c] === 'number'))
+}
+
+async function ejecutarHerramienta(tipo: string, datos: Record<string, unknown>): Promise<{ ok: boolean; mensaje: string }> {
+  switch (tipo) {
+    case 'compra': {
+      const req = faltantes(datos, ['evento_id', 'marca', 'proveedor', 'presentacion', 'fecha_compra'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const evento_id = str(datos, 'evento_id')
+      const marca = str(datos, 'marca')
+      const proveedor = str(datos, 'proveedor')
+      const cantidad = num(datos, 'cantidad')
+      const precio_unitario_real = num(datos, 'precio_unitario_real')
+      if (!Number.isFinite(cantidad) || !Number.isFinite(precio_unitario_real)) return { ok: false, mensaje: 'Faltan la cantidad o el precio unitario.' }
+      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, notas: '' })
       if (compra.error || !compra.id) return { ok: false, mensaje: compra.error ?? 'No se pudo crear la compra.' }
       const item = await crearItem({
-        compra_id: compra.id, producto_id: null, marca: i.marca, proveedor: i.proveedor,
-        presentacion: i.presentacion, ml_por_envase: i.ml_por_envase, cantidad: i.cantidad, precio_unitario_real: i.precio_unitario_real,
+        compra_id: compra.id, producto_id: null, marca, proveedor,
+        presentacion: str(datos, 'presentacion'), ml_por_envase: num(datos, 'ml_por_envase') || 0, cantidad, precio_unitario_real,
       })
       if (item.error) return { ok: false, mensaje: item.error }
-      const total = i.cantidad * i.precio_unitario_real
-      return { ok: true, mensaje: `Listo, registré la compra de ${i.cantidad} ${i.marca} en ${i.proveedor} a $${i.precio_unitario_real.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}). Se descontó de caja operativa.` }
+      const total = cantidad * precio_unitario_real
+      return { ok: true, mensaje: `Listo, registré la compra de ${cantidad} ${marca} en ${proveedor} a $${precio_unitario_real.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}). Se descontó de caja operativa.` }
     }
-    case 'registrar_pago': {
-      const i = input as { evento_id: string; tipo: 'seña' | 'cuota' | 'pago_final'; monto: number; fecha: string; metodo: string; cuenta_destino: 'caja_operativa' | 'anticipos_comprometidos'; notas: string | null }
-      const res = await crearPago({ evento_id: i.evento_id, tipo: i.tipo, monto: i.monto, fecha: i.fecha, metodo: i.metodo, notas: i.notas ?? '', cuenta_destino: i.cuenta_destino, subcuenta_destino_id: null })
+    case 'pago': {
+      const req = faltantes(datos, ['evento_id', 'tipo_pago', 'fecha', 'metodo', 'cuenta_destino'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const monto = num(datos, 'monto')
+      if (!Number.isFinite(monto)) return { ok: false, mensaje: 'Falta el monto.' }
+      const tipoPago = str(datos, 'tipo_pago') as 'seña' | 'cuota' | 'pago_final'
+      const cuentaDestino = str(datos, 'cuenta_destino') as 'caja_operativa' | 'anticipos_comprometidos'
+      const res = await crearPago({
+        evento_id: str(datos, 'evento_id'), tipo: tipoPago, monto, fecha: str(datos, 'fecha'), metodo: str(datos, 'metodo'),
+        notas: strOrNull(datos, 'notas') ?? '', cuenta_destino: cuentaDestino, subcuenta_destino_id: null,
+      })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, registré el cobro de $${i.monto.toLocaleString('es-AR')} (${i.tipo}) — entró a ${i.cuenta_destino === 'anticipos_comprometidos' ? 'anticipos comprometidos' : 'caja operativa'}.` }
+      return { ok: true, mensaje: `Listo, registré el cobro de $${monto.toLocaleString('es-AR')} (${tipoPago}) — entró a ${cuentaDestino === 'anticipos_comprometidos' ? 'anticipos comprometidos' : 'caja operativa'}.` }
     }
-    case 'registrar_gasto_extra': {
-      const i = input as { evento_id: string; concepto: string; monto: number; categoria: CategoriaExtra; fecha: string; notas: string | null }
-      const res = await crearExtra({ evento_id: i.evento_id, concepto: i.concepto, monto: i.monto, categoria: i.categoria, fecha: i.fecha, notas: i.notas ?? '' })
+    case 'gasto_extra': {
+      const req = faltantes(datos, ['evento_id', 'concepto', 'categoria', 'fecha'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const monto = num(datos, 'monto')
+      if (!Number.isFinite(monto)) return { ok: false, mensaje: 'Falta el monto.' }
+      const concepto = str(datos, 'concepto')
+      const res = await crearExtra({
+        evento_id: str(datos, 'evento_id'), concepto, monto, categoria: str(datos, 'categoria') as CategoriaExtra,
+        fecha: str(datos, 'fecha'), notas: strOrNull(datos, 'notas') ?? '',
+      })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, registré el gasto "${i.concepto}" por $${i.monto.toLocaleString('es-AR')}, descontado de caja operativa.` }
+      return { ok: true, mensaje: `Listo, registré el gasto "${concepto}" por $${monto.toLocaleString('es-AR')}, descontado de caja operativa.` }
     }
-    case 'registrar_staff': {
-      const i = input as { evento_id: string; rol: 'bartender' | 'bachero' | 'runner'; nombre_persona: string | null; cantidad: number; costo_unitario: number }
-      const res = await crearStaff({ evento_id: i.evento_id, rol: i.rol, nombre_persona: i.nombre_persona ?? '', cantidad: i.cantidad, costo_unitario: i.costo_unitario })
+    case 'staff': {
+      const req = faltantes(datos, ['evento_id', 'rol'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const cantidad = num(datos, 'cantidad') || 1
+      const costo_unitario = num(datos, 'costo_unitario')
+      if (!Number.isFinite(costo_unitario)) return { ok: false, mensaje: 'Falta el costo por persona.' }
+      const rol = str(datos, 'rol') as 'bartender' | 'bachero' | 'runner'
+      const nombrePersona = strOrNull(datos, 'nombre_persona')
+      const res = await crearStaff({ evento_id: str(datos, 'evento_id'), rol, nombre_persona: nombrePersona ?? '', cantidad, costo_unitario })
       if (res.error) return { ok: false, mensaje: res.error }
-      const total = i.cantidad * i.costo_unitario
-      return { ok: true, mensaje: `Listo, registré ${i.cantidad} ${i.rol}${i.cantidad !== 1 ? 's' : ''}${i.nombre_persona ? ` (${i.nombre_persona})` : ''} a $${i.costo_unitario.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}).` }
+      const total = cantidad * costo_unitario
+      return { ok: true, mensaje: `Listo, registré ${cantidad} ${rol}${cantidad !== 1 ? 's' : ''}${nombrePersona ? ` (${nombrePersona})` : ''} a $${costo_unitario.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}).` }
     }
-    case 'registrar_stock_sobrante': {
-      const i = input as { marca: string; proveedor: string | null; cantidad_envases: number; ml_por_envase: number; precio_unitario_compra: number; origen_evento_id: string; fecha_ingreso: string; notas: string | null }
+    case 'stock_sobrante': {
+      const req = faltantes(datos, ['marca', 'origen_evento_id', 'fecha_ingreso'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const cantidad_envases = num(datos, 'cantidad_envases')
+      if (!Number.isFinite(cantidad_envases)) return { ok: false, mensaje: 'Falta la cantidad de envases.' }
+      const marca = str(datos, 'marca')
       const res = await agregarStock({
-        producto_id: null, marca: i.marca, proveedor: i.proveedor ?? '', cantidad_envases: i.cantidad_envases, ml_por_envase: i.ml_por_envase,
-        precio_unitario_compra: i.precio_unitario_compra, fecha_ingreso: i.fecha_ingreso, origen_evento_id: i.origen_evento_id, tipo: 'ingreso_sobrante', notas: i.notas ?? '',
+        producto_id: null, marca, proveedor: str(datos, 'proveedor'), cantidad_envases, ml_por_envase: num(datos, 'ml_por_envase') || 0,
+        precio_unitario_compra: num(datos, 'precio_unitario_compra') || 0, fecha_ingreso: str(datos, 'fecha_ingreso'),
+        origen_evento_id: str(datos, 'origen_evento_id'), tipo: 'ingreso_sobrante', notas: strOrNull(datos, 'notas') ?? '',
       })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, cargué ${i.cantidad_envases} ${i.marca} como sobrante en stock.` }
+      return { ok: true, mensaje: `Listo, cargué ${cantidad_envases} ${marca} como sobrante en stock.` }
     }
-    case 'crear_inversion': {
-      const i = input as { nombre: string; descripcion: string | null; monto_total: number; fecha_compra: string; cuenta_origen: 'caja_operativa' | 'anticipos_comprometidos'; evento_origen_id: string | null; notas: string | null }
+    case 'inversion': {
+      const req = faltantes(datos, ['nombre', 'fecha_compra', 'cuenta_origen'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const monto_total = num(datos, 'monto_total')
+      if (!Number.isFinite(monto_total)) return { ok: false, mensaje: 'Falta el monto total.' }
+      const nombre = str(datos, 'nombre')
+      const cuentaOrigen = str(datos, 'cuenta_origen') as 'caja_operativa' | 'anticipos_comprometidos'
+      const eventoOrigenId = strOrNull(datos, 'evento_origen_id')
+      if (cuentaOrigen === 'anticipos_comprometidos' && !eventoOrigenId) return { ok: false, mensaje: 'Falta de qué evento sale el anticipo que financia la inversión.' }
       const res = await crearInversion({
-        nombre: i.nombre, descripcion: i.descripcion ?? '', monto_total: i.monto_total, fecha_compra: i.fecha_compra,
-        cuenta_origen: i.cuenta_origen, evento_origen_id: i.evento_origen_id, notas: i.notas ?? '',
+        nombre, descripcion: strOrNull(datos, 'descripcion') ?? '', monto_total, fecha_compra: str(datos, 'fecha_compra'),
+        cuenta_origen: cuentaOrigen, evento_origen_id: eventoOrigenId, notas: strOrNull(datos, 'notas') ?? '',
       })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, registré la inversión "${i.nombre}" por $${i.monto_total.toLocaleString('es-AR')}, financiada desde ${i.cuenta_origen === 'anticipos_comprometidos' ? 'el anticipo del evento' : 'caja operativa'}.` }
+      return { ok: true, mensaje: `Listo, registré la inversión "${nombre}" por $${monto_total.toLocaleString('es-AR')}, financiada desde ${cuentaOrigen === 'anticipos_comprometidos' ? 'el anticipo del evento' : 'caja operativa'}.` }
     }
-    case 'cobrar_autoalquiler': {
-      const i = input as { inversion_id: string; evento_id: string; monto: number; fecha: string; notas: string | null }
-      const res = await amortizarInversion({ inversion_id: i.inversion_id, evento_id: i.evento_id, monto: i.monto, fecha: i.fecha, notas: i.notas ?? '' })
+    case 'autoalquiler': {
+      const req = faltantes(datos, ['inversion_id', 'evento_id', 'fecha'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const monto = num(datos, 'monto')
+      if (!Number.isFinite(monto)) return { ok: false, mensaje: 'Falta el monto.' }
+      const res = await amortizarInversion({
+        inversion_id: str(datos, 'inversion_id'), evento_id: str(datos, 'evento_id'), monto, fecha: str(datos, 'fecha'), notas: strOrNull(datos, 'notas') ?? '',
+      })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, cobré $${i.monto.toLocaleString('es-AR')} de autoalquiler a ese evento.` }
+      return { ok: true, mensaje: `Listo, cobré $${monto.toLocaleString('es-AR')} de autoalquiler a ese evento.` }
     }
-    case 'registrar_distribucion_ganancia': {
-      const i = input as { evento_id: string; destinatario: string; monto: number; fecha: string; metodo: 'transferencia' | 'efectivo'; notas: string | null }
-      const res = await crearReparto({ evento_id: i.evento_id, destinatario: i.destinatario, monto: i.monto, fecha: i.fecha, metodo: i.metodo, notas: i.notas ?? '' })
+    case 'distribucion_ganancia': {
+      const req = faltantes(datos, ['evento_id', 'destinatario', 'fecha', 'metodo'])
+      if (req.length > 0) return { ok: false, mensaje: `Faltan datos: ${req.join(', ')}.` }
+      const monto = num(datos, 'monto')
+      if (!Number.isFinite(monto)) return { ok: false, mensaje: 'Falta el monto.' }
+      const destinatario = str(datos, 'destinatario')
+      const metodo = str(datos, 'metodo') as 'transferencia' | 'efectivo'
+      const res = await crearReparto({
+        evento_id: str(datos, 'evento_id'), destinatario, monto, fecha: str(datos, 'fecha'), metodo, notas: strOrNull(datos, 'notas') ?? '',
+      })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Listo, registré la distribución de $${i.monto.toLocaleString('es-AR')} a ${i.destinatario} (${i.metodo}), descontado de ganancia acumulada.` }
+      return { ok: true, mensaje: `Listo, registré la distribución de $${monto.toLocaleString('es-AR')} a ${destinatario} (${metodo}), descontado de ganancia acumulada.` }
     }
     default:
-      return { ok: false, mensaje: `Herramienta desconocida: ${nombre}` }
+      return { ok: false, mensaje: `Tipo de acción desconocido: ${tipo}` }
   }
 }
 
@@ -341,7 +301,10 @@ export async function POST(request: NextRequest) {
     const bloqueHerramienta = response.content.find(b => b.type === 'tool_use')
 
     if (bloqueHerramienta && bloqueHerramienta.type === 'tool_use') {
-      const resultado = await ejecutarHerramienta(bloqueHerramienta.name, bloqueHerramienta.input as Record<string, unknown>)
+      const entrada = bloqueHerramienta.input as { tipo?: string; datos?: Record<string, unknown> }
+      const resultado = entrada.tipo && entrada.datos
+        ? await ejecutarHerramienta(entrada.tipo, entrada.datos)
+        : { ok: false, mensaje: 'Claude no mandó los datos de la acción correctamente.' }
       const prefijo = bloqueTexto && bloqueTexto.type === 'text' && bloqueTexto.text.trim() ? `${bloqueTexto.text.trim()}\n\n` : ''
       return NextResponse.json({
         text: resultado.ok ? `${prefijo}✅ ${resultado.mensaje}` : `${prefijo}⚠️ No pude guardarlo: ${resultado.mensaje}`,

@@ -2,6 +2,16 @@
 
 ---
 
+## [0.6.1] — 2026-08-26
+
+### Corrección: el asistente tiraba "Schema is too complex"
+
+- 8 herramientas separadas en modo `strict` (una por tipo de operación, cada una con varios campos tipados/nullable) superaban el límite de complejidad de schema de la API de Claude
+- Reemplazado por una sola herramienta genérica (`ejecutar_accion`, con `tipo` + `datos` libre) — qué campos manda cada tipo se explica en texto plano dentro del system prompt, y el backend valida/completa lo que falta antes de llamar a la server action correspondiente
+- Misma funcionalidad (las 8 operaciones, confirmación previa, mismo criterio de reusar server actions), schema mucho más chico
+
+---
+
 ## [0.6.0] — 2026-08-26
 
 ### Asistente de chat con IA para carga de datos
