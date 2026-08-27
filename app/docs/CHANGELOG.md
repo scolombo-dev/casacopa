@@ -2,6 +2,17 @@
 
 ---
 
+## [0.5.4] — 2026-08-26
+
+### Corrección: "Repuesto" en Anticipos por evento duplicaba el pago original
+
+- Bug de origen (presente desde la migración 022, 14/08): la vista `saldo_anticipos_evento` contaba el propio ingreso del pago del cliente como si fuera un "repuesto" (devolución) al anticipo — todo pago se contaba dos veces, como cobrado y como repuesto, inflando el "Saldo neto" de cada evento
+- Corregido: "repuesto" ahora solo cuenta movimientos que realmente devuelven plata al anticipo (autoalquiler cobrado, inversión cancelada, uso de stock revertido, pago corregido) — nunca el ingreso original
+- Migración `035_corregir_repuesto_anticipos_evento.sql` — **requiere correrse a mano en Supabase**
+- Confirmado con el dueño: ningún evento con anticipo usado se cerró todavía con este bug activo, así que no hay plata real de más en caja operativa que corregir — el arreglo es solo de la vista
+
+---
+
 ## [0.5.3] — 2026-08-25
 
 ### Auditoría completa: confirmaciones y errores silenciosos

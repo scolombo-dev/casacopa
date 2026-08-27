@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-08-26 — Bug de origen en saldo_anticipos_evento: "repuesto" duplicaba el pago
+
+**Bug:** desde que existe la vista `saldo_anticipos_evento` (migración 022, 14/08), la columna "repuesto" sumaba cualquier movimiento con `cuenta_destino = 'anticipos_comprometidos'` para el evento — sin excluir el ingreso del propio pago del cliente, que también entra a esa cuenta. Resultado: cada pago se contaba dos veces (como "cobrado" y como "repuesto"), y el "Saldo neto" de cada evento con anticipo quedaba inflado por el mismo monto que ya estaba cobrado.
+
+**Por qué no se detectó antes:** con "repuesto" = "cobrado" siempre, el número no se veía obviamente mal a simple vista — recién se notó cuando un evento tenía además algo "usado" (una inversión financiada con ese anticipo), y el saldo mostrado no bajaba como se esperaba.
+
+**Corrección:** "repuesto" ahora excluye movimientos `tipo = 'ingreso'` — un repuesto real siempre es `transferencia` (autoalquiler cobrado, inversión cancelada, uso de stock revertido) o, en el caso de `editarPago` para pagos viejos, el patrón reversa-e-inserta. El ingreso original de un pago nunca debe contar como repuesto.
+
+**Impacto en datos reales:** se confirmó con el dueño que ningún evento con anticipo usado se cerró todavía — el bug nunca llegó a inflar un movimiento real de "liberación de anticipo" al cerrar un evento. Solo se corrigió la vista, sin backfill de datos.
+
+---
+
 ## 2026-08-25 — El "borrado real" tiene que distinguir pagos anteriores al libro de cuentas
 
 **Bug:** al arreglar `eliminarPago`/`editarPago` (ver 2026-08-19 más abajo) para que los pagos sin `pago_id` reviertan con un egreso, se asumió que ese egreso siempre tiene un ingreso suelto para compensar. Eso vale para pagos cargados entre el 14/08 (nace el libro de cuentas) y el 19/08 (nace `pago_id`) — pero NO para pagos de antes del 14/08, que la migración 022 clasificó por `cuenta_destino` pero deliberadamente nunca generó movimiento para ellos (decisión documentada en esa misma migración: "no genera movimientos nuevos... los saldos iniciales se cargan a mano"). Borrar uno de esos pagos generaba un egreso real sin ningún ingreso detrás, empujando el saldo de la cuenta a negativo.
