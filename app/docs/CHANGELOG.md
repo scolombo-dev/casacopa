@@ -2,6 +2,18 @@
 
 ---
 
+## [0.6.4] — 2026-08-28
+
+### Corrección: la pantalla de Stock no mostraba nada aunque hubiera datos
+
+- Bug encontrado al probar el asistente: cargó varios lotes de prueba (confirmados con verificación por SQL), pero la pantalla `/stock` seguía mostrando "No hay stock registrado aún" en las tres pestañas (Todos/Con stock/Agotados)
+- Causa real: la migración 022 (14/08) agregó `stock.evento_anticipo_id` como una segunda referencia a `eventos`, además de la ya existente `stock.origen_evento_id`. Con dos relaciones hacia la misma tabla, el `select` de `/stock` que pedía `eventos(id, nombre)` sin aclarar cuál de las dos usar quedó ambiguo — Supabase devuelve un error, y como el código no revisaba ese error, la página simplemente mostraba una lista vacía en silencio
+- Este bug es anterior al asistente de chat — probablemente afectaba a cualquier carga de stock desde que existe `evento_anticipo_id`, pero no se había notado porque nadie había vuelto a probar la pantalla con datos reales desde entonces
+- Corrección: el `select` ahora aclara `eventos!origen_evento_id(id, nombre)`, y se agregó un log de error por si vuelve a fallar una consulta de esta pantalla
+- Archivo: `src/app/stock/page.tsx`
+
+---
+
 ## [0.6.3] — 2026-08-27
 
 ### Corrección crítica: el asistente decía "listo" sin haber ejecutado la acción

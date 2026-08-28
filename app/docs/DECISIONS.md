@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-28 — Bug de origen: `/stock` no mostraba nada por un embed ambiguo a `eventos`
+
+**Bug:** después de arreglar la ejecución del asistente (ver decisión de más arriba, mismo día), el usuario probó cargar stock de prueba y confirmó por SQL que los lotes SÍ se guardaban en la tabla `stock` — pero la pantalla `/stock` seguía mostrando "No hay stock registrado aún" en las tres pestañas, incluso después de un hard refresh.
+
+**Causa raíz:** la migración 022 (14/08, cuentas financieras) agregó `stock.evento_anticipo_id` como una segunda referencia a `eventos`, sumada a la ya existente `stock.origen_evento_id` (migración 004). El `select` de `src/app/stock/page.tsx` pedía `eventos(id, nombre)` sin aclarar cuál de las dos relaciones usar — con dos FKs entre las mismas dos tablas, PostgREST no puede resolver el embed y devuelve un error. El código nunca revisaba ese error (`stock ?? []` lo convertía en lista vacía en silencio), así que la falla era invisible.
+
+**Por qué no se notó antes:** el bug existe desde el 14/08, pero recién ahora, con el asistente de chat, alguien volvió a cargar stock de prueba y a mirar la pantalla con datos reales — antes de eso la tabla estaba vacía por otras razones, así que "no hay stock" parecía simplemente correcto.
+
+**Corrección:** el embed ahora aclara explícitamente qué columna usar: `eventos!origen_evento_id(id, nombre)`. Se agregó también un log del error de esa consulta para que una futura falla similar no vuelva a quedar completamente invisible.
+
+**Lección para el patrón general:** cualquier tabla con MÁS DE UNA foreign key hacia la misma tabla destino (acá `stock` → `eventos` por dos caminos) necesita el hint `tabla!columna_fk(...)` en cualquier embed de Supabase/PostgREST — nunca `tabla(...)` a secas. Antes de escribir un embed nuevo, conviene revisar si la tabla origen tiene más de una FK hacia la tabla que se está embebiendo.
+
+---
+
 ## 2026-08-27 — Asistente de chat: la ejecución nunca puede depender de que Claude "decida" ejecutar
 
 **Bug reportado por el usuario:** al confirmar una carga de stock de prueba (10 Fernet), el asistente respondió dos veces seguidas que ya estaba cargado (con ✅, como si fuera el resultado de la herramienta) sin haber llamado a la herramienta ninguna de las dos veces. Recién la tercera vez la ejecutó de verdad.
