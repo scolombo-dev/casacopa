@@ -232,9 +232,13 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
               {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
             </select>
           )}
-          {cuentaFinanciera && (
+          {cuentaFinanciera ? (
             <p className="text-xs text-gray-400 mt-1">
               Cuando uses este stock en un evento, esa plata vuelve automáticamente a esta cuenta.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 mt-1">
+              Igual se suma a &quot;Stock valorizado&quot; en Finanzas, pero sin saber de qué cuenta salió esa plata.
             </p>
           )}
         </div>

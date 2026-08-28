@@ -2,6 +2,19 @@
 
 ---
 
+## [0.6.5] — 2026-08-28
+
+### Stock sin cuenta de origen ahora sí valoriza "Stock valorizado"
+
+- Decisión del dueño: al cargar stock (manual o por chat) sin decir de qué cuenta sale la plata ("No registrar"), el valor de ese stock ahora SÍ se suma a la cuenta "Stock valorizado" — antes quedaba completamente fuera del libro de las 5 cuentas
+- Técnicamente entra como un movimiento `ingreso` sin cuenta de origen (la misma lógica que un cobro de cliente: plata que aparece sin debitar ninguna cuenta interna), en vez de una `transferencia` desde una cuenta puntual
+- Al usarse ese stock en un evento, la plata sale de "Stock valorizado" como un `egreso` (no hay cuenta a la que devolvérsela, a diferencia del stock financiado que sí vuelve a su cuenta de origen)
+- Esto NO aplica al sobrante que deja un evento (esa plata ya se contó como gasto cuando se pagó la compra original — sumarla de nuevo la contaría dos veces), solo a compras de stock nuevas para el depósito
+- Los lotes de prueba cargados antes de este cambio no se actualizan retroactivamente (son datos de prueba)
+- Archivos: `src/modules/stock/actions.ts` (`agregarStock`, `usarStockEnEvento`, `deshacerUsoStock`, `editarLote`), `src/modules/stock/StockClient.tsx`, `src/app/api/chat/route.ts` y `acciones.ts`
+
+---
+
 ## [0.6.4] — 2026-08-28
 
 ### Corrección: la pantalla de Stock no mostraba nada aunque hubiera datos

@@ -50,19 +50,39 @@ export async function agregarStock(data: {
     notas: data.notas.trim() || null,
   })
 
-  if (data.financiado_por) {
+  // El sobrante que deja un evento (tipo "ingreso_sobrante") NO suma acá:
+  // esa plata ya se debitó de caja al pagar la compra original de ese
+  // evento — sumarla de nuevo la contaría dos veces. Cualquier otro
+  // ingreso de stock (compra para el depósito, con o sin cuenta de origen
+  // conocida) sí valoriza el stock: si se sabe de dónde salió la plata es
+  // una transferencia real desde esa cuenta; si no se sabe, entra igual
+  // como "ingreso" sin origen (la misma lógica que un cobro de cliente:
+  // plata que entra al sistema sin debitar ninguna cuenta interna).
+  if (data.tipo === 'ajuste') {
     const montoTotal = data.cantidad_envases * data.precio_unitario_compra
     if (montoTotal > 0) {
-      await supabase.from('cuentas_movimientos').insert({
-        fecha: data.fecha_ingreso,
-        tipo: 'transferencia',
-        cuenta_origen: data.financiado_por,
-        cuenta_destino: 'stock_valorizado',
-        monto: montoTotal,
-        concepto: `Compra de stock: ${data.marca}`,
-        evento_id: data.evento_anticipo_id || null,
-        stock_id: lote.id,
-      })
+      await supabase.from('cuentas_movimientos').insert(
+        data.financiado_por
+          ? {
+              fecha: data.fecha_ingreso,
+              tipo: 'transferencia',
+              cuenta_origen: data.financiado_por,
+              cuenta_destino: 'stock_valorizado',
+              monto: montoTotal,
+              concepto: `Compra de stock: ${data.marca}`,
+              evento_id: data.evento_anticipo_id || null,
+              stock_id: lote.id,
+            }
+          : {
+              fecha: data.fecha_ingreso,
+              tipo: 'ingreso',
+              cuenta_origen: null,
+              cuenta_destino: 'stock_valorizado',
+              monto: montoTotal,
+              concepto: `Compra de stock (origen no registrado): ${data.marca}`,
+              stock_id: lote.id,
+            }
+      )
     }
   }
 
@@ -88,7 +108,7 @@ export async function usarStockEnEvento(data: {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por')
+    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por, origen_evento_id')
     .eq('id', data.stock_id)
     .single()
 
@@ -125,21 +145,33 @@ export async function usarStockEnEvento(data: {
   })
   if (cierreError) return { error: cierreError.message }
 
-  // Solo se mueve plata en el libro si este lote tiene una cuenta
-  // financiadora registrada (se cargó con agregarStock indicando de dónde
-  // salió la plata). El sobrante que genera guardarCierre no la tiene,
-  // porque esa plata ya se debitó de caja al pagar la compra original —
-  // moverla acá otra vez la contaría dos veces.
-  if (costoTotal > 0 && lote.financiado_por) {
-    await supabase.from('cuentas_movimientos').insert({
-      fecha: data.fecha,
-      tipo: 'transferencia',
-      cuenta_origen: 'stock_valorizado',
-      cuenta_destino: lote.financiado_por,
-      monto: costoTotal,
-      concepto: `Uso de stock (${lote.marca}) en evento`,
-      evento_id: data.evento_id,
-    })
+  // Solo se mueve plata en el libro si este lote valorizaba stock (se
+  // cargó con agregarStock, tipo "ajuste" — ver esa función). El sobrante
+  // que genera guardarCierre (origen_evento_id) no la tiene, porque esa
+  // plata ya se debitó de caja al pagar la compra original — moverla acá
+  // otra vez la contaría dos veces.
+  if (costoTotal > 0 && !lote.origen_evento_id) {
+    await supabase.from('cuentas_movimientos').insert(
+      lote.financiado_por
+        ? {
+            fecha: data.fecha,
+            tipo: 'transferencia',
+            cuenta_origen: 'stock_valorizado',
+            cuenta_destino: lote.financiado_por,
+            monto: costoTotal,
+            concepto: `Uso de stock (${lote.marca}) en evento`,
+            evento_id: data.evento_id,
+          }
+        : {
+            fecha: data.fecha,
+            tipo: 'egreso',
+            cuenta_origen: 'stock_valorizado',
+            cuenta_destino: null,
+            monto: costoTotal,
+            concepto: `Uso de stock (${lote.marca}, origen no registrado) en evento`,
+            evento_id: data.evento_id,
+          }
+    )
   }
 
   revalidatePath(`/eventos/${data.evento_id}/consumo`)
@@ -165,7 +197,7 @@ export async function deshacerUsoStock(cierreId: string) {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, financiado_por')
+    .select('cantidad_envases, financiado_por, origen_evento_id')
     .eq('id', cierre.stock_id)
     .single()
   if (!lote) return { error: 'Lote no encontrado.' }
@@ -186,16 +218,28 @@ export async function deshacerUsoStock(cierreId: string) {
     notas: 'Deshacer uso de stock en evento',
   })
 
-  if (cierre.costo_total > 0 && lote.financiado_por) {
-    await supabase.from('cuentas_movimientos').insert({
-      fecha: hoy,
-      tipo: 'transferencia',
-      cuenta_origen: lote.financiado_por,
-      cuenta_destino: 'stock_valorizado',
-      monto: cierre.costo_total,
-      concepto: `Reverso de uso de stock (${cierre.marca})`,
-      evento_id: cierre.evento_id,
-    })
+  if (cierre.costo_total > 0 && !lote.origen_evento_id) {
+    await supabase.from('cuentas_movimientos').insert(
+      lote.financiado_por
+        ? {
+            fecha: hoy,
+            tipo: 'transferencia',
+            cuenta_origen: lote.financiado_por,
+            cuenta_destino: 'stock_valorizado',
+            monto: cierre.costo_total,
+            concepto: `Reverso de uso de stock (${cierre.marca})`,
+            evento_id: cierre.evento_id,
+          }
+        : {
+            fecha: hoy,
+            tipo: 'ingreso',
+            cuenta_origen: null,
+            cuenta_destino: 'stock_valorizado',
+            monto: cierre.costo_total,
+            concepto: `Reverso de uso de stock (${cierre.marca}, origen no registrado)`,
+            evento_id: cierre.evento_id,
+          }
+    )
   }
 
   const { error } = await supabase.from('cierre_consumo').delete().eq('id', cierreId)
@@ -224,7 +268,7 @@ export async function editarLote(data: {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, financiado_por')
+    .select('cantidad_envases, financiado_por, origen_evento_id')
     .eq('id', data.stock_id)
     .single()
 
@@ -258,9 +302,12 @@ export async function editarLote(data: {
     })
   }
 
-  // Si el lote está financiado y cambió el precio o la cantidad, hay que
-  // mantener sincronizado el monto que quedó "apartado" en stock_valorizado.
-  if (lote.financiado_por) {
+  // Si el lote valoriza stock (financiado o no, ver agregarStock) y cambió
+  // el precio o la cantidad, hay que mantener sincronizado el monto que
+  // quedó "apartado" en stock_valorizado. El sobrante de evento
+  // (origen_evento_id) nunca tiene un movimiento propio, así que no hay
+  // nada que sincronizar ahí.
+  if (!lote.origen_evento_id) {
     const nuevoMonto = data.nueva_cantidad * data.precio_unitario_compra
     const { data: movLigado } = await supabase
       .from('cuentas_movimientos').select('id').eq('stock_id', data.stock_id).maybeSingle()

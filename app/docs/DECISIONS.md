@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-08-28 — Stock sin cuenta de origen conocida SÍ valoriza "Stock valorizado"
+
+**Contexto:** al probar el asistente, el usuario cargó stock de prueba sin registrar de qué cuenta salía la plata (opción "No registrar", ya existía antes del chat en el formulario manual). Notó que la cuenta "Stock valorizado" en Finanzas seguía en cero pese a que el stock sí estaba cargado, y preguntó si eso significaba que no estaba "vinculado".
+
+**Pregunta de negocio:** ¿el valor del stock sin origen conocido debe quedar afuera del libro de las 5 cuentas (comportamiento anterior, consistente con "cada peso sale de una cuenta conocida"), o debe sumarse igual a "Stock valorizado" aunque no se sepa de dónde salió esa plata?
+
+**Decisión del usuario:** que sume siempre, aunque no se sepa el origen.
+
+**Implementación:** en vez de solo generar una `transferencia` cuando hay `financiado_por`, ahora TAMBIÉN se genera un movimiento cuando no lo hay — pero como `ingreso` (sin `cuenta_origen`, igual que un cobro de cliente: plata que entra al sistema sin debitar ninguna cuenta interna) en lugar de `transferencia`. Al consumirse ese stock en un evento, sale de "Stock valorizado" como `egreso` (sin cuenta destino), porque no hay ninguna cuenta puntual a la que devolverle esa plata — a diferencia del stock financiado, que sí vuelve a su cuenta de origen al usarse.
+
+**Lo que NO cambia:** el sobrante que deja un evento (`origen_evento_id` seteado) sigue sin generar ningún movimiento — esa plata ya se contó como gasto de caja al pagar la compra original de ese evento; sumarla de nuevo la contaría dos veces. Esto ya estaba documentado y decidido antes, no se tocó.
+
+**Dato pendiente:** los lotes de prueba que el usuario cargó ANTES de este cambio (varios "Fernet" con `financiado_por` null) no se actualizan retroactivamente — quedan sin movimiento, como quedaron creados. Si se quiere que también cuenten, hace falta una migración de backfill puntual; no se hizo porque son datos de prueba.
+
+---
+
 ## 2026-08-28 — Bug de origen: `/stock` no mostraba nada por un embed ambiguo a `eventos`
 
 **Bug:** después de arreglar la ejecución del asistente (ver decisión de más arriba, mismo día), el usuario probó cargar stock de prueba y confirmó por SQL que los lotes SÍ se guardaban en la tabla `stock` — pero la pantalla `/stock` seguía mostrando "No hay stock registrado aún" en las tres pestañas, incluso después de un hard refresh.

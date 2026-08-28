@@ -113,8 +113,8 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
         financiado_por: financiadoPor, evento_anticipo_id: financiadoPor === 'anticipos_comprometidos' ? eventoAnticipoId : null,
       })
       if (res.error) return { ok: false, mensaje: res.error }
-      const origen = financiadoPor === 'anticipos_comprometidos' ? 'el anticipo de ese evento' : financiadoPor === 'caja_operativa' ? 'caja operativa' : 'sin registrar de dónde salió la plata'
-      return { ok: true, mensaje: `Cargué ${cantidad_envases} ${marca} como stock nuevo, financiado desde ${origen}.` }
+      const origen = financiadoPor === 'anticipos_comprometidos' ? ', financiado desde el anticipo de ese evento' : financiadoPor === 'caja_operativa' ? ', financiado desde caja operativa' : ' (sin saber de qué cuenta salió la plata)'
+      return { ok: true, mensaje: `Cargué ${cantidad_envases} ${marca} como stock nuevo${origen}. Se sumó a "stock valorizado".` }
     }
     case 'stock_sobrante': {
       const req = faltantes(datos, ['marca', 'origen_evento_id', 'fecha_ingreso'])
