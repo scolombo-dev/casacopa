@@ -17,7 +17,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
   const [descripcion, setDescripcion] = useState('')
   const [montoTotal, setMontoTotal] = useState(0)
   const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().split('T')[0])
-  const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera>('caja_operativa')
+  const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera | ''>('')
   const [eventoOrigenId, setEventoOrigenId] = useState('')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +26,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
     e.preventDefault()
     if (!nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (montoTotal <= 0) { setError('El monto debe ser mayor a 0.'); return }
+    if (!cuentaOrigen) { setError('Elegí de dónde sale la plata.'); return }
     if (cuentaOrigen === 'anticipos_comprometidos' && !eventoOrigenId) {
       setError('Elegí de qué evento sale el anticipo.'); return
     }

@@ -5,19 +5,84 @@ import { useRouter } from 'next/navigation'
 import { Lock } from 'lucide-react'
 import { formatARS } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
-import type { Subcuenta } from '@/lib/types'
+import type { Subcuenta, CuentaFinanciera } from '@/lib/types'
+import { CUENTA_LABEL } from '@/lib/constants'
 import { cerrarEventoConReparto } from './actions'
+import { amortizarInversion } from '@/modules/inversiones/actions'
 
 type DestinoProfit = 'ganancia' | 'caja' | 'retiro'
+type InversionSinCobrar = { id: string; nombre: string; cuenta_origen: CuentaFinanciera; monto_pendiente: number }
+
+// ─── Recordatorio: inversiones activas a las que todavía no se les cobró
+// autoalquiler por este evento. Deja explícito a qué cuenta volvería la
+// plata si el usuario decide que este evento sí usó ese activo.
+function RecordatorioInversion({ inversion, eventoId }: { inversion: InversionSinCobrar; eventoId: string }) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [cobrando, setCobrando] = useState(false)
+  const [monto, setMonto] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  function confirmar() {
+    if (monto <= 0) { setError('El monto debe ser mayor a 0.'); return }
+    setError(null)
+    startTransition(async () => {
+      const res = await amortizarInversion({
+        inversion_id: inversion.id, evento_id: eventoId, monto,
+        fecha: new Date().toISOString().split('T')[0], notas: '',
+      })
+      if (res.error) { setError(res.error); return }
+      setCobrando(false)
+      router.refresh()
+    })
+  }
+
+  return (
+    <div className="bg-white border border-amber-200 rounded-lg px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-800 truncate">{inversion.nombre}</p>
+          <p className="text-xs text-gray-500">
+            Pendiente {formatARS(inversion.monto_pendiente)} · si cobrás autoalquiler, la plata vuelve a{' '}
+            <span className="font-medium">{CUENTA_LABEL[inversion.cuenta_origen]}</span>
+          </p>
+        </div>
+        {!cobrando && (
+          <button type="button" onClick={() => setCobrando(true)}
+            className="shrink-0 text-xs font-medium text-amber-700 border border-amber-300 rounded-lg px-2.5 py-1.5 hover:bg-amber-100">
+            Sí, cobrar autoalquiler
+          </button>
+        )}
+      </div>
+      {cobrando && (
+        <div className="mt-2 flex items-center gap-2">
+          <input type="number" min={1} value={monto || ''} placeholder="Monto"
+            onChange={e => setMonto(parseInt(e.target.value) || 0)}
+            className="w-32 border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="button" onClick={confirmar} disabled={pending}
+            className="text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg px-2.5 py-1.5 disabled:opacity-50">
+            {pending ? 'Cobrando…' : 'Confirmar'}
+          </button>
+          <button type="button" onClick={() => setCobrando(false)}
+            className="text-xs text-gray-500 hover:text-gray-700">
+            Cancelar
+          </button>
+        </div>
+      )}
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+    </div>
+  )
+}
 
 export default function CerrarEventoModal({
-  eventoId, estado, resultadoNeto, resumen, subcuentasCaja,
+  eventoId, estado, resultadoNeto, resumen, subcuentasCaja, inversionesSinCobrar,
 }: {
   eventoId: string
   estado: string
   resultadoNeto: number
   resumen: { costoInsumos: number; costoPersonal: number; costoExtras: number; costoAutoalquiler: number }
   subcuentasCaja: Subcuenta[]
+  inversionesSinCobrar: InversionSinCobrar[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -68,6 +133,18 @@ export default function CerrarEventoModal({
       {abierto && (
         <Modal titulo="Cerrar evento" onClose={() => setAbierto(false)}>
           <div className="space-y-4">
+            {inversionesSinCobrar.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm space-y-2">
+                <p className="font-medium text-amber-800">¿Usaste algún activo comprado por el negocio en este evento?</p>
+                <p className="text-xs text-amber-700">Todavía no le cobraste autoalquiler a este evento por ninguna de estas inversiones activas — revisá antes de cerrar:</p>
+                <div className="space-y-2">
+                  {inversionesSinCobrar.map(inv => (
+                    <RecordatorioInversion key={inv.id} inversion={inv} eventoId={eventoId} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm space-y-1">
               <p className="font-medium text-gray-700 mb-1.5">Costos cargados</p>
               <div className="flex justify-between text-gray-500"><span>Insumos</span><span>{formatARS(resumen.costoInsumos)}</span></div>

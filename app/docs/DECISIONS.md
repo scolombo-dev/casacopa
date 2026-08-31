@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-08-31 — Inversiones: sin default de cuenta + recordatorio de autoalquiler al cerrar evento
+
+**Pedido inicial:** "la plata para las inversiones tiene que salir de la cuenta de banco en donde se recibió el anticipo del evento". El mecanismo para esto YA existía (`crearInversion` acepta `cuenta_origen: 'anticipos_comprometidos'` + `evento_origen_id`, y `amortizarInversion` ya devuelve la plata proporcionalmente a esa misma cuenta a medida que se cobra autoalquiler) — pero el formulario de "Nueva inversión" arrancaba con "Caja operativa" preseleccionada por defecto, así que era fácil dejarla financiada mal sin querer si no se tocaba el botón.
+
+**Preguntas de negocio y respuestas del usuario:**
+- ¿Las inversiones sin evento puntual (ej. vasos para el negocio en general) de dónde deberían salir? → "De cualquier cuenta... me gustaría elegir de qué cuenta sacar la plata" — o sea, mantener las dos opciones (caja o anticipo de un evento) disponibles siempre, sin eliminar ninguna.
+- ¿Dónde mostrar el aviso de "a qué cuenta volvería la plata" al usar un activo comprado? → "Recordatorio al cerrar el evento".
+
+**Implementación:**
+1. `InversionForm` (`src/modules/finanzas/InversionesResumen.tsx`) ya no preselecciona `cuenta_origen` — arranca vacío y exige elegir antes de poder guardar. Las dos opciones (caja / anticipo de evento) siguen disponibles.
+2. `CerrarEventoModal` ahora recibe la lista de inversiones activas (`estado='activa'`, `monto_pendiente > 0`) que todavía no tienen un `inversion_amortizaciones` cargado para este evento en particular, y muestra un aviso con cada una: nombre, monto pendiente, y a qué cuenta (`CUENTA_LABEL[cuenta_origen]`) volvería la plata si se cobra autoalquiler — con un botón para cobrarlo ahí mismo (llama a `amortizarInversion` con el `evento_id` ya fijado).
+
+**Lo que NO se hizo:** no hay ninguna detección automática de "qué activo físico se usó en qué evento" — el sistema no tiene ese dato en ningún lado (no existe una tabla de "consumo de bienes de uso" como sí existe `cierre_consumo` para insumos). El aviso muestra TODAS las inversiones activas sin cobrar a este evento y deja la decisión ("¿la usé o no?") en manos del usuario — es un recordatorio, no una detección real.
+
+---
+
 ## 2026-08-28 — Stock sin cuenta de origen conocida SÍ valoriza "Stock valorizado"
 
 **Contexto:** al probar el asistente, el usuario cargó stock de prueba sin registrar de qué cuenta salía la plata (opción "No registrar", ya existía antes del chat en el formulario manual). Notó que la cuenta "Stock valorizado" en Finanzas seguía en cero pese a que el stock sí estaba cargado, y preguntó si eso significaba que no estaba "vinculado".

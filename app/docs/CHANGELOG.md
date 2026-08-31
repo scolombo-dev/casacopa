@@ -2,6 +2,16 @@
 
 ---
 
+## [0.6.6] — 2026-08-31
+
+### Inversiones: sin cuenta de origen por defecto + recordatorio de autoalquiler al cerrar evento
+
+- El formulario "Nueva inversión" (Finanzas) ya no arranca con "Caja operativa" preseleccionada — ahora hay que elegir a propósito entre caja o el anticipo de un evento antes de poder guardar. Esto ya era posible financiar una inversión desde el anticipo de un evento (y que la plata vuelva a esa cuenta a medida que se cobra autoalquiler), pero el default silencioso en "Caja operativa" hacía fácil que quedara financiada mal sin querer
+- Nuevo: al abrir "Cerrar evento", si hay inversiones activas a las que todavía no se les cobró autoalquiler por este evento, aparece un aviso listando cada una con el monto pendiente y a qué cuenta volvería la plata si se cobra — con un botón para cobrarlo ahí mismo, sin salir del modal
+- Archivos: `src/modules/finanzas/InversionesResumen.tsx`, `src/app/eventos/[id]/resultado/CerrarEventoModal.tsx`, `src/app/eventos/[id]/resultado/page.tsx`
+
+---
+
 ## [0.6.5] — 2026-08-28
 
 ### Stock sin cuenta de origen ahora sí valoriza "Stock valorizado"

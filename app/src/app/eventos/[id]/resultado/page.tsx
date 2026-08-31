@@ -22,6 +22,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     { data: reparto },
     { data: amortizaciones },
     { data: subcuentasCaja },
+    { data: inversionesActivas },
   ] = await Promise.all([
     supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_total').eq('id', id).single(),
     supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
@@ -34,6 +35,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     supabase.from('evento_reparto_resultado').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('inversion_amortizaciones').select('*, inversiones(nombre)').eq('evento_id', id).order('fecha'),
     supabase.from('subcuentas').select('*').eq('cuenta_padre', 'caja_operativa').eq('activa', true).order('nombre'),
+    supabase.from('inversiones_resumen').select('id, nombre, cuenta_origen, monto_pendiente').eq('estado', 'activa').gt('monto_pendiente', 0),
   ])
 
   if (!evento) notFound()
@@ -65,6 +67,8 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
   const repartoData = reparto ?? []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const amortizacionesData = (amortizaciones ?? []) as any[]
+  const idsInversionesYaCobradas = new Set(amortizacionesData.map(a => a.inversion_id))
+  const inversionesSinCobrar = (inversionesActivas ?? []).filter(inv => !idsInversionesYaCobradas.has(inv.id))
 
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -242,6 +246,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
                 costoAutoalquiler: fin?.costo_autoalquiler ?? 0,
               }}
               subcuentasCaja={subcuentasCaja ?? []}
+              inversionesSinCobrar={inversionesSinCobrar}
             />
           </div>
           <div className={`flex justify-between items-center px-4 py-4 rounded-xl text-base font-bold ${(fin?.resultado_neto ?? 0) >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
