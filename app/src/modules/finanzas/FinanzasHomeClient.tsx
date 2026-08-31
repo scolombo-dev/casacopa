@@ -69,7 +69,7 @@ export default function FinanzasHomeClient({
             <SubcuentasList subcuentas={subcuentas} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <InversionesResumen inversiones={inversiones} eventos={eventosOpciones} />
+            <InversionesResumen inversiones={inversiones} eventos={eventosOpciones} subcuentas={subcuentas} />
             <AnticiposPorEvento anticipos={anticipos} />
           </div>
         </div>

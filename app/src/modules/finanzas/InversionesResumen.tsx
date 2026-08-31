@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { Plus, Ban } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
-import type { InversionResumen, CuentaFinanciera } from '@/lib/types'
+import type { InversionResumen, CuentaFinanciera, Subcuenta } from '@/lib/types'
 import { crearInversion, amortizarInversion, cancelarInversion } from '@/modules/inversiones/actions'
+import SubcuentaSelect from './SubcuentaSelect'
 
 type EventoOpcion = { id: string; nombre: string }
 
-function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose: () => void }) {
+function InversionForm({ eventos, subcuentas, onClose }: { eventos: EventoOpcion[]; subcuentas: Subcuenta[]; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [nombre, setNombre] = useState('')
@@ -19,6 +20,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
   const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().split('T')[0])
   const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera | ''>('')
   const [eventoOrigenId, setEventoOrigenId] = useState('')
+  const [subcuentaOrigenId, setSubcuentaOrigenId] = useState('')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -33,6 +35,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
         nombre, descripcion, monto_total: montoTotal, fecha_compra: fechaCompra,
         cuenta_origen: cuentaOrigen,
         evento_origen_id: cuentaOrigen === 'anticipos_comprometidos' ? eventoOrigenId : null,
+        subcuenta_origen_id: subcuentaOrigenId || null,
         notas,
       })
       if (res.error) { setError(res.error); return }
@@ -90,6 +93,7 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
           </select>
         </div>
       )}
+      <SubcuentaSelect cuenta={cuentaOrigen || null} subcuentas={subcuentas} value={subcuentaOrigenId} onChange={setSubcuentaOrigenId} label="¿Qué billetera/banco? (opcional)" />
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
         <input value={notas} onChange={e => setNotas(e.target.value)}
@@ -174,7 +178,7 @@ function AmortizarForm({ inversion, eventos, onClose }: { inversion: InversionRe
   )
 }
 
-export default function InversionesResumen({ inversiones, eventos }: { inversiones: InversionResumen[]; eventos: EventoOpcion[] }) {
+export default function InversionesResumen({ inversiones, eventos, subcuentas }: { inversiones: InversionResumen[]; eventos: EventoOpcion[]; subcuentas: Subcuenta[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [modalCrear, setModalCrear] = useState(false)
@@ -250,7 +254,7 @@ export default function InversionesResumen({ inversiones, eventos }: { inversion
 
       {modalCrear && (
         <Modal titulo="Nueva inversión" onClose={() => setModalCrear(false)}>
-          <InversionForm eventos={eventos} onClose={() => setModalCrear(false)} />
+          <InversionForm eventos={eventos} subcuentas={subcuentas} onClose={() => setModalCrear(false)} />
         </Modal>
       )}
 

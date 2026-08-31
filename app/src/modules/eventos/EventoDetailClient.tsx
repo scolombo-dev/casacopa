@@ -9,7 +9,7 @@ import {
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { ESTADO_LABEL, ESTADO_STYLE } from '@/lib/constants'
-import type { EstadoEvento, Propuesta } from '@/lib/types'
+import type { EstadoEvento, Propuesta, Subcuenta } from '@/lib/types'
 import { actualizarEstado, eliminarEvento, chequearEliminarEvento } from './actions'
 import ExportarExcelButton from './ExportarExcelButton'
 import {
@@ -29,11 +29,12 @@ const PROPUESTA_BADGE: Record<string, string> = {
 }
 
 export default function EventoDetailClient({
-  evento, propuestas, recetas,
+  evento, propuestas, recetas, subcuentas,
 }: {
   evento: EventoCompleto
   propuestas: Propuesta[]
   recetas: RecetaMin[]
+  subcuentas: Subcuenta[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -155,8 +156,8 @@ export default function EventoDetailClient({
             )}
           </div>
 
-          <StaffSection eventoId={evento.id} staff={evento.evento_staff} />
-          <ExtrasSection eventoId={evento.id} extras={evento.evento_extras} />
+          <StaffSection eventoId={evento.id} staff={evento.evento_staff} subcuentas={subcuentas} />
+          <ExtrasSection eventoId={evento.id} extras={evento.evento_extras} subcuentas={subcuentas} />
         </div>
       </div>
 

@@ -11,6 +11,7 @@ export async function crearInversion(data: {
   fecha_compra: string
   cuenta_origen: CuentaFinanciera
   evento_origen_id: string | null
+  subcuenta_origen_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -22,6 +23,7 @@ export async function crearInversion(data: {
     fecha_compra: data.fecha_compra,
     cuenta_origen: data.cuenta_origen,
     evento_origen_id: data.evento_origen_id,
+    subcuenta_origen_id: data.subcuenta_origen_id,
     notas: data.notas.trim() || null,
   }).select().single()
   if (error) return { error: error.message }
@@ -30,6 +32,7 @@ export async function crearInversion(data: {
     fecha: data.fecha_compra,
     tipo: 'transferencia',
     cuenta_origen: data.cuenta_origen,
+    subcuenta_origen_id: data.subcuenta_origen_id,
     cuenta_destino: 'inversiones',
     monto: data.monto_total,
     concepto: `Inversión: ${data.nombre}`,
@@ -63,7 +66,7 @@ export async function cancelarInversion(id: string) {
 
   const { data: inversion, error: invError } = await supabase
     .from('inversiones')
-    .select('nombre, cuenta_origen, monto_total, evento_origen_id')
+    .select('nombre, cuenta_origen, monto_total, evento_origen_id, subcuenta_origen_id')
     .eq('id', id)
     .single()
   if (invError || !inversion) return { error: invError?.message ?? 'Inversión no encontrada.' }
@@ -98,6 +101,7 @@ export async function cancelarInversion(id: string) {
       tipo: 'transferencia',
       cuenta_origen: 'inversiones',
       cuenta_destino: inversion.cuenta_origen,
+      subcuenta_destino_id: inversion.subcuenta_origen_id,
       monto: montoPendiente,
       concepto: `Cancelación de inversión: ${inversion.nombre}`,
       inversion_id: id,
@@ -123,7 +127,7 @@ export async function amortizarInversion(data: {
 
   const { data: inversion, error: invError } = await supabase
     .from('inversiones')
-    .select('cuenta_origen, monto_total')
+    .select('cuenta_origen, monto_total, subcuenta_origen_id')
     .eq('id', data.inversion_id)
     .single()
   if (invError || !inversion) return { error: invError?.message ?? 'Inversión no encontrada.' }
@@ -142,6 +146,7 @@ export async function amortizarInversion(data: {
     tipo: 'transferencia',
     cuenta_origen: 'inversiones',
     cuenta_destino: inversion.cuenta_origen,
+    subcuenta_destino_id: inversion.subcuenta_origen_id,
     monto: data.monto,
     concepto: 'Autoalquiler (amortización de inversión)',
     evento_id: data.evento_id,

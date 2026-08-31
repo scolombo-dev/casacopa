@@ -10,7 +10,8 @@ import {
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
 import { agregarStock, editarLote, eliminarLote, obtenerMovimientos, registrarVenta, retirarUsoPropio } from './actions'
-import type { CuentaFinanciera } from '@/lib/types'
+import type { CuentaFinanciera, Subcuenta } from '@/lib/types'
+import SubcuentaSelect from '@/modules/finanzas/SubcuentaSelect'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -74,9 +75,10 @@ function agruparPorInsumo(stock: Lote[]): GrupoInsumo[] {
 
 // ─── Formulario de ingreso de stock ──────────────────────────────────────────
 
-function IngresoForm({ productos, eventos, esSobrante, onClose }: {
+function IngresoForm({ productos, eventos, subcuentas, esSobrante, onClose }: {
   productos: ProductoMin[]
   eventos: EventoMin[]
+  subcuentas: Subcuenta[]
   esSobrante: boolean
   onClose: () => void
 }) {
@@ -96,6 +98,7 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
   const [notas, setNotas] = useState('')
   const [cuentaFinanciera, setCuentaFinanciera] = useState<CuentaFinanciera | ''>('')
   const [eventoAnticipoId, setEventoAnticipoId] = useState('')
+  const [subcuentaFinanciadoraId, setSubcuentaFinanciadoraId] = useState('')
 
   function seleccionarProducto(id: string) {
     setProductoId(id)
@@ -128,6 +131,7 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
         notas,
         financiado_por: cuentaFinanciera || null,
         evento_anticipo_id: cuentaFinanciera === 'anticipos_comprometidos' ? eventoAnticipoId : null,
+        subcuenta_financiadora_id: cuentaFinanciera ? (subcuentaFinanciadoraId || null) : null,
       })
       if (res.error) { setError(res.error); return }
       router.refresh()
@@ -227,11 +231,12 @@ function IngresoForm({ productos, eventos, esSobrante, onClose }: {
           </div>
           {cuentaFinanciera === 'anticipos_comprometidos' && (
             <select value={eventoAnticipoId} onChange={e => setEventoAnticipoId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2">
               <option value="">¿De qué evento?</option>
               {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
             </select>
           )}
+          <SubcuentaSelect cuenta={cuentaFinanciera || null} subcuentas={subcuentas} value={subcuentaFinanciadoraId} onChange={setSubcuentaFinanciadoraId} label="¿Qué billetera/banco?" />
           {cuentaFinanciera ? (
             <p className="text-xs text-gray-400 mt-1">
               Cuando uses este stock en un evento, esa plata vuelve automáticamente a esta cuenta.
@@ -756,10 +761,11 @@ function RetiroForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export default function StockClient({ stock, productos, eventos }: {
+export default function StockClient({ stock, productos, eventos, subcuentas }: {
   stock: Lote[]
   productos: ProductoMin[]
   eventos: EventoMin[]
+  subcuentas: Subcuenta[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -985,6 +991,7 @@ export default function StockClient({ stock, productos, eventos }: {
           <IngresoForm
             productos={productos}
             eventos={eventos}
+            subcuentas={subcuentas}
             esSobrante={false}
             onClose={() => setModalIngreso(false)}
           />
@@ -997,6 +1004,7 @@ export default function StockClient({ stock, productos, eventos }: {
           <IngresoForm
             productos={productos}
             eventos={eventos}
+            subcuentas={subcuentas}
             esSobrante={true}
             onClose={() => setModalSobrante(false)}
           />

@@ -9,6 +9,7 @@ export default async function ComprasPage() {
     { data: eventos },
     { data: proveedores },
     { data: productos },
+    { data: subcuentas },
   ] = await Promise.all([
     supabase
       .from('compras')
@@ -28,6 +29,8 @@ export default async function ComprasPage() {
       .eq('activo', true)
       .order('insumo_base')
       .order('marca'),
+
+    supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
   ])
 
   return (
@@ -36,6 +39,7 @@ export default async function ComprasPage() {
       eventos={eventos ?? []}
       proveedores={proveedores ?? []}
       productos={productos ?? []}
+      subcuentas={subcuentas ?? []}
     />
   )
 }

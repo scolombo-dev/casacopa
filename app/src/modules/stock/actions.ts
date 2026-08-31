@@ -19,6 +19,7 @@ export async function agregarStock(data: {
   notas: string
   financiado_por?: CuentaFinanciera | null
   evento_anticipo_id?: string | null
+  subcuenta_financiadora_id?: string | null
 }) {
   const supabase = createAdminClient()
 
@@ -35,6 +36,7 @@ export async function agregarStock(data: {
       origen_evento_id: data.origen_evento_id || null,
       financiado_por: data.financiado_por || null,
       evento_anticipo_id: data.evento_anticipo_id || null,
+      subcuenta_financiadora_id: data.financiado_por ? (data.subcuenta_financiadora_id || null) : null,
     })
     .select()
     .single()
@@ -67,6 +69,7 @@ export async function agregarStock(data: {
               fecha: data.fecha_ingreso,
               tipo: 'transferencia',
               cuenta_origen: data.financiado_por,
+              subcuenta_origen_id: data.subcuenta_financiadora_id || null,
               cuenta_destino: 'stock_valorizado',
               monto: montoTotal,
               concepto: `Compra de stock: ${data.marca}`,
@@ -108,7 +111,7 @@ export async function usarStockEnEvento(data: {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por, origen_evento_id')
+    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por, origen_evento_id, subcuenta_financiadora_id')
     .eq('id', data.stock_id)
     .single()
 
@@ -158,6 +161,7 @@ export async function usarStockEnEvento(data: {
             tipo: 'transferencia',
             cuenta_origen: 'stock_valorizado',
             cuenta_destino: lote.financiado_por,
+            subcuenta_destino_id: lote.subcuenta_financiadora_id,
             monto: costoTotal,
             concepto: `Uso de stock (${lote.marca}) en evento`,
             evento_id: data.evento_id,
@@ -197,7 +201,7 @@ export async function deshacerUsoStock(cierreId: string) {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, financiado_por, origen_evento_id')
+    .select('cantidad_envases, financiado_por, origen_evento_id, subcuenta_financiadora_id')
     .eq('id', cierre.stock_id)
     .single()
   if (!lote) return { error: 'Lote no encontrado.' }
@@ -225,6 +229,7 @@ export async function deshacerUsoStock(cierreId: string) {
             fecha: hoy,
             tipo: 'transferencia',
             cuenta_origen: lote.financiado_por,
+            subcuenta_origen_id: lote.subcuenta_financiadora_id,
             cuenta_destino: 'stock_valorizado',
             monto: cierre.costo_total,
             concepto: `Reverso de uso de stock (${cierre.marca})`,

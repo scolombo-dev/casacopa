@@ -4,7 +4,7 @@ import StockClient from '@/modules/stock/StockClient'
 export default async function StockPage() {
   const supabase = await createClient()
 
-  const [{ data: stock, error: errorStock }, { data: productos }, { data: eventos }] = await Promise.all([
+  const [{ data: stock, error: errorStock }, { data: productos }, { data: eventos }, { data: subcuentas }] = await Promise.all([
     supabase
       .from('stock')
       .select(`
@@ -24,6 +24,7 @@ export default async function StockPage() {
       .select('id, nombre, fecha')
       .order('fecha', { ascending: false })
       .limit(30),
+    supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
   ])
 
   if (errorStock) {
@@ -35,6 +36,7 @@ export default async function StockPage() {
       stock={stock ?? []}
       productos={productos ?? []}
       eventos={eventos ?? []}
+      subcuentas={subcuentas ?? []}
     />
   )
 }

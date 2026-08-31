@@ -144,6 +144,7 @@ export async function crearStaff(data: {
   nombre_persona: string
   cantidad: number
   costo_unitario: number
+  subcuenta_origen_id: string | null
 }) {
   const supabase = createAdminClient()
   const { error } = await supabase.from('evento_staff').insert({
@@ -152,6 +153,7 @@ export async function crearStaff(data: {
     nombre_persona: data.nombre_persona.trim() || null,
     cantidad: data.cantidad,
     costo_unitario: data.costo_unitario,
+    subcuenta_origen_id: data.subcuenta_origen_id || null,
   })
   if (error) return { error: error.message }
   revalidatePath('/eventos')
@@ -165,6 +167,7 @@ export async function editarStaff(id: string, data: {
   nombre_persona: string
   cantidad: number
   costo_unitario: number
+  subcuenta_origen_id: string | null
 }) {
   const supabase = createAdminClient()
   const { error } = await supabase.from('evento_staff').update({
@@ -172,6 +175,7 @@ export async function editarStaff(id: string, data: {
     nombre_persona: data.nombre_persona.trim() || null,
     cantidad: data.cantidad,
     costo_unitario: data.costo_unitario,
+    subcuenta_origen_id: data.subcuenta_origen_id || null,
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/eventos')
@@ -198,6 +202,7 @@ export async function crearExtra(data: {
   monto: number
   categoria: CategoriaExtra
   fecha: string
+  subcuenta_origen_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -207,6 +212,7 @@ export async function crearExtra(data: {
     monto: data.monto,
     categoria: data.categoria,
     fecha: data.fecha,
+    subcuenta_origen_id: data.subcuenta_origen_id || null,
     notas: data.notas.trim() || null,
   })
   if (error) return { error: error.message }
@@ -221,6 +227,7 @@ export async function editarExtra(id: string, data: {
   monto: number
   categoria: CategoriaExtra
   fecha: string
+  subcuenta_origen_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -229,6 +236,7 @@ export async function editarExtra(id: string, data: {
     monto: data.monto,
     categoria: data.categoria,
     fecha: data.fecha,
+    subcuenta_origen_id: data.subcuenta_origen_id || null,
     notas: data.notas.trim() || null,
   }).eq('id', id)
   if (error) return { error: error.message }

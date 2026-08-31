@@ -12,7 +12,7 @@ import { Modal } from '@/components/Modal'
 import { ESTADO_LABEL, ESTADO_STYLE } from '@/lib/constants'
 import type {
   Evento, EstadoEvento, Propuesta, Receta,
-  EventoTrago, EventoStaff, EventoExtra, RolStaff, CategoriaExtra,
+  EventoTrago, EventoStaff, EventoExtra, RolStaff, CategoriaExtra, Subcuenta,
 } from '@/lib/types'
 import {
   crearEvento, editarEvento, eliminarEvento, actualizarEstado,
@@ -21,6 +21,7 @@ import {
   crearExtra, editarExtra, eliminarExtra,
   chequearEliminarEvento,
 } from './actions'
+import SubcuentaSelect from '@/modules/finanzas/SubcuentaSelect'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
 
@@ -427,7 +428,7 @@ export function EventoForm({
 
 // ─── Sección de Staff ─────────────────────────────────────────────────────────
 
-export function StaffSection({ eventoId, staff }: { eventoId: string; staff: EventoStaff[] }) {
+export function StaffSection({ eventoId, staff, subcuentas }: { eventoId: string; staff: EventoStaff[]; subcuentas: Subcuenta[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [agregando, setAgregando] = useState(false)
@@ -491,6 +492,7 @@ export function StaffSection({ eventoId, staff }: { eventoId: string; staff: Eve
         <StaffForm
           eventoId={eventoId}
           inicial={editando ?? undefined}
+          subcuentas={subcuentas}
           onClose={() => { setAgregando(false); setEditando(null) }}
         />
       )}
@@ -498,21 +500,22 @@ export function StaffSection({ eventoId, staff }: { eventoId: string; staff: Eve
   )
 }
 
-function StaffForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?: EventoStaff; onClose: () => void }) {
+function StaffForm({ eventoId, inicial, subcuentas, onClose }: { eventoId: string; inicial?: EventoStaff; subcuentas: Subcuenta[]; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [rol, setRol] = useState<RolStaff>(inicial?.rol ?? 'bartender')
   const [nombre, setNombre] = useState(inicial?.nombre_persona ?? '')
   const [cantidad, setCantidad] = useState(inicial?.cantidad ?? 1)
   const [costo, setCosto] = useState(inicial?.costo_unitario ?? 0)
+  const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     startTransition(async () => {
       const res = inicial
-        ? await editarStaff(inicial.id, { rol, nombre_persona: nombre, cantidad, costo_unitario: costo })
-        : await crearStaff({ evento_id: eventoId, rol, nombre_persona: nombre, cantidad, costo_unitario: costo })
+        ? await editarStaff(inicial.id, { rol, nombre_persona: nombre, cantidad, costo_unitario: costo, subcuenta_origen_id: subcuentaId || null })
+        : await crearStaff({ evento_id: eventoId, rol, nombre_persona: nombre, cantidad, costo_unitario: costo, subcuenta_origen_id: subcuentaId || null })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -545,6 +548,7 @@ function StaffForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?:
             className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
       </div>
+      <SubcuentaSelect cuenta="caja_operativa" subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
       {error && <p className="text-xs text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={pending}
@@ -559,7 +563,7 @@ function StaffForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?:
 
 // ─── Sección de Extras ────────────────────────────────────────────────────────
 
-export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: EventoExtra[] }) {
+export function ExtrasSection({ eventoId, extras, subcuentas }: { eventoId: string; extras: EventoExtra[]; subcuentas: Subcuenta[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [agregando, setAgregando] = useState(false)
@@ -619,6 +623,7 @@ export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: 
         <ExtraForm
           eventoId={eventoId}
           inicial={editando ?? undefined}
+          subcuentas={subcuentas}
           onClose={() => { setAgregando(false); setEditando(null) }}
         />
       )}
@@ -626,13 +631,14 @@ export function ExtrasSection({ eventoId, extras }: { eventoId: string; extras: 
   )
 }
 
-function ExtraForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?: EventoExtra; onClose: () => void }) {
+function ExtraForm({ eventoId, inicial, subcuentas, onClose }: { eventoId: string; inicial?: EventoExtra; subcuentas: Subcuenta[]; onClose: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [concepto, setConcepto] = useState(inicial?.concepto ?? '')
   const [monto, setMonto] = useState(inicial?.monto ?? 0)
   const [categoria, setCategoria] = useState<CategoriaExtra>(inicial?.categoria ?? 'otros')
   const [fecha, setFecha] = useState(inicial?.fecha ?? new Date().toISOString().split('T')[0])
+  const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [notas, setNotas] = useState(inicial?.notas ?? '')
   const [error, setError] = useState<string | null>(null)
 
@@ -641,8 +647,8 @@ function ExtraForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?:
     if (!concepto.trim()) { setError('El concepto es obligatorio.'); return }
     startTransition(async () => {
       const res = inicial
-        ? await editarExtra(inicial.id, { concepto, monto, categoria, fecha, notas })
-        : await crearExtra({ evento_id: eventoId, concepto, monto, categoria, fecha, notas })
+        ? await editarExtra(inicial.id, { concepto, monto, categoria, fecha, subcuenta_origen_id: subcuentaId || null, notas })
+        : await crearExtra({ evento_id: eventoId, concepto, monto, categoria, fecha, subcuenta_origen_id: subcuentaId || null, notas })
       if (res.error) { setError(res.error); return }
       router.refresh()
       onClose()
@@ -680,6 +686,7 @@ function ExtraForm({ eventoId, inicial, onClose }: { eventoId: string; inicial?:
             className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
       </div>
+      <SubcuentaSelect cuenta="caja_operativa" subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
       {error && <p className="text-xs text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={pending}

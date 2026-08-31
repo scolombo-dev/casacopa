@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-08-31 (3) — Subcuenta (billetera/banco) en todo lo que sale de caja
+
+**Pedido:** "es posible que me actualices todos los valores anteriores? quiero ver en la cuenta uala como bajo por el gasto en vasos".
+
+**Causa:** el sistema de subcuentas (billeteras/bancos dentro de "Caja operativa" o "Anticipos comprometidos", migración 024) solo se conectaba desde `crearPago` y `crearMovimientoManual`. Compras para eventos, personal, extras (los tres vía triggers automáticos que sincronizan `cuentas_movimientos` cuando cambia el total en `compras`/`evento_staff`/`evento_extras`), inversiones y stock financiado nunca escribían `subcuenta_origen_id`/`subcuenta_destino_id` — la plata salía de "Caja operativa" en el agregado, pero ninguna billetera puntual bajaba.
+
+**Preguntas de negocio y respuestas:**
+- ¿Agregar el selector solo a inversiones o en todo lo que sale de caja? → "En todo lo que sale de caja".
+- ¿Uala fue la única billetera usada hasta ahora, o hay que revisar caso por caso? → "Usé varias, hay que revisar caso por caso" — pendiente: pedirle al usuario que corra una consulta listando los movimientos históricos sin subcuenta para que diga, uno por uno, cuál corresponde a cada billetera real, antes de armar una migración de backfill.
+
+**Implementación (migración 036):** se agregó `subcuenta_origen_id` a `compras`, `evento_staff`, `evento_extras`, `inversiones`, y `subcuenta_financiadora_id` a `stock` (nombre distinto ahí porque ya existe `financiado_por` con otro propósito — la CUENTA, no la billetera). Los dos triggers de personal/extras ya disparaban con cualquier `UPDATE`, así que solo hacía falta propagar la columna nueva en el `INSERT` a `cuentas_movimientos`; el de compras estaba restringido a `UPDATE OF total, fecha_compra`, así que se amplió para incluir también `subcuenta_origen_id`. Inversiones y stock generan su movimiento desde código de aplicación (no trigger), así que ahí alcanzó con pasar el dato nuevo por las acciones existentes. `inversiones_resumen` se recreó porque usa `i.*`, que en Postgres queda fijo al momento de crear la vista y no recoge columnas agregadas después.
+
+**Consistencia hacia adelante:** cuando una inversión financiada con una billetera puntual se amortiza (autoalquiler) o se cancela, la plata vuelve automáticamente a esa MISMA billetera (`inversion.subcuenta_origen_id`), sin que el usuario tenga que volver a elegirla cada vez. Mismo criterio para stock financiado: al usarse en un evento (o deshacer ese uso), la plata va/vuelve a la billetera que lo financió originalmente (`lote.subcuenta_financiadora_id`).
+
+**Lo que quedó afuera de este cambio:** el asistente de chat no pregunta ni permite elegir billetera todavía (los campos quedan `null` en las acciones que dispara) — se puede agregar después si hace falta, pasando las subcuentas al contexto del chat igual que ya se hace con eventos e inversiones. Tampoco se backfillearon datos históricos — eso depende de que el usuario revise caso por caso cuál billetera correspondía a cada gasto viejo.
+
+---
+
 ## 2026-08-31 (2) — Inversión financiada por anticipos sin evento puntual + movimientos por cuenta
 
 **Pedido:** "Pero quiero seleccionar la cuenta de la cual tomo la inversión. NO me interesa por el momento de qué evento voy a sacar la plata." — seguido de: "quiero ver en los movimientos de la cuenta, como va aumentando y disminuyendo, quedando registro si el gasto fue en inversión, en el alcohol de un evento... también cuando se recupera plata si el activo comprado se amortiza."

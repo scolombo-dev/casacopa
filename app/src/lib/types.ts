@@ -135,6 +135,7 @@ export type EventoStaff = {
   cantidad: number
   costo_unitario: number
   costo_total: number               // columna generada
+  subcuenta_origen_id: string | null
 }
 
 export type EventoExtra = {
@@ -144,6 +145,7 @@ export type EventoExtra = {
   monto: number
   categoria: CategoriaExtra
   fecha: string
+  subcuenta_origen_id: string | null
   notas: string | null
   creado_en: string
 }
@@ -155,6 +157,7 @@ export type Compra = {
   evento_id: string
   fecha_compra: string
   proveedor_id: string | null
+  subcuenta_origen_id: string | null
   total: number
   notas: string | null
   creado_en: string
@@ -296,6 +299,7 @@ export type Inversion = {
   fecha_compra: string
   cuenta_origen: CuentaFinanciera
   evento_origen_id: string | null
+  subcuenta_origen_id: string | null
   estado: EstadoInversion
   notas: string | null
   creado_en: string

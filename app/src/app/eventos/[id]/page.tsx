@@ -6,7 +6,7 @@ export default async function EventoDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: evento }, { data: propuestas }, { data: recetas }] = await Promise.all([
+  const [{ data: evento }, { data: propuestas }, { data: recetas }, { data: subcuentas }] = await Promise.all([
     supabase
       .from('eventos')
       .select(`
@@ -21,6 +21,7 @@ export default async function EventoDetailPage({ params }: { params: Promise<{ i
       .single(),
     supabase.from('propuestas').select('*').eq('activo', true).order('tipo'),
     supabase.from('recetas').select('id, nombre_trago, categoria').eq('activo', true).order('categoria').order('nombre_trago'),
+    supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
   ])
 
   if (!evento) notFound()
@@ -30,6 +31,7 @@ export default async function EventoDetailPage({ params }: { params: Promise<{ i
       evento={evento}
       propuestas={propuestas ?? []}
       recetas={recetas ?? []}
+      subcuentas={subcuentas ?? []}
     />
   )
 }

@@ -2,6 +2,19 @@
 
 ---
 
+## [0.6.8] — 2026-08-31
+
+### Billetera/banco (subcuenta) en todo lo que sale de caja operativa
+
+- Hasta ahora, solo los pagos de clientes y los movimientos manuales quedaban asociados a una billetera/banco específico (subcuenta, ej. "Uala"). Compras para un evento, personal, gastos extra, inversiones y stock financiado con caja descontaban del agregado de "Caja operativa" sin decir de qué billetera salió realmente — por eso el saldo de una subcuenta puntual no reflejaba esos gastos aunque en la realidad sí hubieran salido de ahí
+- Ahora se puede elegir billetera/banco (opcional) al cargar: una compra para un evento, personal, un gasto extra, una inversión, o stock financiado. Cuando una inversión se amortiza (autoalquiler) o se cancela, la plata vuelve automáticamente a la misma billetera de la que salió — sin tener que volver a elegirla
+- Migración 036: agrega `subcuenta_origen_id` a `compras`, `evento_staff`, `evento_extras`, `inversiones`, y `subcuenta_financiadora_id` a `stock`; actualiza los triggers automáticos de compras/personal/extras para propagarlo al movimiento financiero
+- Los movimientos cargados ANTES de esta migración quedan sin billetera asignada — no se actualizan solos (ver DECISIONS.md, requiere revisión caso por caso con el dueño)
+- El asistente de chat todavía no permite elegir billetera por voz/texto — queda pendiente si se quiere en el futuro
+- Archivos: migración `036_subcuenta_en_gastos_caja.sql`; `src/modules/inversiones/actions.ts`, `src/modules/stock/actions.ts`, `src/modules/compras/actions.ts`, `src/modules/eventos/actions.ts`; UI: `InversionesResumen.tsx`, `EventosClient.tsx`, `EventoDetailClient.tsx`, `ComprasClient.tsx`, `StockClient.tsx`; `src/lib/types.ts`
+
+---
+
 ## [0.6.7] — 2026-08-31
 
 ### Inversiones: financiar desde anticipos sin atarlo a un evento puntual + movimientos por cuenta

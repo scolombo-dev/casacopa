@@ -9,6 +9,7 @@ export async function crearCompra(data: {
   evento_id: string
   fecha_compra: string
   proveedor_id: string | null
+  subcuenta_origen_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -18,6 +19,7 @@ export async function crearCompra(data: {
       evento_id: data.evento_id,
       fecha_compra: data.fecha_compra,
       proveedor_id: data.proveedor_id || null,
+      subcuenta_origen_id: data.subcuenta_origen_id || null,
       notas: data.notas.trim() || null,
       total: 0,
     })
@@ -33,6 +35,7 @@ export async function crearCompra(data: {
 export async function editarCompra(id: string, data: {
   fecha_compra: string
   proveedor_id: string | null
+  subcuenta_origen_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -41,6 +44,7 @@ export async function editarCompra(id: string, data: {
     .update({
       fecha_compra: data.fecha_compra,
       proveedor_id: data.proveedor_id || null,
+      subcuenta_origen_id: data.subcuenta_origen_id || null,
       notas: data.notas.trim() || null,
     })
     .eq('id', id)

@@ -45,7 +45,7 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const cantidad = num(datos, 'cantidad')
       const precio_unitario_real = num(datos, 'precio_unitario_real')
       if (!Number.isFinite(cantidad) || !Number.isFinite(precio_unitario_real)) return { ok: false, mensaje: 'Faltan la cantidad o el precio unitario.' }
-      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, notas: '' })
+      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, subcuenta_origen_id: null, notas: '' })
       if (compra.error || !compra.id) return { ok: false, mensaje: compra.error ?? 'No se pudo crear la compra.' }
       const item = await crearItem({
         compra_id: compra.id, producto_id: null, marca, proveedor,
@@ -77,7 +77,7 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const concepto = str(datos, 'concepto')
       const res = await crearExtra({
         evento_id: str(datos, 'evento_id'), concepto, monto, categoria: str(datos, 'categoria') as CategoriaExtra,
-        fecha: str(datos, 'fecha'), notas: strOrNull(datos, 'notas') ?? '',
+        fecha: str(datos, 'fecha'), subcuenta_origen_id: null, notas: strOrNull(datos, 'notas') ?? '',
       })
       if (res.error) return { ok: false, mensaje: res.error }
       return { ok: true, mensaje: `Registré el gasto "${concepto}" por $${monto.toLocaleString('es-AR')}, descontado de caja operativa.` }
@@ -90,7 +90,7 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       if (!Number.isFinite(costo_unitario)) return { ok: false, mensaje: 'Falta el costo por persona.' }
       const rol = str(datos, 'rol') as 'bartender' | 'bachero' | 'runner'
       const nombrePersona = strOrNull(datos, 'nombre_persona')
-      const res = await crearStaff({ evento_id: str(datos, 'evento_id'), rol, nombre_persona: nombrePersona ?? '', cantidad, costo_unitario })
+      const res = await crearStaff({ evento_id: str(datos, 'evento_id'), rol, nombre_persona: nombrePersona ?? '', cantidad, costo_unitario, subcuenta_origen_id: null })
       if (res.error) return { ok: false, mensaje: res.error }
       const total = cantidad * costo_unitario
       return { ok: true, mensaje: `Registré ${cantidad} ${rol}${cantidad !== 1 ? 's' : ''}${nombrePersona ? ` (${nombrePersona})` : ''} a $${costo_unitario.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}).` }
@@ -140,7 +140,7 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const eventoOrigenId = strOrNull(datos, 'evento_origen_id')
       const res = await crearInversion({
         nombre, descripcion: strOrNull(datos, 'descripcion') ?? '', monto_total, fecha_compra: str(datos, 'fecha_compra'),
-        cuenta_origen: cuentaOrigen, evento_origen_id: eventoOrigenId, notas: strOrNull(datos, 'notas') ?? '',
+        cuenta_origen: cuentaOrigen, evento_origen_id: eventoOrigenId, subcuenta_origen_id: null, notas: strOrNull(datos, 'notas') ?? '',
       })
       if (res.error) return { ok: false, mensaje: res.error }
       const origen = cuentaOrigen === 'anticipos_comprometidos'

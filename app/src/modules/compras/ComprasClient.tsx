@@ -8,12 +8,13 @@ import {
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
-import type { Compra, CompraItem, Proveedor, Evento, Producto } from '@/lib/types'
+import type { Compra, CompraItem, Proveedor, Evento, Producto, Subcuenta } from '@/lib/types'
 import {
   crearCompra, editarCompra, eliminarCompra,
   crearItem, editarItem, eliminarItem,
   obtenerInsumosEvento,
 } from './actions'
+import SubcuentaSelect from '@/modules/finanzas/SubcuentaSelect'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
 
@@ -31,10 +32,11 @@ type CompraCompleta = Compra & {
 
 // ─── Formulario de Compra ─────────────────────────────────────────────────────
 
-function CompraForm({ inicial, eventos, proveedores, onClose }: {
+function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
   inicial?: CompraCompleta
   eventos: EventoMin[]
   proveedores: { id: string; nombre: string }[]
+  subcuentas: Subcuenta[]
   onClose: () => void
 }) {
   const router = useRouter()
@@ -44,6 +46,7 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
   const [eventoId, setEventoId] = useState(inicial?.evento_id ?? '')
   const [fecha, setFecha] = useState(inicial?.fecha_compra ?? new Date().toISOString().split('T')[0])
   const [proveedorId, setProveedorId] = useState(inicial?.proveedor_id ?? '')
+  const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [notas, setNotas] = useState(inicial?.notas ?? '')
 
   function handleSubmit(e: React.FormEvent) {
@@ -51,7 +54,7 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
     if (!eventoId) { setError('Seleccioná un evento.'); return }
     setError(null)
     startTransition(async () => {
-      const payload = { fecha_compra: fecha, proveedor_id: proveedorId || null, notas }
+      const payload = { fecha_compra: fecha, proveedor_id: proveedorId || null, subcuenta_origen_id: subcuentaId || null, notas }
       const res = inicial
         ? await editarCompra(inicial.id, payload)
         : await crearCompra({ evento_id: eventoId, ...payload })
@@ -90,6 +93,7 @@ function CompraForm({ inicial, eventos, proveedores, onClose }: {
           </select>
         </div>
       </div>
+      <SubcuentaSelect cuenta="caja_operativa" subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
@@ -417,11 +421,12 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export default function ComprasClient({ compras, eventos, proveedores, productos }: {
+export default function ComprasClient({ compras, eventos, proveedores, productos, subcuentas }: {
   compras: CompraCompleta[]
   eventos: EventoMin[]
   proveedores: { id: string; nombre: string }[]
   productos: ProductoConProv[]
+  subcuentas: Subcuenta[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -492,12 +497,12 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
 
       {modalCrear && (
         <Modal titulo="Nueva compra" onClose={() => setModalCrear(false)}>
-          <CompraForm eventos={eventos} proveedores={proveedores} onClose={() => setModalCrear(false)} />
+          <CompraForm eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} onClose={() => setModalCrear(false)} />
         </Modal>
       )}
       {editando && (
         <Modal titulo="Editar compra" onClose={() => setEditando(null)}>
-          <CompraForm inicial={editando} eventos={eventos} proveedores={proveedores} onClose={() => setEditando(null)} />
+          <CompraForm inicial={editando} eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} onClose={() => setEditando(null)} />
         </Modal>
       )}
       {eliminando && (
