@@ -27,9 +27,6 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
     if (!nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (montoTotal <= 0) { setError('El monto debe ser mayor a 0.'); return }
     if (!cuentaOrigen) { setError('Elegí de dónde sale la plata.'); return }
-    if (cuentaOrigen === 'anticipos_comprometidos' && !eventoOrigenId) {
-      setError('Elegí de qué evento sale el anticipo.'); return
-    }
     setError(null)
     startTransition(async () => {
       const res = await crearInversion({
@@ -85,10 +82,10 @@ function InversionForm({ eventos, onClose }: { eventos: EventoOpcion[]; onClose:
       </div>
       {cuentaOrigen === 'anticipos_comprometidos' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">¿De qué evento?</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">¿De qué evento? (opcional)</label>
           <select value={eventoOrigenId} onChange={e => setEventoOrigenId(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar…</option>
+            <option value="">Sin especificar (sale del pozo general de anticipos)</option>
             {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
           </select>
         </div>

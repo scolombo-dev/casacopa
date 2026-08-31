@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import type {
   SaldoCuenta, CuentaMovimiento, InversionResumen, SaldoAnticipoEvento,
-  ResultadoNetoEvento, PagoCliente, SaldoSubcuenta,
+  ResultadoNetoEvento, PagoCliente, SaldoSubcuenta, CuentaFinanciera,
 } from '@/lib/types'
 import CuentasResumen from './CuentasResumen'
 import MovimientosList from './MovimientosList'
@@ -22,6 +22,8 @@ type Props = {
   eventosOpciones: { id: string; nombre: string }[]
   eventosFinancieros: ResultadoNetoEvento[]
   pagos: PagoCliente[]
+  cuentaFiltro: CuentaFinanciera | null
+  saldoCuentaFiltro: number
 }
 
 const TABS = [
@@ -31,6 +33,7 @@ const TABS = [
 
 export default function FinanzasHomeClient({
   saldos, movimientos, inversiones, anticipos, subcuentas, eventosOpciones, eventosFinancieros, pagos,
+  cuentaFiltro, saldoCuentaFiltro,
 }: Props) {
   const [tab, setTab] = useState<typeof TABS[number]['id']>('cuentas')
 
@@ -60,9 +63,9 @@ export default function FinanzasHomeClient({
 
       {tab === 'cuentas' ? (
         <div className="space-y-6">
-          <CuentasResumen saldos={saldos} inversiones={inversiones} />
+          <CuentasResumen saldos={saldos} inversiones={inversiones} cuentaFiltro={cuentaFiltro} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MovimientosList movimientos={movimientos} subcuentas={subcuentas} />
+            <MovimientosList movimientos={movimientos} subcuentas={subcuentas} cuentaFiltro={cuentaFiltro} saldoCuentaFiltro={saldoCuentaFiltro} />
             <SubcuentasList subcuentas={subcuentas} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -2,6 +2,16 @@
 
 ---
 
+## [0.6.7] — 2026-08-31
+
+### Inversiones: financiar desde anticipos sin atarlo a un evento puntual + movimientos por cuenta
+
+- Al financiar una inversión desde "Anticipos comprometidos" (formulario manual y chat), elegir el evento puntual ahora es opcional — se puede dejar "sin especificar" y la plata sale del pozo general de anticipos comprometidos en vez de descontarse del anticipo de un evento particular
+- Nuevo: en Finanzas, cada una de las 5 tarjetas de cuenta ahora es un link — al hacer clic filtra la lista de "Movimientos" para mostrar solo los de esa cuenta, con: el saldo de la cuenta después de cada movimiento (para ver cómo va subiendo y bajando en el tiempo), el signo +/− desde la perspectiva de esa cuenta (en vez del tipo genérico ingreso/egreso/transferencia), y una etiqueta de categoría por movimiento (Inversión, Compra evento, Compra de stock, Uso de stock, Personal, Extra, Cobro cliente, Recupero autoalquiler, Reparto ganancia, Manual)
+- Archivos: `src/modules/finanzas/InversionesResumen.tsx`, `src/app/api/chat/acciones.ts`, `src/app/api/chat/route.ts`, `src/app/finanzas/page.tsx`, `src/modules/finanzas/FinanzasHomeClient.tsx`, `src/modules/finanzas/CuentasResumen.tsx`, `src/modules/finanzas/MovimientosList.tsx`
+
+---
+
 ## [0.6.6] — 2026-08-31
 
 ### Inversiones: sin cuenta de origen por defecto + recordatorio de autoalquiler al cerrar evento

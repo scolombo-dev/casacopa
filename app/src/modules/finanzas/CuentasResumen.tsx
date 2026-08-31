@@ -1,4 +1,5 @@
-import { formatARS } from '@/lib/utils'
+import Link from 'next/link'
+import { formatARS, cn } from '@/lib/utils'
 import { CUENTA_LABEL, CUENTA_COLOR } from '@/lib/constants'
 import type { SaldoCuenta, CuentaFinanciera, InversionResumen } from '@/lib/types'
 
@@ -6,7 +7,11 @@ const ORDEN: CuentaFinanciera[] = [
   'caja_operativa', 'anticipos_comprometidos', 'inversiones', 'stock_valorizado', 'ganancia_acumulada',
 ]
 
-export default function CuentasResumen({ saldos, inversiones }: { saldos: SaldoCuenta[]; inversiones: InversionResumen[] }) {
+export default function CuentasResumen({ saldos, inversiones, cuentaFiltro }: {
+  saldos: SaldoCuenta[]
+  inversiones: InversionResumen[]
+  cuentaFiltro: CuentaFinanciera | null
+}) {
   const saldoPorCuenta = Object.fromEntries(saldos.map(s => [s.cuenta, s.saldo])) as Record<CuentaFinanciera, number>
   const totalPatrimonio = saldos.reduce((s, c) => s + c.saldo, 0)
 
@@ -20,14 +25,24 @@ export default function CuentasResumen({ saldos, inversiones }: { saldos: SaldoC
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {ORDEN.map(cuenta => {
           const color = CUENTA_COLOR[cuenta]
+          const seleccionada = cuentaFiltro === cuenta
           return (
-            <div key={cuenta} className={`rounded-2xl border ${color.border} ${color.bg} px-5 py-4 shadow-sm`}>
+            <Link
+              key={cuenta}
+              href={seleccionada ? '/finanzas' : `/finanzas?cuenta=${cuenta}#movimientos`}
+              className={cn(
+                'rounded-2xl border px-5 py-4 shadow-sm transition-shadow hover:shadow-md',
+                color.border, color.bg,
+                seleccionada && 'ring-2 ring-offset-1 ring-gray-800'
+              )}
+            >
               <p className={`text-xs font-semibold uppercase tracking-wide ${color.text}`}>{CUENTA_LABEL[cuenta]}</p>
               <p className={`text-2xl font-extrabold mt-1.5 ${color.text}`}>{formatARS(saldoPorCuenta[cuenta] ?? 0)}</p>
               {cuenta === 'inversiones' && promedioAmortizado !== null && (
                 <p className="text-xs text-orange-600 mt-1">{promedioAmortizado}% amortizado en promedio</p>
               )}
-            </div>
+              <p className={`text-xs mt-1 ${color.text} opacity-70`}>{seleccionada ? 'Viendo movimientos ↓' : 'Ver movimientos →'}</p>
+            </Link>
           )
         })}
       </div>

@@ -138,13 +138,15 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const nombre = str(datos, 'nombre')
       const cuentaOrigen = str(datos, 'cuenta_origen') as 'caja_operativa' | 'anticipos_comprometidos'
       const eventoOrigenId = strOrNull(datos, 'evento_origen_id')
-      if (cuentaOrigen === 'anticipos_comprometidos' && !eventoOrigenId) return { ok: false, mensaje: 'Falta de qué evento sale el anticipo que financia la inversión.' }
       const res = await crearInversion({
         nombre, descripcion: strOrNull(datos, 'descripcion') ?? '', monto_total, fecha_compra: str(datos, 'fecha_compra'),
         cuenta_origen: cuentaOrigen, evento_origen_id: eventoOrigenId, notas: strOrNull(datos, 'notas') ?? '',
       })
       if (res.error) return { ok: false, mensaje: res.error }
-      return { ok: true, mensaje: `Registré la inversión "${nombre}" por $${monto_total.toLocaleString('es-AR')}, financiada desde ${cuentaOrigen === 'anticipos_comprometidos' ? 'el anticipo del evento' : 'caja operativa'}.` }
+      const origen = cuentaOrigen === 'anticipos_comprometidos'
+        ? (eventoOrigenId ? 'el anticipo de ese evento' : 'el pozo general de anticipos')
+        : 'caja operativa'
+      return { ok: true, mensaje: `Registré la inversión "${nombre}" por $${monto_total.toLocaleString('es-AR')}, financiada desde ${origen}.` }
     }
     case 'autoalquiler': {
       const req = faltantes(datos, ['inversion_id', 'evento_id', 'fecha'])

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-08-31 (2) — Inversión financiada por anticipos sin evento puntual + movimientos por cuenta
+
+**Pedido:** "Pero quiero seleccionar la cuenta de la cual tomo la inversión. NO me interesa por el momento de qué evento voy a sacar la plata." — seguido de: "quiero ver en los movimientos de la cuenta, como va aumentando y disminuyendo, quedando registro si el gasto fue en inversión, en el alcohol de un evento... también cuando se recupera plata si el activo comprado se amortiza."
+
+**Primer cambio — evento_origen_id opcional:** hasta ahora, elegir "Anticipos comprometidos" como origen de una inversión obligaba a elegir también un evento puntual (de cuyo anticipo saldría la plata). El usuario aclaró que por ahora no le interesa atribuir la inversión a un evento específico — solo quiere elegir la CUENTA (caja o el pozo de anticipos). Se sacó esa validación obligatoria tanto en el formulario manual como en el chat; `evento_origen_id` sigue existiendo y se puede completar si se quiere, pero ya no bloquea. Técnicamente esto ya andaba bien con el esquema existente: `saldo_anticipos_evento` (el desglose por evento) filtra explícitamente `evento_id IS NOT NULL`, así que una inversión sin evento puntual simplemente no se le atribuye a ningún evento — sale del total agregado de "Anticipos comprometidos" (`saldo_cuentas`, que no depende de evento_id) sin bloquear ni inflar el saldo disponible de ningún evento particular.
+
+**Segundo cambio — vista de movimientos por cuenta:** se agregó la capacidad de filtrar la lista de movimientos de Finanzas por una de las 5 cuentas (clic en la tarjeta de esa cuenta), mostrando el saldo resultante después de cada movimiento (calculado desde el saldo actual real hacia atrás en el tiempo) y una etiqueta de categoría (Inversión / Compra evento / Compra de stock / Uso de stock / Personal / Extra / Cobro cliente / Recupero autoalquiler / Reparto ganancia / Manual) derivada de qué columna FK tiene cargada cada movimiento (`compra_id`, `staff_id`, `inversion_id`, `amortizacion_id`, `stock_id`, etc — todas ya existían de migraciones anteriores para el borrado real en cascada).
+
+---
+
 ## 2026-08-31 — Inversiones: sin default de cuenta + recordatorio de autoalquiler al cerrar evento
 
 **Pedido inicial:** "la plata para las inversiones tiene que salir de la cuenta de banco en donde se recibió el anticipo del evento". El mecanismo para esto YA existía (`crearInversion` acepta `cuenta_origen: 'anticipos_comprometidos'` + `evento_origen_id`, y `amortizarInversion` ya devuelve la plata proporcionalmente a esa misma cuenta a medida que se cobra autoalquiler) — pero el formulario de "Nueva inversión" arrancaba con "Caja operativa" preseleccionada por defecto, así que era fácil dejarla financiada mal sin querer si no se tocaba el botón.

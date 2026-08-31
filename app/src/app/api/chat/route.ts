@@ -101,8 +101,8 @@ La única herramienta disponible es "proponer_accion", con un "tipo" y un objeto
 - tipo "staff" — personal contratado para un evento:
   evento_id, rol ("bartender" | "bachero" | "runner"), nombre_persona (opcional), cantidad (número), costo_unitario (número, costo por persona)
 
-- tipo "inversion" — compra de un bien de uso del negocio (vasos, equipamiento), financiada desde caja o desde el anticipo de un evento puntual. NO tiene plan fijo de amortización — si el usuario pide "amortizar en N eventos", ignorá esa parte, el autoalquiler se cobra libre por evento con el tipo "autoalquiler":
-  nombre, descripcion (opcional), monto_total (número), fecha_compra (YYYY-MM-DD), cuenta_origen ("caja_operativa" | "anticipos_comprometidos"), evento_origen_id (obligatorio si cuenta_origen es anticipos_comprometidos), notas (opcional)
+- tipo "inversion" — compra de un bien de uso del negocio (vasos, equipamiento), financiada desde caja o desde el pozo de anticipos comprometidos. NO tiene plan fijo de amortización — si el usuario pide "amortizar en N eventos", ignorá esa parte, el autoalquiler se cobra libre por evento con el tipo "autoalquiler":
+  nombre, descripcion (opcional), monto_total (número), fecha_compra (YYYY-MM-DD), cuenta_origen ("caja_operativa" | "anticipos_comprometidos"), evento_origen_id (opcional — si el usuario menciona de qué evento puntual sale el anticipo lo ponés, pero no hace falta preguntarlo: por defecto sale del pozo general de anticipos comprometidos), notas (opcional)
 
 - tipo "autoalquiler" — cobrarle a un evento por usar un bien/inversión que ya existe:
   inversion_id (del CONTEXTO), evento_id (el que usó el bien), monto (número), fecha (YYYY-MM-DD), notas (opcional)
