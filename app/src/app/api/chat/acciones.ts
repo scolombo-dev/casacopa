@@ -45,7 +45,8 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const cantidad = num(datos, 'cantidad')
       const precio_unitario_real = num(datos, 'precio_unitario_real')
       if (!Number.isFinite(cantidad) || !Number.isFinite(precio_unitario_real)) return { ok: false, mensaje: 'Faltan la cantidad o el precio unitario.' }
-      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, subcuenta_origen_id: null, notas: '' })
+      const cuentaOrigenCompra = (str(datos, 'cuenta_origen') as 'caja_operativa' | 'anticipos_comprometidos') || 'caja_operativa'
+      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, cuenta_origen: cuentaOrigenCompra, subcuenta_origen_id: null, notas: '' })
       if (compra.error || !compra.id) return { ok: false, mensaje: compra.error ?? 'No se pudo crear la compra.' }
       const item = await crearItem({
         compra_id: compra.id, producto_id: null, marca, proveedor,
@@ -53,7 +54,8 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       })
       if (item.error) return { ok: false, mensaje: item.error }
       const total = cantidad * precio_unitario_real
-      return { ok: true, mensaje: `Registré la compra de ${cantidad} ${marca} en ${proveedor} a $${precio_unitario_real.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}). Se descontó de caja operativa.` }
+      const origenCompra = cuentaOrigenCompra === 'anticipos_comprometidos' ? 'el anticipo de este evento' : 'caja operativa'
+      return { ok: true, mensaje: `Registré la compra de ${cantidad} ${marca} en ${proveedor} a $${precio_unitario_real.toLocaleString('es-AR')} c/u (total $${total.toLocaleString('es-AR')}). Se descontó de ${origenCompra}.` }
     }
     case 'pago': {
       const req = faltantes(datos, ['evento_id', 'tipo_pago', 'fecha', 'metodo', 'cuenta_destino'])

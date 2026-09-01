@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { cn, formatARS, formatFecha } from '@/lib/utils'
 import { Modal } from '@/components/Modal'
-import type { Compra, CompraItem, Proveedor, Evento, Producto, Subcuenta } from '@/lib/types'
+import type { Compra, CompraItem, Proveedor, Evento, Producto, Subcuenta, CuentaFinanciera } from '@/lib/types'
 import {
   crearCompra, editarCompra, eliminarCompra,
   crearItem, editarItem, eliminarItem,
@@ -46,6 +46,7 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
   const [eventoId, setEventoId] = useState(inicial?.evento_id ?? '')
   const [fecha, setFecha] = useState(inicial?.fecha_compra ?? new Date().toISOString().split('T')[0])
   const [proveedorId, setProveedorId] = useState(inicial?.proveedor_id ?? '')
+  const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera>(inicial?.cuenta_origen ?? 'caja_operativa')
   const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [notas, setNotas] = useState(inicial?.notas ?? '')
 
@@ -54,7 +55,7 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
     if (!eventoId) { setError('Seleccioná un evento.'); return }
     setError(null)
     startTransition(async () => {
-      const payload = { fecha_compra: fecha, proveedor_id: proveedorId || null, subcuenta_origen_id: subcuentaId || null, notas }
+      const payload = { fecha_compra: fecha, proveedor_id: proveedorId || null, cuenta_origen: cuentaOrigen, subcuenta_origen_id: subcuentaId || null, notas }
       const res = inicial
         ? await editarCompra(inicial.id, payload)
         : await crearCompra({ evento_id: eventoId, ...payload })
@@ -93,7 +94,22 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
           </select>
         </div>
       </div>
-      <SubcuentaSelect cuenta="caja_operativa" subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">¿De dónde sale la plata?</label>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => { setCuentaOrigen('caja_operativa'); setSubcuentaId('') }}
+            className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              cuentaOrigen === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+            Caja operativa
+          </button>
+          <button type="button" onClick={() => { setCuentaOrigen('anticipos_comprometidos'); setSubcuentaId('') }}
+            className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              cuentaOrigen === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
+            Anticipo de este evento
+          </button>
+        </div>
+      </div>
+      <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}

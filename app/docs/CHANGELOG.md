@@ -2,6 +2,18 @@
 
 ---
 
+## [0.7.0] — 2026-09-01
+
+### Comprar insumos para un evento con el anticipo de ese mismo evento
+
+- Hasta ahora, una compra para un evento puntual (la que se consume directo en ese evento) siempre se pagaba con caja operativa, sin opción. Ahora se puede elegir pagarla con el anticipo comprometido de ese mismo evento — no hace falta elegir de qué evento sale el anticipo, porque la compra ya está atada a uno solo
+- Distinto de "Agregar stock" (financiado por anticipo): eso genera un lote de inventario general reutilizable en cualquier evento futuro. Esto es una compra directa e inmediata, ligada a un solo evento, como cualquier otra compra — solo cambia de qué cuenta sale la plata
+- El asistente de chat también lo soporta: si decís algo como "pagala con la seña del evento" al registrar una compra, usa el anticipo en vez de caja
+- Migración 037: agrega `cuenta_origen` a `compras` (default `caja_operativa`, no rompe nada existente) y actualiza el trigger que genera el movimiento financiero automático para usar la cuenta elegida
+- Archivos: migración `037_compra_evento_con_anticipo.sql`; `src/modules/compras/actions.ts`, `ComprasClient.tsx`; `src/app/api/chat/acciones.ts`, `route.ts`; `src/lib/types.ts`
+
+---
+
 ## [0.6.9] — 2026-09-01
 
 ### Historial de billetera/banco: saldo después de cada movimiento

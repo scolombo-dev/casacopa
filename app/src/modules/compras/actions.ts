@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import type { CuentaFinanciera } from '@/lib/types'
 
 // ─── Compras ──────────────────────────────────────────────────────────────────
 
@@ -9,6 +10,7 @@ export async function crearCompra(data: {
   evento_id: string
   fecha_compra: string
   proveedor_id: string | null
+  cuenta_origen: CuentaFinanciera
   subcuenta_origen_id: string | null
   notas: string
 }) {
@@ -19,6 +21,7 @@ export async function crearCompra(data: {
       evento_id: data.evento_id,
       fecha_compra: data.fecha_compra,
       proveedor_id: data.proveedor_id || null,
+      cuenta_origen: data.cuenta_origen,
       subcuenta_origen_id: data.subcuenta_origen_id || null,
       notas: data.notas.trim() || null,
       total: 0,
@@ -35,6 +38,7 @@ export async function crearCompra(data: {
 export async function editarCompra(id: string, data: {
   fecha_compra: string
   proveedor_id: string | null
+  cuenta_origen: CuentaFinanciera
   subcuenta_origen_id: string | null
   notas: string
 }) {
@@ -44,6 +48,7 @@ export async function editarCompra(id: string, data: {
     .update({
       fecha_compra: data.fecha_compra,
       proveedor_id: data.proveedor_id || null,
+      cuenta_origen: data.cuenta_origen,
       subcuenta_origen_id: data.subcuenta_origen_id || null,
       notas: data.notas.trim() || null,
     })

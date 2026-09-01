@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-09-01 — Compra para evento pagable con el anticipo de ese evento
+
+**Pedido:** "Tambien quiero poder comprar stock para un evento con plata de una cuenta que tiene plata de un anticipo."
+
+**Distinción importante:** el sistema tiene DOS conceptos separados que suenan parecido:
+- "compra" (tabla `compras`/`compra_items`): un insumo comprado PARA un evento puntual, se consume ahí directo, no genera un lote de inventario reutilizable. Hasta ahora, SIEMPRE se pagaba con caja operativa (hardcodeado en el trigger `fn_sync_cuenta_movimiento_compra`), sin opción.
+- "compra_stock" / "Agregar stock" (tabla `stock`): un lote de inventario GENERAL, reutilizable en cualquier evento futuro. Ya podía financiarse desde el anticipo de un evento (implementado el 26/08).
+
+El pedido de hoy es sobre el primero: una compra normal para un evento, pagada con el anticipo de ESE MISMO evento en vez de caja.
+
+**Implementación:** se agregó `cuenta_origen` a la tabla `compras` (antes no existía esa columna — el trigger tenía `'caja_operativa'` fijo en el código SQL). Como una compra siempre está atada a un `evento_id` desde su creación, no hace falta preguntar "¿de qué evento sale el anticipo?" como sí hace falta en inversiones (que no están necesariamente atadas a un evento) — acá es siempre el mismo evento de la compra. El trigger ahora usa `NEW.cuenta_origen` en vez del valor fijo, y se agregó al listado de columnas que lo disparan (`UPDATE OF ... cuenta_origen`).
+
+**Decisión de default:** a diferencia de inversiones (donde se sacó el default de "Caja operativa" a propósito, porque el usuario se había quejado de que quedaba financiada mal sin querer), acá SÍ se dejó "Caja operativa" preseleccionada por defecto. Motivo: las compras son una acción mucho más frecuente y rutinaria que crear una inversión, y hasta ahora SIEMPRE salían de caja — forzar una elección explícita en cada compra sería fricción innecesaria para el caso común. Elegir el anticipo es la excepción, no la regla, así que queda como una opción a un clic de distancia en vez de una obligación.
+
+---
+
 ## 2026-08-31 (3) — Subcuenta (billetera/banco) en todo lo que sale de caja
 
 **Pedido:** "es posible que me actualices todos los valores anteriores? quiero ver en la cuenta uala como bajo por el gasto en vasos".
