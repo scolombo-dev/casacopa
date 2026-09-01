@@ -74,8 +74,10 @@ function RecordatorioInversion({ inversion, eventoId }: { inversion: InversionSi
   )
 }
 
+type RecapFinanciamiento = { id: string; detalle: string; monto: number; cuentaLabel: string }
+
 export default function CerrarEventoModal({
-  eventoId, estado, resultadoNeto, resumen, subcuentasCaja, inversionesSinCobrar,
+  eventoId, estado, resultadoNeto, resumen, subcuentasCaja, inversionesSinCobrar, recapFinanciamiento,
 }: {
   eventoId: string
   estado: string
@@ -83,6 +85,7 @@ export default function CerrarEventoModal({
   resumen: { costoInsumos: number; costoPersonal: number; costoExtras: number; costoAutoalquiler: number }
   subcuentasCaja: Subcuenta[]
   inversionesSinCobrar: InversionSinCobrar[]
+  recapFinanciamiento: RecapFinanciamiento[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -142,6 +145,24 @@ export default function CerrarEventoModal({
                     <RecordatorioInversion key={inv.id} inversion={inv} eventoId={eventoId} />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {recapFinanciamiento.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm space-y-2">
+                <p className="font-medium text-blue-800">Plata que se movió con anticipos/billeteras en este evento</p>
+                <div className="space-y-1.5">
+                  {recapFinanciamiento.map(r => (
+                    <div key={r.id} className="flex justify-between items-start gap-3 bg-white rounded-lg px-3 py-2">
+                      <span className="text-gray-600">{r.detalle}</span>
+                      <div className="text-right shrink-0">
+                        <p className="font-medium text-gray-800 tabular-nums">{formatARS(r.monto)}</p>
+                        <p className="text-xs text-blue-600">→ {r.cuentaLabel}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-700">Ya se movió solo — esto es solo para que lo verifiques antes de cerrar.</p>
               </div>
             )}
 

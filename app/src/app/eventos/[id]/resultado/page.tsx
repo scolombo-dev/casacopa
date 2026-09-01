@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatARS, formatFecha } from '@/lib/utils'
+import { CUENTA_LABEL } from '@/lib/constants'
 import ResultadoActions from './ResultadoActions'
 import RepartoResultado from './RepartoResultado'
 import CerrarEventoModal from './CerrarEventoModal'
@@ -23,6 +24,9 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     { data: amortizaciones },
     { data: subcuentasCaja },
     { data: inversionesActivas },
+    { data: comprasAnticipo },
+    { data: stockUsado },
+    { data: sobranteFinanciadoGenerado },
   ] = await Promise.all([
     supabase.from('eventos').select('id, nombre, fecha, tipo_evento, estado, cantidad_personas, precio_total').eq('id', id).single(),
     supabase.from('resultado_neto_evento').select('*').eq('evento_id', id).single(),
@@ -36,6 +40,9 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     supabase.from('inversion_amortizaciones').select('*, inversiones(nombre)').eq('evento_id', id).order('fecha'),
     supabase.from('subcuentas').select('*').eq('cuenta_padre', 'caja_operativa').eq('activa', true).order('nombre'),
     supabase.from('inversiones_resumen').select('id, nombre, cuenta_origen, monto_pendiente').eq('estado', 'activa').gt('monto_pendiente', 0),
+    supabase.from('compras').select('id, total, subcuentas:subcuenta_origen_id(nombre, titular)').eq('evento_id', id).eq('cuenta_origen', 'anticipos_comprometidos'),
+    supabase.from('cierre_consumo').select('id, costo_total, marca, stock:stock_id(financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular))').eq('evento_id', id).eq('tipo_origen', 'stock'),
+    supabase.from('stock').select('id, marca, cantidad_envases, precio_unitario_compra, financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular)').eq('origen_evento_id', id).not('financiado_por', 'is', null),
   ])
 
   if (!evento) notFound()
@@ -69,6 +76,35 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
   const amortizacionesData = (amortizaciones ?? []) as any[]
   const idsInversionesYaCobradas = new Set(amortizacionesData.map(a => a.inversion_id))
   const inversionesSinCobrar = (inversionesActivas ?? []).filter(inv => !idsInversionesYaCobradas.has(inv.id))
+
+  // Recap de plata financiada con anticipo/billetera que este evento movió —
+  // ver DECISIONS.md 2026-09-01. Puramente informativo: el movimiento real
+  // ya ocurrió solo (al comprar, al usar el stock en Consumo), esto solo lo
+  // deja visible al cerrar el evento.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subLabel = (s: any) => s ? `${s.nombre} — ${s.titular}` : null
+  const comprasAnticipoData = (comprasAnticipo ?? []).map(c => ({
+    id: c.id,
+    detalle: 'Compra de este evento pagada con el anticipo',
+    monto: c.total,
+    cuentaLabel: subLabel(c.subcuentas) ?? CUENTA_LABEL.anticipos_comprometidos,
+  }))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stockFinanciadoUsadoData = ((stockUsado ?? []) as any[])
+    .filter(c => !!c.stock?.financiado_por)
+    .map(c => ({
+      id: c.id,
+      detalle: `Uso de stock financiado: ${c.marca}`,
+      monto: c.costo_total,
+      cuentaLabel: subLabel(c.stock.subcuentas) ?? CUENTA_LABEL[c.stock.financiado_por as keyof typeof CUENTA_LABEL],
+    }))
+  const sobranteFinanciadoData = (sobranteFinanciadoGenerado ?? []).map(s => ({
+    id: s.id,
+    detalle: `Sobrante financiado guardado como stock: ${s.marca} ×${s.cantidad_envases}`,
+    monto: s.cantidad_envases * s.precio_unitario_compra,
+    cuentaLabel: subLabel(s.subcuentas) ?? CUENTA_LABEL[s.financiado_por as keyof typeof CUENTA_LABEL],
+  }))
+  const recapFinanciamiento = [...comprasAnticipoData, ...stockFinanciadoUsadoData, ...sobranteFinanciadoData]
 
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -247,6 +283,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
               }}
               subcuentasCaja={subcuentasCaja ?? []}
               inversionesSinCobrar={inversionesSinCobrar}
+              recapFinanciamiento={recapFinanciamiento}
             />
           </div>
           <div className={`flex justify-between items-center px-4 py-4 rounded-xl text-base font-bold ${(fin?.resultado_neto ?? 0) >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>

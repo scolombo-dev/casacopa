@@ -2,6 +2,17 @@
 
 ---
 
+## [0.7.1] — 2026-09-01
+
+### El sobrante de una compra financiada con anticipo recupera su plata sola + resumen al cerrar
+
+- Si una compra para un evento se pagó con el anticipo de una cuenta bancaria, y sobran botellas, ese sobrante YA NO queda "perdido" sin cuenta asociada: hereda la misma cuenta/billetera de la compra original. Cuando ese sobrante se use en un evento futuro, la plata vuelve sola a esa cuenta — igual que el stock cargado directo con "Agregar stock"
+- Técnicamente: al cerrar el consumo de un evento, si hay sobrante de una compra financiada con anticipo, se corrige el gasto original (que había debitado el 100% asumiendo que se iba a usar todo) para que el anticipo solo quede debitado por lo realmente consumido, y el resto pasa a valorizar stock, recuperable después
+- Nuevo: al abrir "Cerrar evento", si este evento movió plata de/hacia una cuenta bancaria (compró con el anticipo, usó stock financiado, o generó sobrante financiado), aparece un resumen confirmando a qué cuenta fue o volvió cada monto — puramente informativo, la plata ya se movió sola
+- Archivos: `src/modules/consumo/actions.ts`, `src/modules/stock/actions.ts`, `src/app/eventos/[id]/resultado/page.tsx` y `CerrarEventoModal.tsx`
+
+---
+
 ## [0.7.0] — 2026-09-01
 
 ### Comprar insumos para un evento con el anticipo de ese mismo evento

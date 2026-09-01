@@ -148,12 +148,13 @@ export async function usarStockEnEvento(data: {
   })
   if (cierreError) return { error: cierreError.message }
 
-  // Solo se mueve plata en el libro si este lote valorizaba stock (se
-  // cargó con agregarStock, tipo "ajuste" — ver esa función). El sobrante
-  // que genera guardarCierre (origen_evento_id) no la tiene, porque esa
-  // plata ya se debitó de caja al pagar la compra original — moverla acá
-  // otra vez la contaría dos veces.
-  if (costoTotal > 0 && !lote.origen_evento_id) {
+  // Solo se mueve plata en el libro si este lote valorizaba stock: o se
+  // cargó con agregarStock (tipo "ajuste", sin origen_evento_id), o es
+  // sobrante de una compra financiada con anticipo (guardarCierre ya le
+  // asignó financiado_por en ese caso). El sobrante normal (sin financiar)
+  // no la tiene, porque esa plata ya se debitó de caja al pagar la compra
+  // original — moverla acá otra vez la contaría dos veces.
+  if (costoTotal > 0 && (!lote.origen_evento_id || lote.financiado_por)) {
     await supabase.from('cuentas_movimientos').insert(
       lote.financiado_por
         ? {
@@ -222,7 +223,7 @@ export async function deshacerUsoStock(cierreId: string) {
     notas: 'Deshacer uso de stock en evento',
   })
 
-  if (cierre.costo_total > 0 && !lote.origen_evento_id) {
+  if (cierre.costo_total > 0 && (!lote.origen_evento_id || lote.financiado_por)) {
     await supabase.from('cuentas_movimientos').insert(
       lote.financiado_por
         ? {
@@ -307,12 +308,13 @@ export async function editarLote(data: {
     })
   }
 
-  // Si el lote valoriza stock (financiado o no, ver agregarStock) y cambió
-  // el precio o la cantidad, hay que mantener sincronizado el monto que
-  // quedó "apartado" en stock_valorizado. El sobrante de evento
-  // (origen_evento_id) nunca tiene un movimiento propio, así que no hay
-  // nada que sincronizar ahí.
-  if (!lote.origen_evento_id) {
+  // Si el lote valoriza stock (financiado o no, ver agregarStock; o
+  // sobrante financiado con anticipo, ver guardarCierre) y cambió el precio
+  // o la cantidad, hay que mantener sincronizado el monto que quedó
+  // "apartado" en stock_valorizado. El sobrante normal de evento (sin
+  // financiar) nunca tiene un movimiento propio, así que no hay nada que
+  // sincronizar ahí.
+  if (!lote.origen_evento_id || lote.financiado_por) {
     const nuevoMonto = data.nueva_cantidad * data.precio_unitario_compra
     const { data: movLigado } = await supabase
       .from('cuentas_movimientos').select('id').eq('stock_id', data.stock_id).maybeSingle()

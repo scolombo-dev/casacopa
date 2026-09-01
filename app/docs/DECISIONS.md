@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-09-01 (2) — Sobrante de compra financiada hereda la cuenta + recap al cerrar
+
+**Pedido, en dos partes:**
+1. Cuando el stock (financiado con anticipo + billetera) se usa en un evento, la plata vuelve sola a esa billetera (ya funcionaba) — el usuario pidió que además se lo confirme visualmente en algún momento del flujo.
+2. Al comprar algo PARA UN EVENTO puntual (no "Agregar stock") pagando con el anticipo de una cuenta bancaria, si sobran botellas, ese sobrante tiene que seguir atado a esa cuenta — para poder recuperar la plata cuando se use en un evento futuro "ajeno" a la compra original.
+
+**Respuestas del usuario a las preguntas de aclaración:**
+- ¿Dónde mostrar la confirmación de "a qué cuenta vuelve la plata"? → En el cierre financiero del evento (recomendado).
+- ¿El sobrante de una compra financiada con anticipo debe quedar atado a esa cuenta? → Sí, queda atado (recomendado).
+
+**El problema real (punto 2):** antes de esta migración, TODA compra para un evento se trataba como gasto puro de caja — si sobraban botellas, ese sobrante se cargaba como stock sin ninguna cuenta asociada, a propósito, porque "esa plata ya se gastó sin más". Pero desde que una compra puede financiarse con el anticipo de una cuenta ([0.7.0]), esa premisa ya no es válida para ese caso: si compro 10 botellas por $1000 con el anticipo de "Banco Galicia" y el evento usa 7, el anticipo debitó $1000 completos aunque solo $700 fueron gasto real de este evento — los $300 del sobrante quedaban "perdidos" (ni contados como stock, ni recuperables).
+
+**Corrección (`guardarCierre`, `src/modules/consumo/actions.ts`):** para cada item con sobrante, se busca la compra de origen (vía `compra_item_id` → `compra_items.compra_id` → `compras.cuenta_origen`/`subcuenta_origen_id`). Si esa compra fue financiada con anticipo: el lote de sobrante se crea con `financiado_por`/`subcuenta_financiadora_id` (igual que si se hubiera cargado con `agregarStock`), se inserta una transferencia de `anticipos_comprometidos` → `stock_valorizado` por el valor del sobrante, y se AJUSTA el egreso original de la compra (recalculado desde `compras.total`, no restando incrementalmente, para que volver a guardar el cierre no lo siga reduciendo cada vez) para que el anticipo solo quede debitado por lo realmente consumido.
+
+**Efecto secundario necesario:** `usarStockEnEvento`, `deshacerUsoStock` y `editarLote` (en `src/modules/stock/actions.ts`) filtraban con `!lote.origen_evento_id` para decidir si mover plata al usar un lote — una condición que asumía "todo sobrante de evento nunca está financiado". Ahora que SÍ puede estarlo, la condición pasó a `(!lote.origen_evento_id || lote.financiado_por)` en los tres lugares.
+
+**Punto 1 (recap visual):** se agregó un panel informativo en `CerrarEventoModal` que junta tres cosas — compras de este evento pagadas con anticipo, stock financiado usado en este evento (con a qué cuenta volvió), y sobrante financiado que este evento generó (con qué cuenta lo financiará a futuro) — todo ya ejecutado automáticamente, solo para que el usuario lo verifique antes de cerrar.
+
+**Limitación conocida (heredada, no nueva):** si se vuelve a guardar el cierre de un evento con cantidades de sobrante distintas DESPUÉS de que ese sobrante ya se usó en otro lado, ese uso posterior no se puede reconstruir — mismo caveat que ya existía documentado en el código para la recreación de stock de sobrante en general.
+
+---
+
 ## 2026-09-01 — Compra para evento pagable con el anticipo de ese evento
 
 **Pedido:** "Tambien quiero poder comprar stock para un evento con plata de una cuenta que tiene plata de un anticipo."
