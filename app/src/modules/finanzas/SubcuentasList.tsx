@@ -86,6 +86,18 @@ function HistorialSubcuentaModal({ subcuenta, onClose }: { subcuenta: SaldoSubcu
     })
   })
 
+  // Saldo de esta billetera DESPUÉS de cada movimiento — arranca del saldo
+  // actual y camina hacia atrás (la lista viene más nuevo primero), para
+  // poder ver cómo va bajando cuando se gasta y volviendo a subir cuando
+  // se recupera vía amortización.
+  let saldoCorriente = subcuenta.saldo
+  const saldosPorFila = (movimientos ?? []).map(m => {
+    const despues = saldoCorriente
+    const esIngreso = m.subcuenta_destino_id === subcuenta.id
+    saldoCorriente -= esIngreso ? m.monto : -m.monto
+    return despues
+  })
+
   return (
     <Modal titulo={`${subcuenta.nombre} — ${subcuenta.titular}`} onClose={onClose}>
       <div className="bg-gray-50 rounded-lg px-4 py-2.5 text-sm text-gray-600 mb-3">
@@ -98,7 +110,7 @@ function HistorialSubcuentaModal({ subcuenta, onClose }: { subcuenta: SaldoSubcu
       )}
       {movimientos && movimientos.length > 0 && (
         <div className="divide-y rounded-lg border overflow-hidden">
-          {movimientos.map(m => {
+          {movimientos.map((m, i) => {
             const esIngreso = m.subcuenta_destino_id === subcuenta.id
             return (
               <div key={m.id} className="flex items-center justify-between px-4 py-2.5 bg-white text-sm">
@@ -106,9 +118,12 @@ function HistorialSubcuentaModal({ subcuenta, onClose }: { subcuenta: SaldoSubcu
                   <p className="text-gray-700">{m.concepto}</p>
                   <p className="text-xs text-gray-400">{formatFecha(m.fecha)}{m.eventos?.nombre ? ` · ${m.eventos.nombre}` : ''}</p>
                 </div>
-                <span className={`font-semibold tabular-nums ${esIngreso ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {esIngreso ? '+' : '−'}{formatARS(m.monto)}
-                </span>
+                <div className="text-right shrink-0 ml-3">
+                  <span className={`font-semibold tabular-nums ${esIngreso ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {esIngreso ? '+' : '−'}{formatARS(m.monto)}
+                  </span>
+                  <p className="text-[10px] text-gray-400 mt-0.5">saldo {formatARS(saldosPorFila[i])}</p>
+                </div>
               </div>
             )
           })}

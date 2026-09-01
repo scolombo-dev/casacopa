@@ -2,6 +2,16 @@
 
 ---
 
+## [0.6.9] — 2026-09-01
+
+### Historial de billetera/banco: saldo después de cada movimiento
+
+- La sección "Billeteras y bancos" de Finanzas (donde ya se podía crear cualquier cuenta bancaria real, no solo "Uala") ahora muestra, en el historial de cada una, el saldo resultante después de cada movimiento — para ver claramente cómo baja cuando se gasta en una inversión y cómo va subiendo de nuevo a medida que se cobra autoalquiler
+- No es una funcionalidad nueva: es la sección "Billeteras y bancos" que ya existía, ahora alimentada correctamente porque inversiones/compras/personal/extras/stock ya escriben la billetera de origen (ver [0.6.8])
+- Archivo: `src/modules/finanzas/SubcuentasList.tsx`
+
+---
+
 ## [0.6.8] — 2026-08-31
 
 ### Billetera/banco (subcuenta) en todo lo que sale de caja operativa
