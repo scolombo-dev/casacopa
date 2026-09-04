@@ -46,7 +46,7 @@ export async function ejecutarHerramienta(tipo: string, datos: Record<string, un
       const precio_unitario_real = num(datos, 'precio_unitario_real')
       if (!Number.isFinite(cantidad) || !Number.isFinite(precio_unitario_real)) return { ok: false, mensaje: 'Faltan la cantidad o el precio unitario.' }
       const cuentaOrigenCompra = (str(datos, 'cuenta_origen') as 'caja_operativa' | 'anticipos_comprometidos') || 'caja_operativa'
-      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, cuenta_origen: cuentaOrigenCompra, subcuenta_origen_id: null, notas: '' })
+      const compra = await crearCompra({ evento_id, fecha_compra: str(datos, 'fecha_compra'), proveedor_id: null, cuenta_origen: cuentaOrigenCompra, subcuenta_origen_id: null, evento_anticipo_id: null, notas: '' })
       if (compra.error || !compra.id) return { ok: false, mensaje: compra.error ?? 'No se pudo crear la compra.' }
       const item = await crearItem({
         compra_id: compra.id, producto_id: null, marca, proveedor,

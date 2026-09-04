@@ -111,7 +111,7 @@ export async function usarStockEnEvento(data: {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por, origen_evento_id, subcuenta_financiadora_id')
+    .select('cantidad_envases, marca, ml_por_envase, precio_unitario_compra, financiado_por, origen_evento_id, subcuenta_financiadora_id, evento_anticipo_id')
     .eq('id', data.stock_id)
     .single()
 
@@ -165,7 +165,11 @@ export async function usarStockEnEvento(data: {
             subcuenta_destino_id: lote.subcuenta_financiadora_id,
             monto: costoTotal,
             concepto: `Uso de stock (${lote.marca}) en evento`,
-            evento_id: data.evento_id,
+            // Repone el pozo de anticipo del evento que ORIGINALMENTE puso la
+            // plata (evento_anticipo_id), no el evento que ahora consume el
+            // stock — si no, "Anticipos por evento" nunca reflejaba la
+            // recuperación del evento financiador.
+            evento_id: lote.evento_anticipo_id || data.evento_id,
           }
         : {
             fecha: data.fecha,
@@ -202,7 +206,7 @@ export async function deshacerUsoStock(cierreId: string) {
 
   const { data: lote } = await supabase
     .from('stock')
-    .select('cantidad_envases, financiado_por, origen_evento_id, subcuenta_financiadora_id')
+    .select('cantidad_envases, financiado_por, origen_evento_id, subcuenta_financiadora_id, evento_anticipo_id')
     .eq('id', cierre.stock_id)
     .single()
   if (!lote) return { error: 'Lote no encontrado.' }
@@ -234,7 +238,9 @@ export async function deshacerUsoStock(cierreId: string) {
             cuenta_destino: 'stock_valorizado',
             monto: cierre.costo_total,
             concepto: `Reverso de uso de stock (${cierre.marca})`,
-            evento_id: cierre.evento_id,
+            // Mismo criterio que en usarStockEnEvento: se descuenta del pozo
+            // del evento que financió el lote, no del que lo consumía.
+            evento_id: lote.evento_anticipo_id || cierre.evento_id,
           }
         : {
             fecha: hoy,

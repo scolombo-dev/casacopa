@@ -12,6 +12,7 @@ export async function crearCompra(data: {
   proveedor_id: string | null
   cuenta_origen: CuentaFinanciera
   subcuenta_origen_id: string | null
+  evento_anticipo_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -23,6 +24,7 @@ export async function crearCompra(data: {
       proveedor_id: data.proveedor_id || null,
       cuenta_origen: data.cuenta_origen,
       subcuenta_origen_id: data.subcuenta_origen_id || null,
+      evento_anticipo_id: data.cuenta_origen === 'anticipos_comprometidos' ? (data.evento_anticipo_id || null) : null,
       notas: data.notas.trim() || null,
       total: 0,
     })
@@ -40,6 +42,7 @@ export async function editarCompra(id: string, data: {
   proveedor_id: string | null
   cuenta_origen: CuentaFinanciera
   subcuenta_origen_id: string | null
+  evento_anticipo_id: string | null
   notas: string
 }) {
   const supabase = createAdminClient()
@@ -50,6 +53,7 @@ export async function editarCompra(id: string, data: {
       proveedor_id: data.proveedor_id || null,
       cuenta_origen: data.cuenta_origen,
       subcuenta_origen_id: data.subcuenta_origen_id || null,
+      evento_anticipo_id: data.cuenta_origen === 'anticipos_comprometidos' ? (data.evento_anticipo_id || null) : null,
       notas: data.notas.trim() || null,
     })
     .eq('id', id)

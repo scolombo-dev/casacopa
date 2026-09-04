@@ -2,6 +2,18 @@
 
 ---
 
+## [0.7.2] — 2026-09-04
+
+### Comprar con el anticipo de OTRO evento (elegir evento y después cuenta)
+
+- La compra pagada con "Anticipo" ahora pregunta primero de qué evento es ese anticipo (no tiene por qué ser el mismo evento que se está comprando — puede ser el de un evento futuro), y recién después de qué billetera/banco sale la plata, porque el anticipo de un mismo evento puede estar repartido en más de una cuenta
+- Corregido de paso: el panel "Anticipos por evento" contaba el gasto siempre contra el evento de la compra, aunque la plata en realidad fuera de otro evento — ahora descuenta del pozo del evento que realmente puso la plata
+- Corregido también: cuando un stock financiado con anticipo se usaba en un evento futuro y la plata volvía a la cuenta, ese "repuesto" quedaba mal etiquetado con el evento que consumía el stock en vez del que lo había financiado — no afectaba el saldo real de la cuenta bancaria (eso siempre estuvo bien), solo el panel "Anticipos por evento"
+- Migración 038 (`compras.evento_anticipo_id`)
+- Archivos: `src/modules/compras/actions.ts`, `ComprasClient.tsx`, `src/modules/consumo/actions.ts`, `src/modules/stock/actions.ts`
+
+---
+
 ## [0.7.1] — 2026-09-01
 
 ### El sobrante de una compra financiada con anticipo recupera su plata sola + resumen al cerrar

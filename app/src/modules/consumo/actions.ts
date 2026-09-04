@@ -84,18 +84,21 @@ export async function guardarCierre(
   // cuenta como inventario (transferencia a stock_valorizado) en vez de
   // dejarlo contado para siempre como gasto ya hecho.
   const compraItemIds = conSobrante.map(c => c.compra_item_id).filter(Boolean)
-  const infoPorCompraItem = new Map<string, { compra_id: string; cuenta_origen: string; subcuenta_origen_id: string | null }>()
+  const infoPorCompraItem = new Map<string, { compra_id: string; cuenta_origen: string; subcuenta_origen_id: string | null; evento_anticipo_id: string | null }>()
   const totalPorCompra = new Map<string, number>()
   if (compraItemIds.length > 0) {
     const { data: items } = await supabase.from('compra_items').select('id, compra_id').in('id', compraItemIds)
     const compraIds = [...new Set((items ?? []).map(i => i.compra_id))]
     if (compraIds.length > 0) {
-      const { data: comprasInfo } = await supabase.from('compras').select('id, cuenta_origen, subcuenta_origen_id, total').in('id', compraIds)
+      const { data: comprasInfo } = await supabase.from('compras').select('id, evento_id, cuenta_origen, subcuenta_origen_id, evento_anticipo_id, total').in('id', compraIds)
       const porCompra = new Map((comprasInfo ?? []).map(c => [c.id, c]))
       for (const it of items ?? []) {
         const c = porCompra.get(it.compra_id)
         if (c) {
-          infoPorCompraItem.set(it.id, { compra_id: it.compra_id, cuenta_origen: c.cuenta_origen, subcuenta_origen_id: c.subcuenta_origen_id })
+          infoPorCompraItem.set(it.id, {
+            compra_id: it.compra_id, cuenta_origen: c.cuenta_origen, subcuenta_origen_id: c.subcuenta_origen_id,
+            evento_anticipo_id: c.evento_anticipo_id || c.evento_id,
+          })
           totalPorCompra.set(it.compra_id, c.total)
         }
       }
@@ -128,6 +131,7 @@ export async function guardarCierre(
         origen_evento_id: eventoId,
         financiado_por: financiadaConAnticipo ? 'anticipos_comprometidos' : null,
         subcuenta_financiadora_id: financiadaConAnticipo ? info!.subcuenta_origen_id : null,
+        evento_anticipo_id: financiadaConAnticipo ? info!.evento_anticipo_id : null,
       })
       .select()
       .single()
@@ -151,7 +155,7 @@ export async function guardarCierre(
           cuenta_destino: 'stock_valorizado',
           monto: valorSobrante,
           concepto: `Sobrante sin consumir de compra financiada con anticipo: ${item.marca}`,
-          evento_id: eventoId,
+          evento_id: info!.evento_anticipo_id,
           stock_id: lote.id,
         })
         sobranteFinanciadoPorCompra.set(info!.compra_id, (sobranteFinanciadoPorCompra.get(info!.compra_id) ?? 0) + valorSobrante)

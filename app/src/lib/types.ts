@@ -159,6 +159,7 @@ export type Compra = {
   proveedor_id: string | null
   cuenta_origen: CuentaFinanciera
   subcuenta_origen_id: string | null
+  evento_anticipo_id: string | null
   total: number
   notas: string | null
   creado_en: string

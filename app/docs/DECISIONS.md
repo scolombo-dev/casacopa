@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-09-04 — Compra con anticipo de OTRO evento: elegir evento y después cuenta
+
+**Pedido:** al pagar una compra con "Anticipo", el usuario necesita: 1) elegir de qué EVENTO es el anticipo (no necesariamente el mismo evento de la compra — puede ser el anticipo ya cobrado de un evento futuro), y 2) recién después elegir de qué cuenta bancaria sale, "porque quizás el adelanto de un evento está en 2 cuentas".
+
+**Contradice una simplificación anterior:** en [0.7.0] se había asumido "no hace falta preguntar de qué evento sale ese anticipo: siempre es el mismo evento de la compra" — el usuario confirmó que esa asunción era incorrecta para su forma de operar (usa el anticipo cobrado de un evento para comprar cosas de otro). Se revierte: se agrega `compras.evento_anticipo_id` (migración 038), igual patrón que `stock.evento_anticipo_id` ([0.7.0]/mig. 022), y el formulario de compra pasa a tener 3 pasos cuando el origen es anticipo: cuenta (caja/anticipo) → evento del anticipo → billetera/banco.
+
+**Bug relacionado encontrado y corregido de paso:** el trigger de compras y el ajuste de sobrante en `guardarCierre` usaban siempre `compras.evento_id` (el evento PARA el que se compra) como `evento_id` del movimiento contra `anticipos_comprometidos`, en vez del evento que realmente puso la plata — esto hacía que el panel "Anticipos por evento" mostrara gastado el pozo del evento equivocado. Además, en `usarStockEnEvento`/`deshacerUsoStock`, el movimiento de "repuesto" (cuando un stock financiado se usa en un evento futuro y la plata vuelve) usaba el evento que CONSUME el stock en vez del que lo FINANCIÓ — el saldo real de la cuenta bancaria (`saldo_subcuentas`) siempre estuvo bien porque no depende de `evento_id`, pero el panel "Anticipos por evento" nunca mostraba repuesto el pozo del evento financiador. Se corrigió usando `evento_anticipo_id` (con fallback al comportamiento anterior si es null, para no romper compras/stock viejos) en los cuatro puntos: trigger de compras, corrección de sobrante en `guardarCierre`, y las dos direcciones de `usarStockEnEvento`/`deshacerUsoStock`.
+
+**No incluye:** backfill de `cuentas_movimientos` históricos ya mal etiquetados con el evento equivocado — no se confirmó con el usuario si hay uso real de stock financiado ya cerrado que requiera corrección retroactiva del panel "Anticipos por evento" (el saldo de las cuentas bancarias en sí no está afectado). Queda pendiente si el usuario lo pide.
+
+---
+
 ## 2026-09-01 (2) — Sobrante de compra financiada hereda la cuenta + recap al cerrar
 
 **Pedido, en dos partes:**

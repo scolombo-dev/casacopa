@@ -47,15 +47,25 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
   const [fecha, setFecha] = useState(inicial?.fecha_compra ?? new Date().toISOString().split('T')[0])
   const [proveedorId, setProveedorId] = useState(inicial?.proveedor_id ?? '')
   const [cuentaOrigen, setCuentaOrigen] = useState<CuentaFinanciera>(inicial?.cuenta_origen ?? 'caja_operativa')
+  const [eventoAnticipoId, setEventoAnticipoId] = useState(inicial?.evento_anticipo_id ?? '')
   const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [notas, setNotas] = useState(inicial?.notas ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!eventoId) { setError('Seleccioná un evento.'); return }
+    if (cuentaOrigen === 'anticipos_comprometidos' && !eventoAnticipoId) {
+      setError('Elegí de qué evento es el anticipo que estás usando.')
+      return
+    }
     setError(null)
     startTransition(async () => {
-      const payload = { fecha_compra: fecha, proveedor_id: proveedorId || null, cuenta_origen: cuentaOrigen, subcuenta_origen_id: subcuentaId || null, notas }
+      const payload = {
+        fecha_compra: fecha, proveedor_id: proveedorId || null, cuenta_origen: cuentaOrigen,
+        subcuenta_origen_id: subcuentaId || null,
+        evento_anticipo_id: cuentaOrigen === 'anticipos_comprometidos' ? (eventoAnticipoId || null) : null,
+        notas,
+      }
       const res = inicial
         ? await editarCompra(inicial.id, payload)
         : await crearCompra({ evento_id: eventoId, ...payload })
@@ -97,7 +107,7 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">¿De dónde sale la plata?</label>
         <div className="flex gap-2">
-          <button type="button" onClick={() => { setCuentaOrigen('caja_operativa'); setSubcuentaId('') }}
+          <button type="button" onClick={() => { setCuentaOrigen('caja_operativa'); setEventoAnticipoId(''); setSubcuentaId('') }}
             className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
               cuentaOrigen === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
             Caja operativa
@@ -105,11 +115,24 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
           <button type="button" onClick={() => { setCuentaOrigen('anticipos_comprometidos'); setSubcuentaId('') }}
             className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
               cuentaOrigen === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
-            Anticipo de este evento
+            Anticipos de eventos
           </button>
         </div>
       </div>
-      <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="Billetera/banco (opcional)" />
+      {cuentaOrigen === 'anticipos_comprometidos' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">¿De qué evento es el anticipo?</label>
+          <select value={eventoAnticipoId} onChange={e => setEventoAnticipoId(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">Seleccionar evento…</option>
+            {eventos.map(ev => (
+              <option key={ev.id} value={ev.id}>{ev.nombre} — {formatFecha(ev.fecha)}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">No hace falta que sea el mismo evento de esta compra — puede ser el anticipo de otro evento (incluso futuro).</p>
+        </div>
+      )}
+      <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="¿De qué billetera/banco sale la plata?" />
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
