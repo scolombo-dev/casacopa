@@ -75,10 +75,11 @@ function agruparPorInsumo(stock: Lote[]): GrupoInsumo[] {
 
 // ─── Formulario de ingreso de stock ──────────────────────────────────────────
 
-function IngresoForm({ productos, eventos, subcuentas, esSobrante, onClose }: {
+function IngresoForm({ productos, eventos, subcuentas, pagosAnticipo, esSobrante, onClose }: {
   productos: ProductoMin[]
   eventos: EventoMin[]
   subcuentas: Subcuenta[]
+  pagosAnticipo: { evento_id: string; subcuenta_destino_id: string }[]
   esSobrante: boolean
   onClose: () => void
 }) {
@@ -111,12 +112,29 @@ function IngresoForm({ productos, eventos, subcuentas, esSobrante, onClose }: {
     setMlEnvase(p.ml_por_envase)
   }
 
+  // Solo las billeteras/bancos donde ese evento realmente recibió anticipo —
+  // si no hay ningún pago etiquetado a una cuenta puntual, se muestra la
+  // lista completa como respaldo (igual criterio que en /compras).
+  const subcuentasDelEvento = eventoAnticipoId
+    ? subcuentas.filter(s => pagosAnticipo.some(p => p.evento_id === eventoAnticipoId && p.subcuenta_destino_id === s.id))
+    : []
+  const hayFiltroPorEvento = eventoAnticipoId !== '' && subcuentasDelEvento.length > 0
+  const subcuentasParaMostrar = hayFiltroPorEvento ? subcuentasDelEvento : subcuentas
+  // Opciones que SubcuentaSelect va a mostrar realmente (mismo filtro que usa
+  // internamente) — si no hay ninguna cargada para esta cuenta todavía, no
+  // tiene sentido exigir una elección imposible.
+  const hayOpcionesDeSubcuenta = subcuentasParaMostrar.some(s => s.cuenta_padre === cuentaFinanciera && s.activa)
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!marca.trim()) { setError('La marca es obligatoria.'); return }
     if (cantidad <= 0) { setError('La cantidad debe ser mayor a 0.'); return }
     if (cuentaFinanciera === 'anticipos_comprometidos' && !eventoAnticipoId) {
       setError('Elegí de qué evento sale el anticipo.'); return
+    }
+    if (cuentaFinanciera && hayOpcionesDeSubcuenta && !subcuentaFinanciadoraId) {
+      setError('Elegí de qué billetera/banco sale la plata — si no, después no queda registrado en el historial de esa cuenta.')
+      return
     }
     setError(null)
     startTransition(async () => {
@@ -213,30 +231,34 @@ function IngresoForm({ productos, eventos, subcuentas, esSobrante, onClose }: {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">¿De dónde sale la plata? (opcional)</label>
           <div className="flex gap-2 mb-2">
-            <button type="button" onClick={() => setCuentaFinanciera('')}
+            <button type="button" onClick={() => { setCuentaFinanciera(''); setEventoAnticipoId(''); setSubcuentaFinanciadoraId('') }}
               className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
                 cuentaFinanciera === '' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
               No registrar
             </button>
-            <button type="button" onClick={() => setCuentaFinanciera('caja_operativa')}
+            <button type="button" onClick={() => { setCuentaFinanciera('caja_operativa'); setEventoAnticipoId(''); setSubcuentaFinanciadoraId('') }}
               className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
                 cuentaFinanciera === 'caja_operativa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
               Caja operativa
             </button>
-            <button type="button" onClick={() => setCuentaFinanciera('anticipos_comprometidos')}
+            <button type="button" onClick={() => { setCuentaFinanciera('anticipos_comprometidos'); setSubcuentaFinanciadoraId('') }}
               className={cn('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
                 cuentaFinanciera === 'anticipos_comprometidos' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300')}>
               Anticipo de un evento
             </button>
           </div>
           {cuentaFinanciera === 'anticipos_comprometidos' && (
-            <select value={eventoAnticipoId} onChange={e => setEventoAnticipoId(e.target.value)}
+            <select value={eventoAnticipoId} onChange={e => { setEventoAnticipoId(e.target.value); setSubcuentaFinanciadoraId('') }}
               className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2">
               <option value="">¿De qué evento?</option>
               {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
             </select>
           )}
-          <SubcuentaSelect cuenta={cuentaFinanciera || null} subcuentas={subcuentas} value={subcuentaFinanciadoraId} onChange={setSubcuentaFinanciadoraId} label="¿Qué billetera/banco?" />
+          <SubcuentaSelect cuenta={cuentaFinanciera || null} subcuentas={subcuentasParaMostrar} value={subcuentaFinanciadoraId} onChange={setSubcuentaFinanciadoraId}
+            label={hayFiltroPorEvento ? 'Billetera/banco donde ese evento tiene anticipo' : '¿Qué billetera/banco?'} />
+          {cuentaFinanciera === 'anticipos_comprometidos' && eventoAnticipoId && !hayFiltroPorEvento && (
+            <p className="text-xs text-amber-600 -mt-1 mb-2">Ese evento no tiene ningún pago de anticipo registrado en una billetera/banco puntual — elegí de la lista completa.</p>
+          )}
           {cuentaFinanciera ? (
             <p className="text-xs text-gray-400 mt-1">
               Cuando uses este stock en un evento, esa plata vuelve automáticamente a esta cuenta.
@@ -761,11 +783,12 @@ function RetiroForm({ lote, onClose }: { lote: Lote; onClose: () => void }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export default function StockClient({ stock, productos, eventos, subcuentas }: {
+export default function StockClient({ stock, productos, eventos, subcuentas, pagosAnticipo }: {
   stock: Lote[]
   productos: ProductoMin[]
   eventos: EventoMin[]
   subcuentas: Subcuenta[]
+  pagosAnticipo: { evento_id: string; subcuenta_destino_id: string }[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -992,6 +1015,7 @@ export default function StockClient({ stock, productos, eventos, subcuentas }: {
             productos={productos}
             eventos={eventos}
             subcuentas={subcuentas}
+            pagosAnticipo={pagosAnticipo}
             esSobrante={false}
             onClose={() => setModalIngreso(false)}
           />
@@ -1005,6 +1029,7 @@ export default function StockClient({ stock, productos, eventos, subcuentas }: {
             productos={productos}
             eventos={eventos}
             subcuentas={subcuentas}
+            pagosAnticipo={pagosAnticipo}
             esSobrante={true}
             onClose={() => setModalSobrante(false)}
           />

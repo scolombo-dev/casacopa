@@ -60,12 +60,20 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, pagosAnticipo, 
     : []
   const hayFiltroPorEvento = eventoAnticipoId !== '' && subcuentasDelEvento.length > 0
   const subcuentasParaMostrar = hayFiltroPorEvento ? subcuentasDelEvento : subcuentas
+  // Opciones que SubcuentaSelect va a mostrar realmente (mismo filtro que usa
+  // internamente) — si no hay ninguna cargada para esta cuenta todavía, no
+  // tiene sentido exigir una elección imposible.
+  const hayOpcionesDeSubcuenta = subcuentasParaMostrar.some(s => s.cuenta_padre === cuentaOrigen && s.activa)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!eventoId) { setError('Seleccioná un evento.'); return }
     if (cuentaOrigen === 'anticipos_comprometidos' && !eventoAnticipoId) {
       setError('Elegí de qué evento es el anticipo que estás usando.')
+      return
+    }
+    if (hayOpcionesDeSubcuenta && !subcuentaId) {
+      setError('Elegí de qué billetera/banco sale la plata — si no, después no queda registrado en el historial de esa cuenta.')
       return
     }
     setError(null)

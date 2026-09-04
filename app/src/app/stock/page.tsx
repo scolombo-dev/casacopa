@@ -4,7 +4,9 @@ import StockClient from '@/modules/stock/StockClient'
 export default async function StockPage() {
   const supabase = await createClient()
 
-  const [{ data: stock, error: errorStock }, { data: productos }, { data: eventos }, { data: subcuentas }] = await Promise.all([
+  const [
+    { data: stock, error: errorStock }, { data: productos }, { data: eventos }, { data: subcuentas }, { data: pagosAnticipo },
+  ] = await Promise.all([
     supabase
       .from('stock')
       .select(`
@@ -25,6 +27,15 @@ export default async function StockPage() {
       .order('fecha', { ascending: false })
       .limit(30),
     supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
+
+    // A qué billetera/banco entró el anticipo de cada evento — para filtrar
+    // las cuentas elegibles cuando se financia stock con el anticipo de un
+    // evento puntual (igual que en /compras).
+    supabase
+      .from('pagos_cliente')
+      .select('evento_id, subcuenta_destino_id')
+      .eq('cuenta_destino', 'anticipos_comprometidos')
+      .not('subcuenta_destino_id', 'is', null),
   ])
 
   if (errorStock) {
@@ -37,6 +48,7 @@ export default async function StockPage() {
       productos={productos ?? []}
       eventos={eventos ?? []}
       subcuentas={subcuentas ?? []}
+      pagosAnticipo={pagosAnticipo ?? []}
     />
   )
 }
