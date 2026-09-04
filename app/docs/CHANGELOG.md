@@ -2,6 +2,16 @@
 
 ---
 
+## [0.7.3] — 2026-09-04
+
+### Billetera obligatoria al financiar con anticipo (Compras y Agregar stock)
+
+- "Agregar stock" financiado con anticipo dejaba elegir billetera como opcional y sin filtrar por el evento — la plata se descontaba bien del anticipo del evento, pero no quedaba registrada en el historial de ninguna billetera puntual. Ahora se filtra por el evento elegido (igual que en Compras) y pasa a ser obligatorio elegir billetera cuando hay alguna cargada para esa cuenta
+- Migración 039: corrige 2 lotes de stock ya cargados sin billetera (Speed → Caja Fuerte, Gin Brighton → Anticipos COCOS tomi) y sus movimientos vinculados
+- Archivos: `src/modules/stock/StockClient.tsx`, `src/modules/compras/ComprasClient.tsx`, `src/app/stock/page.tsx`
+
+---
+
 ## [0.7.2] — 2026-09-04
 
 ### Comprar con el anticipo de OTRO evento (elegir evento y después cuenta)
