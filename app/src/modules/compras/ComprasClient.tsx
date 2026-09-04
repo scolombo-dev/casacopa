@@ -32,11 +32,12 @@ type CompraCompleta = Compra & {
 
 // ─── Formulario de Compra ─────────────────────────────────────────────────────
 
-function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
+function CompraForm({ inicial, eventos, proveedores, subcuentas, pagosAnticipo, onClose }: {
   inicial?: CompraCompleta
   eventos: EventoMin[]
   proveedores: { id: string; nombre: string }[]
   subcuentas: Subcuenta[]
+  pagosAnticipo: { evento_id: string; subcuenta_destino_id: string }[]
   onClose: () => void
 }) {
   const router = useRouter()
@@ -50,6 +51,15 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
   const [eventoAnticipoId, setEventoAnticipoId] = useState(inicial?.evento_anticipo_id ?? '')
   const [subcuentaId, setSubcuentaId] = useState(inicial?.subcuenta_origen_id ?? '')
   const [notas, setNotas] = useState(inicial?.notas ?? '')
+
+  // Solo las billeteras/bancos donde ese evento realmente recibió anticipo —
+  // si el evento no tiene ningún pago de anticipo etiquetado a una cuenta
+  // puntual, se muestra la lista completa como respaldo.
+  const subcuentasDelEvento = eventoAnticipoId
+    ? subcuentas.filter(s => pagosAnticipo.some(p => p.evento_id === eventoAnticipoId && p.subcuenta_destino_id === s.id))
+    : []
+  const hayFiltroPorEvento = eventoAnticipoId !== '' && subcuentasDelEvento.length > 0
+  const subcuentasParaMostrar = hayFiltroPorEvento ? subcuentasDelEvento : subcuentas
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -122,7 +132,7 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
       {cuentaOrigen === 'anticipos_comprometidos' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">¿De qué evento es el anticipo?</label>
-          <select value={eventoAnticipoId} onChange={e => setEventoAnticipoId(e.target.value)}
+          <select value={eventoAnticipoId} onChange={e => { setEventoAnticipoId(e.target.value); setSubcuentaId('') }}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Seleccionar evento…</option>
             {eventos.map(ev => (
@@ -132,7 +142,11 @@ function CompraForm({ inicial, eventos, proveedores, subcuentas, onClose }: {
           <p className="text-xs text-gray-400 mt-1">No hace falta que sea el mismo evento de esta compra — puede ser el anticipo de otro evento (incluso futuro).</p>
         </div>
       )}
-      <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentas} value={subcuentaId} onChange={setSubcuentaId} label="¿De qué billetera/banco sale la plata?" />
+      <SubcuentaSelect cuenta={cuentaOrigen} subcuentas={subcuentasParaMostrar} value={subcuentaId} onChange={setSubcuentaId}
+        label={hayFiltroPorEvento ? 'Billetera/banco donde ese evento tiene anticipo' : '¿De qué billetera/banco sale la plata?'} />
+      {cuentaOrigen === 'anticipos_comprometidos' && eventoAnticipoId && !hayFiltroPorEvento && (
+        <p className="text-xs text-amber-600 -mt-2">Ese evento no tiene ningún pago de anticipo registrado en una billetera/banco puntual — elegí de la lista completa.</p>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
@@ -460,12 +474,13 @@ function CompraCard({ compra, productos, onEdit, onDelete }: {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export default function ComprasClient({ compras, eventos, proveedores, productos, subcuentas }: {
+export default function ComprasClient({ compras, eventos, proveedores, productos, subcuentas, pagosAnticipo }: {
   compras: CompraCompleta[]
   eventos: EventoMin[]
   proveedores: { id: string; nombre: string }[]
   productos: ProductoConProv[]
   subcuentas: Subcuenta[]
+  pagosAnticipo: { evento_id: string; subcuenta_destino_id: string }[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -536,12 +551,12 @@ export default function ComprasClient({ compras, eventos, proveedores, productos
 
       {modalCrear && (
         <Modal titulo="Nueva compra" onClose={() => setModalCrear(false)}>
-          <CompraForm eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} onClose={() => setModalCrear(false)} />
+          <CompraForm eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} pagosAnticipo={pagosAnticipo} onClose={() => setModalCrear(false)} />
         </Modal>
       )}
       {editando && (
         <Modal titulo="Editar compra" onClose={() => setEditando(null)}>
-          <CompraForm inicial={editando} eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} onClose={() => setEditando(null)} />
+          <CompraForm inicial={editando} eventos={eventos} proveedores={proveedores} subcuentas={subcuentas} pagosAnticipo={pagosAnticipo} onClose={() => setEditando(null)} />
         </Modal>
       )}
       {eliminando && (

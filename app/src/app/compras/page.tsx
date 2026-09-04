@@ -10,6 +10,7 @@ export default async function ComprasPage() {
     { data: proveedores },
     { data: productos },
     { data: subcuentas },
+    { data: pagosAnticipo },
   ] = await Promise.all([
     supabase
       .from('compras')
@@ -31,6 +32,15 @@ export default async function ComprasPage() {
       .order('marca'),
 
     supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
+
+    // A qué billetera/banco entró el anticipo de cada evento — para que al
+    // pagar una compra con el anticipo de un evento, solo se puedan elegir
+    // las cuentas donde ese evento realmente tiene plata.
+    supabase
+      .from('pagos_cliente')
+      .select('evento_id, subcuenta_destino_id')
+      .eq('cuenta_destino', 'anticipos_comprometidos')
+      .not('subcuenta_destino_id', 'is', null),
   ])
 
   return (
@@ -40,6 +50,7 @@ export default async function ComprasPage() {
       proveedores={proveedores ?? []}
       productos={productos ?? []}
       subcuentas={subcuentas ?? []}
+      pagosAnticipo={pagosAnticipo ?? []}
     />
   )
 }
