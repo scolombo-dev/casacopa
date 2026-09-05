@@ -35,10 +35,18 @@ function PagoForm({ eventoId, estadoEvento, subcuentas, pago, onClose }: {
     pago?.cuenta_destino ?? (eventoYaPaso ? 'caja_operativa' : 'anticipos_comprometidos')
   )
   const [subcuentaDestinoId, setSubcuentaDestinoId] = useState(pago?.subcuenta_destino_id ?? '')
+  // Igual criterio que en Compras/Agregar stock: si hay billeteras cargadas
+  // para esta cuenta, hay que elegir una — si no, este pago queda sin poder
+  // filtrarse después al pagar algo con el anticipo de este evento.
+  const hayOpcionesDeSubcuenta = subcuentas.some(s => s.cuenta_padre === cuentaDestino && s.activa)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (monto <= 0) { setError('El monto debe ser mayor a 0.'); return }
+    if (hayOpcionesDeSubcuenta && !subcuentaDestinoId) {
+      setError('Elegí a qué billetera/banco entra la plata — si no, después no se puede filtrar al pagar algo con el anticipo de este evento.')
+      return
+    }
     setError(null)
     startTransition(async () => {
       const datos = {
