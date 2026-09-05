@@ -64,6 +64,8 @@ export async function crearPago(data: {
 
   revalidatePath('/finanzas')
   revalidatePath('/')
+  revalidatePath('/stock')
+  revalidatePath('/compras')
   return { error: null }
 }
 
@@ -145,6 +147,8 @@ export async function editarPago(id: string, data: {
 
   revalidatePath('/finanzas')
   revalidatePath('/')
+  revalidatePath('/stock')
+  revalidatePath('/compras')
   return { error: null }
 }
 
@@ -165,6 +169,8 @@ export async function eliminarPago(id: string) {
     if (error) return { error: error.message }
     revalidatePath('/finanzas')
     revalidatePath('/')
+    revalidatePath('/stock')
+    revalidatePath('/compras')
     return { error: null }
   }
 
@@ -196,6 +202,8 @@ export async function eliminarPago(id: string) {
   if (error) return { error: error.message }
   revalidatePath('/finanzas')
   revalidatePath('/')
+  revalidatePath('/stock')
+  revalidatePath('/compras')
   return { error: null }
 }
 
