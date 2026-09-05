@@ -1,8 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import ComprasClient from '@/modules/compras/ComprasClient'
 
 export default async function ComprasPage() {
   const supabase = await createClient()
+  // subcuentas tiene RLS activado sin política de lectura — se consulta con
+  // el cliente admin (mismo que usan las acciones de guardado) para no
+  // depender de RLS acá.
+  const supabaseAdmin = createAdminClient()
 
   const [
     { data: compras },
@@ -31,7 +35,7 @@ export default async function ComprasPage() {
       .order('insumo_base')
       .order('marca'),
 
-    supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
+    supabaseAdmin.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
 
     // A qué billetera/banco entró el anticipo de cada evento — para que al
     // pagar una compra con el anticipo de un evento, solo se puedan elegir

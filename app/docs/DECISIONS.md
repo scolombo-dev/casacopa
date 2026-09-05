@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-09-05 — Causa raíz encontrada: RLS en `subcuentas` sin política de lectura
+
+**Síntoma reportado:** el selector de billetera/banco en "Agregar stock" seguía sin mostrar ninguna opción para un evento con anticipo correctamente cobrado y tagueado a una cuenta puntual (verificado por SQL, dos veces). Se descartaron en orden, cada uno con evidencia concreta antes de pasar al siguiente: dato mal cargado (no — SQL lo confirmó bien), evento duplicado (no — un solo evento con ese nombre), deploy no aplicado (no — Vercel mostraba Ready sobre el commit correcto), caché del navegador (no descartable del todo pero no explicaba el patrón), subcuentas borradas por el usuario (no — el usuario confirmó que seguían activas en Finanzas).
+
+**Cómo se encontró:** se agregó un renglón de diagnóstico temporal en la propia pantalla (conteo de `pagosAnticipo` y de `subcuentas` filtradas) para dejar de inferir y ver el dato real en producción. Reveló `pagosAnticipo: 2` (correcto) pero `subcuentas activas anticipo: 0` — la lista de subcuentas que le llega a Compras/Stock estaba vacía pese a que el usuario la veía poblada en Finanzas. Eso llevó a comparar cómo lee cada pantalla esa tabla: Finanzas lee la vista `saldo_subcuentas` (creada por el rol dueño de la DB, no aplica RLS de quien consulta), mientras que Compras/Stock/Eventos/el cierre leen la tabla `subcuentas` directo con el cliente de sesión normal (sí aplica RLS). `select relrowsecurity from pg_class where relname='subcuentas'` confirmó RLS activado, y no había ninguna policy de SELECT — así que la tabla siempre devolvía vacío para ese cliente, sin error visible (RLS sin policy permisiva filtra filas silenciosamente, no tira excepción).
+
+**Alcance real del bug:** no era exclusivo de "Agregar stock" — afectaba a TODA lectura directa de `subcuentas` agregada esta semana: el selector de billetera en Compras, en Agregar stock, en los formularios de Personal/Extra de un evento, el selector "¿A qué billetera?" del reparto de ganancia al cerrar un evento, y los nombres de cuenta en el panel de recap de "Cerrar evento" (que embebe `subcuentas` vía FK desde `compras`/`cierre_consumo`/`stock`). Todos mostraban vacío o en blanco sin ningún error.
+
+**Corrección:** en vez de escribir una policy de RLS nueva (más superficie para mantener en un sistema de un solo usuario/dueño), esas lecturas pasan a usar `createAdminClient()` — el mismo cliente de service_role que ya usan todas las Server Actions de guardado — igual que la vista `saldo_subcuentas` ya lo hacía de hecho al ejecutarse con privilegios del dueño de la vista.
+
+**Lección para no repetir esto:** cuando se agrega una lectura NUEVA de una tabla en un `page.tsx` (Server Component, cliente de sesión) que hasta ahora solo se leía desde acciones de guardado (cliente admin) o desde una vista, hay que verificar explícitamente que esa tabla sea legible con el cliente de sesión — no asumirlo solo porque el insert/update ya funciona.
+
+---
+
 ## 2026-09-04 — Compra con anticipo de OTRO evento: elegir evento y después cuenta
 
 **Pedido:** al pagar una compra con "Anticipo", el usuario necesita: 1) elegir de qué EVENTO es el anticipo (no necesariamente el mismo evento de la compra — puede ser el anticipo ya cobrado de un evento futuro), y 2) recién después elegir de qué cuenta bancaria sale, "porque quizás el adelanto de un evento está en 2 cuentas".

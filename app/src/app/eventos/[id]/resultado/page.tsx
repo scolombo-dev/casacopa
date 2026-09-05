@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatARS, formatFecha } from '@/lib/utils'
 import { CUENTA_LABEL } from '@/lib/constants'
@@ -10,6 +10,10 @@ import AutoalquilerList from './AutoalquilerList'
 export default async function ResultadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  // subcuentas tiene RLS activado sin política de lectura — cualquier
+  // consulta que la toque (directa o embebida vía FK) necesita el cliente
+  // admin, igual que las acciones de guardado.
+  const supabaseAdmin = createAdminClient()
 
   const [
     { data: evento },
@@ -38,11 +42,11 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
     supabase.from('ajustes_ipc').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('evento_reparto_resultado').select('*').eq('evento_id', id).order('fecha'),
     supabase.from('inversion_amortizaciones').select('*, inversiones(nombre)').eq('evento_id', id).order('fecha'),
-    supabase.from('subcuentas').select('*').eq('cuenta_padre', 'caja_operativa').eq('activa', true).order('nombre'),
+    supabaseAdmin.from('subcuentas').select('*').eq('cuenta_padre', 'caja_operativa').eq('activa', true).order('nombre'),
     supabase.from('inversiones_resumen').select('id, nombre, cuenta_origen, monto_pendiente').eq('estado', 'activa').gt('monto_pendiente', 0),
-    supabase.from('compras').select('id, total, subcuentas:subcuenta_origen_id(nombre, titular)').eq('evento_id', id).eq('cuenta_origen', 'anticipos_comprometidos'),
-    supabase.from('cierre_consumo').select('id, costo_total, marca, stock:stock_id(financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular))').eq('evento_id', id).eq('tipo_origen', 'stock'),
-    supabase.from('stock').select('id, marca, cantidad_envases, precio_unitario_compra, financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular)').eq('origen_evento_id', id).not('financiado_por', 'is', null),
+    supabaseAdmin.from('compras').select('id, total, subcuentas:subcuenta_origen_id(nombre, titular)').eq('evento_id', id).eq('cuenta_origen', 'anticipos_comprometidos'),
+    supabaseAdmin.from('cierre_consumo').select('id, costo_total, marca, stock:stock_id(financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular))').eq('evento_id', id).eq('tipo_origen', 'stock'),
+    supabaseAdmin.from('stock').select('id, marca, cantidad_envases, precio_unitario_compra, financiado_por, subcuentas:subcuenta_financiadora_id(nombre, titular)').eq('origen_evento_id', id).not('financiado_por', 'is', null),
   ])
 
   if (!evento) notFound()

@@ -1,8 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import StockClient from '@/modules/stock/StockClient'
 
 export default async function StockPage() {
   const supabase = await createClient()
+  // subcuentas tiene RLS activado sin política de lectura — se consulta con
+  // el cliente admin (mismo que usan las acciones de guardado) para no
+  // depender de RLS acá.
+  const supabaseAdmin = createAdminClient()
 
   const [
     { data: stock, error: errorStock }, { data: productos }, { data: eventos }, { data: subcuentas }, { data: pagosAnticipo },
@@ -26,7 +30,7 @@ export default async function StockPage() {
       .select('id, nombre, fecha')
       .order('fecha', { ascending: false })
       .limit(30),
-    supabase.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
+    supabaseAdmin.from('subcuentas').select('*').eq('activa', true).order('cuenta_padre').order('nombre'),
 
     // A qué billetera/banco entró el anticipo de cada evento — para filtrar
     // las cuentas elegibles cuando se financia stock con el anticipo de un

@@ -2,6 +2,17 @@
 
 ---
 
+## [0.7.4] — 2026-09-05
+
+### Causa raíz: RLS bloqueaba la lectura de "subcuentas" en Compras, Stock, Eventos y el cierre
+
+- Encontrado tras horas de diagnóstico: la tabla `subcuentas` tiene RLS activado en Supabase sin ninguna política de lectura para la clave de la app. El editor SQL (acceso total) y la vista `saldo_subcuentas` (usada en Finanzas, que la esquiva de casualidad) siempre mostraron las cuentas bien — pero cualquier pantalla que leyera la tabla `subcuentas` directo (Compras, Agregar stock, formularios de Personal/Extra en Eventos, y el resumen de "Cerrar evento") recibía siempre una lista vacía, sin ningún error visible
+- Esto explica por qué el selector de billetera/banco nunca mostraba opciones en esas pantallas, incluso con las cuentas cargadas y activas
+- Corregido: esas pantallas ahora leen `subcuentas` con el mismo cliente de acceso total que ya usan las acciones de guardado, en vez de depender de una política de RLS nueva
+- Archivos: `src/app/stock/page.tsx`, `src/app/compras/page.tsx`, `src/app/eventos/[id]/page.tsx`, `src/app/eventos/[id]/resultado/page.tsx`
+
+---
+
 ## [0.7.3] — 2026-09-04
 
 ### Billetera obligatoria al financiar con anticipo (Compras y Agregar stock)

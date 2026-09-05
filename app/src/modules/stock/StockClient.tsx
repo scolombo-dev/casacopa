@@ -257,12 +257,7 @@ function IngresoForm({ productos, eventos, subcuentas, pagosAnticipo, esSobrante
           <SubcuentaSelect cuenta={cuentaFinanciera || null} subcuentas={subcuentasParaMostrar} value={subcuentaFinanciadoraId} onChange={setSubcuentaFinanciadoraId}
             label={hayFiltroPorEvento ? 'Billetera/banco donde ese evento tiene anticipo' : '¿Qué billetera/banco?'} />
           {cuentaFinanciera === 'anticipos_comprometidos' && eventoAnticipoId && !hayFiltroPorEvento && (
-            <>
-              <p className="text-xs text-amber-600 -mt-1 mb-2">Ese evento no tiene ningún pago de anticipo registrado en una billetera/banco puntual — elegí de la lista completa.</p>
-              <p className="text-[10px] text-gray-300 -mt-1 mb-2">
-                [debug] pagosAnticipo total: {pagosAnticipo.length} · para este evento: {pagosAnticipo.filter(p => p.evento_id === eventoAnticipoId).length} · subcuentas activas anticipo: {subcuentas.filter(s => s.cuenta_padre === 'anticipos_comprometidos').length}
-              </p>
-            </>
+            <p className="text-xs text-amber-600 -mt-1 mb-2">Ese evento no tiene ningún pago de anticipo registrado en una billetera/banco puntual — elegí de la lista completa.</p>
           )}
           {cuentaFinanciera ? (
             <p className="text-xs text-gray-400 mt-1">
